@@ -1,0 +1,14 @@
+{
+    "name": "Bossy.Tests.Editor",
+    "references": [
+        "Bossy.Editor",
+        "Bossy"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}

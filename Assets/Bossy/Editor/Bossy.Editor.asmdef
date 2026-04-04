@@ -1,0 +1,10 @@
+{
+    "name": "Bossy.Editor",
+    "references": [
+      "Bossy"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}
