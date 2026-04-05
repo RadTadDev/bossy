@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Bossy.Command;
+using Bossy.Registry;
+using UnityEngine;
 
 namespace Bossy.Tests.Utils
 {
@@ -14,111 +16,247 @@ namespace Bossy.Tests.Utils
     public class CommandGenerator
     {
         private string _name;
-        private Type _parentType;
-        private List<FieldInfo> _fields = new();
-        private readonly Type _baseType = typeof(ICommand);
+        private HashSet<string> _fieldNames = new();
+        private Type _parentCommandType;
+        private TypeBuilder _typeBuilder;
+        private int _positionalIndex;
+        private int _optionalIndex;
 
-        /// <summary>
-        /// Declare the name of this command.
-        /// </summary>
-        /// <param name="name">The command's name.</param>
-        /// <returns>The generator.</returns>
-        public CommandGenerator WithName(string name)
+        private CommandGenerator(string name)
         {
             _name = name;
-            return this;
+            _typeBuilder = DynamicAssemblyCache.CreateType(interfaces: new []{ typeof(ICommand) });
+        }
+
+        /// <summary>
+        /// Starts building a command by declaring its name.
+        /// </summary>
+        /// <param name="name">The name of the command. Must be unique with in the
+        /// <see cref="CommandRegistry"/> scope.</param>
+        /// <returns>The generator.</returns>
+        /// <exception cref="ArgumentException">Throws on invalid name - must match C# syntax.</exception>
+        public static CommandGenerator WithName(string name)
+        {
+            if (!GenerationRules.IsValidName(name))
+            {
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));    
+            }
+            
+            var generator = new CommandGenerator(name);
+            return generator;
         }
         
         /// <summary>
         /// Makes it a subcommand.
         /// </summary>
         /// <param name="parentType">The parent type.</param>
-        /// <returns>The builder.</returns>
+        /// <returns>The Generator.</returns>
         public CommandGenerator AsSubcommand(Type parentType)
         {
-            _parentType = parentType;
+            _parentCommandType = parentType;
             return this;
+        }
+
+        /// <summary>
+        /// Adds a switch argument to this command.
+        /// </summary>
+        /// <param name="fullname">The long --name of the switch.</param>
+        /// <param name="type">The underlying argument type.</param>
+        /// <param name="overrideShortName">Optional override shortname, if not provided the
+        /// first non underscore character of the fullname is used.</param>
+        /// <returns>The generator.</returns>
+        /// <exception cref="ArgumentException">Throws on invalid or duplicate name.</exception>
+        /// <exception cref="ArgumentNullException">Throws on null type.</exception>
+        public CommandGenerator WithSwitch(string fullname, Type type, char overrideShortName = '\0')
+        {
+            if (!GenerationRules.IsValidName(fullname))
+            {
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(fullname));
+            }
+
+            if (_fieldNames.Contains(fullname))
+            {
+                throw new ArgumentException("Name must not collide with other types.", nameof(fullname));
+            }
+            
+            if (type == null)
+            {
+                throw new ArgumentNullException(nameof(type));
+            }
+            
+            _fieldNames.Add(fullname);
+            
+            var shortName = overrideShortName == '\0' ? fullname[0] : overrideShortName;
+            FieldGenerator.WithName(fullname).WithType(type).AsSwitch(_typeBuilder, shortName);
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a positional argument to this command.
+        /// </summary>
+        /// <param name="name">The name of the argument.</param>
+        /// <param name="type">The underlying argument type.</param>
+        /// <param name="index">The index of the argument. If unspecified, it will auto increment.</param>
+        /// <returns>The generator.</returns>
+        /// <exception cref="ArgumentException">Throws on invalid or duplicate name.</exception>
+        /// <exception cref="ArgumentNullException">Throws on null type.</exception>
+        public CommandGenerator WithPositional(string name, Type type, int index = -1)
+        {
+            if (!GenerationRules.IsValidName(name))
+            {
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
+            }
+
+            if (_fieldNames.Contains(name))
+            {
+                throw new ArgumentException("Name must not collide with other types.", nameof(name));
+            }
+            
+            if (type == null)
+            {
+                throw new ArgumentNullException(nameof(type));
+            }
+
+            _fieldNames.Add(name);
+            
+            if (index == -1)
+            {
+                index = _positionalIndex++;    
+            }
+            
+            FieldGenerator.WithName(name).WithType(type).AsPositional(_typeBuilder, index);
+            return this;
+        }
+        
+        /// <summary>
+        /// Adds an optional argument to this command.
+        /// </summary>
+        /// <param name="name">The name of the argument.</param>
+        /// <param name="type">The underlying argument type.</param>
+        /// <param name="index">The index of the argument. If unspecified, it will auto increment.</param>
+        /// <returns>The generator.</returns>
+        /// <exception cref="ArgumentException">Throws on invalid or duplicate name.</exception>
+        /// <exception cref="ArgumentNullException">Throws on null type.</exception>
+        public CommandGenerator WithOptional(string name, Type type, int index = -1)
+        {
+            if (!GenerationRules.IsValidName(name))
+            {
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
+            }
+            
+            if (_fieldNames.Contains(name))
+            {
+                throw new ArgumentException("Name must not collide with other types.", nameof(name));
+            }
+            
+            if (type == null)
+            {
+                throw new ArgumentNullException(nameof(type));
+            }
+
+            _fieldNames.Add(name);
+            
+            if (index == -1)
+            {
+                index = _optionalIndex++;    
+            }
+            
+            FieldGenerator.WithName(name).WithType(type).AsOptional(_typeBuilder, index);
+            return this;
+        }
+        
+        /// <summary>
+        /// Adds a variadic argument array to this command.
+        /// </summary>
+        /// <param name="name">The name of the argument.</param>
+        /// <param name="type">The underlying generic argument type. This will be converted
+        /// to an array type automatically.</param>
+        /// <returns>The generator.</returns>
+        /// <exception cref="ArgumentException">Throws on invalid or duplicate name.</exception>
+        /// <exception cref="ArgumentNullException">Throws on null type.</exception>
+        public CommandGenerator WithVariadic(string name, Type type)
+        {
+            if (!GenerationRules.IsValidName(name))
+            {
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
+            }
+
+            if (_fieldNames.Contains(name))
+            {
+                throw new ArgumentException("Name must not collide with other types.", nameof(name));
+            }
+
+            if (type == null)
+            {
+                throw new ArgumentNullException(nameof(type));
+            }
+
+            _fieldNames.Add(name);
+            
+            FieldGenerator.WithName(name).WithType(type).AsVariadic(_typeBuilder);
+            return this;
+        }
+        
+        /// <summary>
+        /// Generates a command object.
+        /// </summary>
+        /// <returns>The generated command.</returns>
+        public ICommand Generate()
+        {
+            return (ICommand)Activator.CreateInstance(BuildType());
         }
         
         private Type BuildType()
         {
-            var typeBuilder = DynamicAssemblyCache.ModuleBuilder.DefineType($"DynamicTestClass_{DynamicAssemblyCache.NextId}", TypeAttributes.Public, _baseType);
+            var constructorInfo = typeof(CommandAttribute).GetConstructor(new [] { typeof(string), typeof(string), typeof(Type) });
 
-            foreach (var field in _fields)
+            if (constructorInfo == null)
             {
-                var fieldBuilder = typeBuilder.DefineField(field.Name, field.FieldType, FieldAttributes.Public);
-
-                // TODO: Apply attributes from field to fieldBuilder
+                throw new InvalidOperationException($"Cannot find constructor for {nameof(CommandAttribute)}");
             }
-
-            // TODO: Apply pre-execution validators to command type
-
-            var name = _name ?? $"test_{DynamicAssemblyCache.NextId}";
-            var cmdAttribute = _parentType == null ? new CommandAttribute(name, "") : new CommandAttribute(name, "", _parentType);
-            var constructorInfo = typeof(CommandAttribute).GetConstructors().First();
             
-            typeBuilder.SetCustomAttribute(new CustomAttributeBuilder(constructorInfo, new object[] {cmdAttribute.Name, cmdAttribute.Description, cmdAttribute.ParentType}));
-
-            // Generate a default execution method in IL so the class compiles
-            GenerateExecutionStub(typeBuilder);
+            _typeBuilder.SetCustomAttribute(new CustomAttributeBuilder(constructorInfo, new object[] {_name, "Description.", _parentCommandType}));
             
-            return typeBuilder.CreateType();
+            GenerateConstructorStub();
+            GenerateExecutionStub();
+            
+            return _typeBuilder.CreateType();
         }
 
-        private void GenerateExecutionStub(TypeBuilder typeBuilder)
+        private void GenerateConstructorStub()
         {
-            const string functionName = nameof(ICommand.ExecuteAsync);
+            var constructor = _typeBuilder.DefineConstructor(
+                MethodAttributes.Public,
+                CallingConventions.Standard,
+                Type.EmptyTypes);
 
-            var methodToOverride = _baseType.GetMethod(functionName);
-            
-            if (methodToOverride == null)
-            {
-                throw new InvalidOperationException($"Cannot build command with execution method name {functionName}");
-            }
-            
-            // Create a method override for execution method
-            var methodBuilder = typeBuilder.DefineMethod
-            (
-                methodToOverride.Name,
-                MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.HideBySig,
-                methodToOverride.ReturnType,
-                new [] { typeof(CommandContext) }
+            var il = constructor.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
+            il.Emit(OpCodes.Ret);
+        }
+        
+        private void GenerateExecutionStub()
+        {
+            var interfaceMethod = typeof(ICommand).GetMethod(nameof(ICommand.ExecuteAsync))!;
+    
+            var methodBuilder = _typeBuilder.DefineMethod(
+                interfaceMethod.Name,
+                MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.HideBySig,
+                interfaceMethod.ReturnType,
+                interfaceMethod.GetParameters().Select(p => p.ParameterType).ToArray()
             );
 
-            // Generate IL for the method (return Task.FromResult(default(CommandStatus)))
+            var fromResultMethod = typeof(Task)
+                .GetMethod(nameof(Task.FromResult))!
+                .MakeGenericMethod(typeof(CommandStatus));
+
             var il = methodBuilder.GetILGenerator();
-
-            // Prepare to call Task.FromResult(CommandStatus)
-            var commandOutputType = typeof(CommandStatus);
-            var fromResultMethod = typeof(Task).GetMethod(nameof(Task.FromResult))!.MakeGenericMethod(commandOutputType);
-
-            // Load default(CommandStatus) onto stack
-            var local = il.DeclareLocal(commandOutputType);
-            il.Emit(OpCodes.Ldloca_S, local);
-            
-            // initialize default value
-            il.Emit(OpCodes.Initobj, commandOutputType);  
-
-            // Load the local (default CommandStatus)
-            il.Emit(OpCodes.Ldloc_0);
-
-            // Call Task.FromResult(default(CommandStatus))
+            il.Emit(OpCodes.Ldc_I4_0);
             il.Emit(OpCodes.Call, fromResultMethod);
-
-            // Return the Task<CommandOutput>
             il.Emit(OpCodes.Ret);
 
-            // Mark this method as override of the abstract base method
-            typeBuilder.DefineMethodOverride(methodBuilder, methodToOverride);
-        }
-
-        /// <summary>
-        /// Defaults to unique name, simple command base, not a subcommand, no fields or prevalidators.
-        /// </summary>
-        /// <returns>The command.</returns>
-        public ICommand Generate()
-        {
-            return (ICommand)Activator.CreateInstance(BuildType());
+            _typeBuilder.DefineMethodOverride(methodBuilder, interfaceMethod);
         }
     }
 }

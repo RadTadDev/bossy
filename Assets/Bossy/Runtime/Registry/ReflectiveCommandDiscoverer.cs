@@ -8,16 +8,11 @@ using Bossy.Utils;
 namespace Bossy.Registry
 {
     /// <summary>
-    /// Discovers all commands in the code base and returns a list of their types.
+    /// Uses reflection to discover all command types.
     /// </summary>
-    public static class CommandDiscoverer
+    public class ReflectiveCommandDiscoverer : ICommandDiscoverer
     {
-        /// <summary>
-        /// Reflectively discovers all commands in the codebase.
-        /// </summary>
-        /// <param name="assemblies">All assemblies to load commands from.</param>
-        /// <returns>A list of all discovered command types.</returns>
-        public static IReadOnlyList<Type> GetAllCommandTypes(params Assembly[] assemblies)
+        public IReadOnlyList<Type> GetAllCommandTypes(params Assembly[] assemblies)
         {
             return assemblies
                 .SelectMany(assembly =>

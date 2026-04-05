@@ -1,9 +1,8 @@
-using UnityEngine;
 using UnityEngine.TestTools;
 using NUnit.Framework;
 using System.Collections;
 
-namespace Radtad2.Bossy.Tests 
+namespace Bossy.Tests 
 {
 	
 	class RuntimeExampleTest 
