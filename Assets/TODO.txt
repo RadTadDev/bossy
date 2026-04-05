@@ -1,0 +1,7 @@
+Roslyn Analyzers
+- Ensure positional indexes are unique and ordered
+- Ensure optional indexes are unique and ordered
+- Ensure command parent type is also a command
+- Ensure variadic attributes are only on array types
+- Ensure only one variadic per command class
+- Ensure only one argument attribute per field

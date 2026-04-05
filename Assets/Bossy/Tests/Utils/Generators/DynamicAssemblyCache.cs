@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
@@ -11,17 +12,12 @@ namespace Bossy.Tests.Utils
     /// </summary>
     public class DynamicAssemblyCache : UnityEngine.MonoBehaviour
     {
+        private static HashSet<string> _definedTypes = new();
+        
+        private static long NextId => (uint)Interlocked.Increment(ref _id);
         private static long _id;
         
-        /// <summary>
-        /// Gets a globally unique Id.
-        /// </summary>
-        public static long NextId => (uint)Interlocked.Increment(ref _id);
-
-        /// <summary>
-        /// The dynamic module builder. Use this for adding types to the dynamic assembly.
-        /// </summary>
-        public static ModuleBuilder ModuleBuilder { get; }
+        private static ModuleBuilder _moduleBuilder;
 
         static DynamicAssemblyCache()
         {
@@ -32,12 +28,39 @@ namespace Bossy.Tests.Utils
                 var builder = AssemblyBuilder.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
 
                 // Create a dynamic module in Dynamic Assembly.
-                ModuleBuilder = builder.DefineDynamicModule("TestDynamicModule");
+                _moduleBuilder = builder.DefineDynamicModule("TestDynamicModule");
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Failed to initialize {BossyData.Name} dynamic assembly for testing.", e);
             }
+        }
+
+        /// <summary>
+        /// Gets a type builder for a custom type.
+        /// </summary>
+        /// <param name="typeName">The name of the type. If null it will default to a unique name.</param>
+        /// <param name="parentType">The type this type inherits from, if unspecified it will be object.</param>
+        /// <param name="interfaces">Interfaces that this type implements.</param>
+        /// <param name="throwOnDefined">Whether to throw an exception if the typeName is already defined.
+        /// If false, the name will be made unique and succeed.</param>
+        /// <returns>The builder.</returns>
+        public static TypeBuilder CreateType(string typeName = null, Type parentType = null, Type[] interfaces = null, bool throwOnDefined = false)
+        {
+            if (string.IsNullOrEmpty(typeName))
+                typeName = $"TestType_{NextId}";
+            else if (_definedTypes.Contains(typeName))
+            {
+                if (throwOnDefined) throw new ArgumentException($"{typeName} was already defined in the dynamic assembly");
+                typeName += $"_{NextId}";
+            }
+
+            return _moduleBuilder.DefineType(
+                typeName,
+                TypeAttributes.Public,
+                parentType ?? typeof(object),
+                interfaces ?? Type.EmptyTypes
+            );
         }
     }
 }

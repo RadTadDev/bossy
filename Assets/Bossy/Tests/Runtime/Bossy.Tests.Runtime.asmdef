@@ -1,5 +1,5 @@
 {
-    "name": "Bossy.Tests",
+    "name": "Bossy.Tests.Runtime",
     "references": [
         "Bossy"
     ],
