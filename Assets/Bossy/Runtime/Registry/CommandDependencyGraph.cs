@@ -17,9 +17,10 @@ namespace Bossy.Registry
         /// </summary>
         /// <param name="commandTypes">A list of all command types to graph.</param>
         /// <returns>The mapping.</returns>
+        /// <exception cref="ArgumentException">Throws on command type.</exception>
         public static Dictionary<Type, CommandDependencyNode> BuildGraph(IReadOnlyList<Type> commandTypes)
         {
-            var invalid = commandTypes.FirstOrDefault(t => !CommandDiscoverer.IsCommandType(t));
+            var invalid = commandTypes.FirstOrDefault(t => !ReflectiveCommandDiscoverer.IsCommandType(t));
 
             if (invalid != null)
             {

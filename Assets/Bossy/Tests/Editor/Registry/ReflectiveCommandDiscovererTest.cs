@@ -1,9 +1,8 @@
-using System.Reflection;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Editor 
+namespace Bossy.Tests.Registry
 {
-	internal class CommandDiscovererTest 
+	internal class ReflectiveCommandDiscovererTest 
 	{
 		[Test]
 		public void Test_GetAllCommandTypes_Nominal() 

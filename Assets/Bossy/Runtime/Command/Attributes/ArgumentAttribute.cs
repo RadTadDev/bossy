@@ -5,7 +5,7 @@ namespace Bossy.Command
     /// <summary>
     /// Base class for argument attributes used for discovering the type of an argument.
     /// </summary>
-    public class ArgumentAttribute : Attribute
+    public abstract class ArgumentAttribute : Attribute
     {
         /// <summary>
         /// The name of this argument.
@@ -22,7 +22,7 @@ namespace Bossy.Command
         /// </summary>
         /// <param name="name">The name of this argument, pass in null to use the field name.</param>
         /// <param name="description">The description of this argument.</param>
-        public ArgumentAttribute(string name, string description)
+        protected ArgumentAttribute(string name, string description)
         {
             Name = name;
             Description = description;
