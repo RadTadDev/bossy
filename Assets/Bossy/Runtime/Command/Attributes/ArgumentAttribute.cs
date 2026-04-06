@@ -10,7 +10,7 @@ namespace Bossy.Command
         /// <summary>
         /// The name of this argument.
         /// </summary>
-        public readonly string Name;
+        public readonly string OverrideName;
         
         /// <summary>
         /// The description of this argument.
@@ -20,11 +20,11 @@ namespace Bossy.Command
         /// <summary>
         /// Declares a new argument.
         /// </summary>
-        /// <param name="name">The name of this argument, pass in null to use the field name.</param>
+        /// <param name="overrideName">The name of this argument, pass in null to use the field name.</param>
         /// <param name="description">The description of this argument.</param>
-        protected ArgumentAttribute(string name, string description)
+        protected ArgumentAttribute(string overrideName, string description)
         {
-            Name = name;
+            OverrideName = overrideName;
             Description = description;
         }
     }

@@ -5,7 +5,7 @@ using System.Collections;
 namespace Bossy.Tests 
 {
 	
-	class RuntimeExampleTest 
+	internal class RuntimeExampleTest 
 	{
 
 		[Test]

@@ -12,8 +12,8 @@ namespace Bossy.Command
         /// Declares variadic arguments.
         /// </summary>
         /// <param name="description">The description.</param>
-        /// <param name="name">The override name - defaults to field name if null.</param>
+        /// <param name="overrideName">The override name - defaults to field name if null.</param>
         /// <remarks>This variadic attribute may only be applied to array types.</remarks>
-        public VariadicAttribute(string description, string name = null) : base(name, description) { }
+        public VariadicAttribute(string description, string overrideName = null) : base(overrideName, description) { }
     }
 }

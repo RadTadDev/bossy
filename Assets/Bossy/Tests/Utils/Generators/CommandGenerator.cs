@@ -63,9 +63,9 @@ namespace Bossy.Tests.Utils
         /// <param name="fullname">The long --name of the switch.</param>
         /// <param name="type">The underlying argument type.</param>
         /// <param name="overrideShortName">Optional override shortname, if not provided the
-        /// first non underscore character of the fullname is used.</param>
+        /// first letter character of the fullname is used.</param>
         /// <returns>The generator.</returns>
-        /// <exception cref="ArgumentException">Throws on invalid or duplicate name.</exception>
+        /// <exception cref="ArgumentException">Throws on invalid or duplicate name or invalid shortname.</exception>
         /// <exception cref="ArgumentNullException">Throws on null type.</exception>
         public CommandGenerator WithSwitch(string fullname, Type type, char overrideShortName = '\0')
         {
@@ -85,9 +85,23 @@ namespace Bossy.Tests.Utils
             }
             
             _fieldNames.Add(fullname);
+
+            char shortName;
+            if (overrideShortName == '\0')
+            {
+                shortName = fullname.FirstOrDefault(char.IsLetter);
+                
+                if (shortName is '\0')
+                {
+                    throw new ArgumentException($"Cannot produce automatic short name from variable with not letters: {fullname}", fullname);
+                }
+            }
+            else
+            {
+                shortName = overrideShortName;
+            }
             
-            var shortName = overrideShortName == '\0' ? fullname[0] : overrideShortName;
-            FieldGenerator.WithName(fullname).WithType(type).AsSwitch(_typeBuilder, shortName);
+            ArgumentGenerator.WithName(fullname).WithType(type).AsSwitch(_typeBuilder, shortName);
             return this;
         }
 
@@ -124,7 +138,7 @@ namespace Bossy.Tests.Utils
                 index = _positionalIndex++;    
             }
             
-            FieldGenerator.WithName(name).WithType(type).AsPositional(_typeBuilder, index);
+            ArgumentGenerator.WithName(name).WithType(type).AsPositional(_typeBuilder, index);
             return this;
         }
         
@@ -161,7 +175,7 @@ namespace Bossy.Tests.Utils
                 index = _optionalIndex++;    
             }
             
-            FieldGenerator.WithName(name).WithType(type).AsOptional(_typeBuilder, index);
+            ArgumentGenerator.WithName(name).WithType(type).AsOptional(_typeBuilder, index);
             return this;
         }
         
@@ -193,7 +207,7 @@ namespace Bossy.Tests.Utils
 
             _fieldNames.Add(name);
             
-            FieldGenerator.WithName(name).WithType(type).AsVariadic(_typeBuilder);
+            ArgumentGenerator.WithName(name).WithType(type).AsVariadic(_typeBuilder);
             return this;
         }
         

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CoverageReport scope="Summary">
+  <Summary>
+    <Generatedon>4/5/2026 - 7:05:49 PM</Generatedon>
+    <Parser>MultiReportParser (2x OpenCoverParser)</Parser>
+    <Assemblies>1</Assemblies>
+    <Classes>35</Classes>
+    <Files>21</Files>
+    <Coveredlines>38</Coveredlines>
+    <Uncoveredlines>258</Uncoveredlines>
+    <Coverablelines>296</Coverablelines>
+    <Totallines>1024</Totallines>
+    <Linecoverage>12.8</Linecoverage>
+    <Coveredbranches>0</Coveredbranches>
+    <Totalbranches>0</Totalbranches>
+    <Coveredmethods>9</Coveredmethods>
+    <Totalmethods>60</Totalmethods>
+    <Methodcoverage>15</Methodcoverage>
+  </Summary>
+  <Coverage>
+    <Assembly name="Bossy" classes="35" coverage="12.8" coveredlines="38" coverablelines="296" totallines="4426" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="9" totalmethods="60" methodcoverage="15">
+      <Class name="Bossy.Command.ArgumentAttribute" coverage="100" coveredlines="5" coverablelines="5" totallines="31" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="1" totalmethods="1" methodcoverage="100" />
+      <Class name="Bossy.Command.ArgumentSchema" coverage="0" coveredlines="0" coverablelines="8" totallines="53" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Command.CommandAttribute" coverage="100" coveredlines="6" coverablelines="6" totallines="28" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="1" totalmethods="1" methodcoverage="100" />
+      <Class name="Bossy.Command.CommandContext" coverage="0" coveredlines="0" coverablelines="18" totallines="43" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="5" methodcoverage="0" />
+      <Class name="Bossy.Command.CommandSchema" coverage="0" coveredlines="0" coverablelines="9" totallines="60" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Command.OptionalAttribute" coverage="100" coveredlines="4" coverablelines="4" totallines="28" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="1" totalmethods="1" methodcoverage="100" />
+      <Class name="Bossy.Command.PositionalAttribute" coverage="100" coveredlines="4" coverablelines="4" totallines="27" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="1" totalmethods="1" methodcoverage="100" />
+      <Class name="Bossy.Command.Schema.ArgumentDuplicateDescriptionWarning" coverage="0" coveredlines="0" coverablelines="6" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.ArgumentDuplicateNameError" coverage="0" coveredlines="0" coverablelines="5" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.ArgumentMissingAttributeError" coverage="0" coveredlines="0" coverablelines="5" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.ArgumentMissingDescriptionWarning" coverage="0" coveredlines="0" coverablelines="5" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.ArgumentMissingNameError" coverage="0" coveredlines="0" coverablelines="1" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.BadIndexOrderError" coverage="0" coveredlines="0" coverablelines="5" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.DuplicateIndexError" coverage="0" coveredlines="0" coverablelines="7" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.DuplicateSwitchNameError" coverage="0" coveredlines="0" coverablelines="5" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.DuplicateVariadicError" coverage="0" coveredlines="0" coverablelines="5" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.InvalidShortSwitchNameError" coverage="0" coveredlines="0" coverablelines="6" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.MissingDescriptionWarning" coverage="0" coveredlines="0" coverablelines="1" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.MissingNameError" coverage="0" coveredlines="0" coverablelines="1" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.NegativeIndexError" coverage="0" coveredlines="0" coverablelines="7" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.NotACommandError" coverage="0" coveredlines="0" coverablelines="5" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.ValidationResult" coverage="0" coveredlines="0" coverablelines="7" totallines="41" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="3" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.Validator" coverage="0" coveredlines="0" coverablelines="97" totallines="156" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="4" methodcoverage="0" />
+      <Class name="Bossy.Command.Schema.VariadicTypeNotArrayError" coverage="0" coveredlines="0" coverablelines="5" totallines="243" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="2" methodcoverage="0" />
+      <Class name="Bossy.Command.SimpleCommand" coverage="0" coveredlines="0" coverablelines="3" totallines="24" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Command.SwitchAttribute" coverage="100" coveredlines="4" coverablelines="4" totallines="27" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="1" totalmethods="1" methodcoverage="100" />
+      <Class name="Bossy.Command.VariadicAttribute" coverage="100" coveredlines="1" coverablelines="1" totallines="19" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="1" totalmethods="1" methodcoverage="100" />
+      <Class name="Bossy.Registry.ArgumentSchemaBuilder" coverage="0" coveredlines="0" coverablelines="3" totallines="15" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Registry.CommandDependencyGraph" coverage="0" coveredlines="0" coverablelines="26" totallines="61" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Registry.CommandDependencyNode" coverage="0" coveredlines="0" coverablelines="1" totallines="21" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Registry.CommandRegistry" coverage="0" coveredlines="0" coverablelines="3" totallines="13" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Registry.CommandSchemaBuilder" coverage="0" coveredlines="0" coverablelines="3" totallines="15" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="1" methodcoverage="0" />
+      <Class name="Bossy.Registry.ICommandDiscoverer" coverage="100" coveredlines="3" coverablelines="3" totallines="31" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="1" totalmethods="1" methodcoverage="100" />
+      <Class name="Bossy.Registry.ReflectiveCommandDiscoverer" coverage="61.1" coveredlines="11" coverablelines="18" totallines="51" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="2" totalmethods="2" methodcoverage="100" />
+      <Class name="Bossy.Utils.Log" coverage="0" coveredlines="0" coverablelines="4" totallines="37" branchcoverage="" coveredbranches="0" totalbranches="0" coveredmethods="0" totalmethods="4" methodcoverage="0" />
+    </Assembly>
+  </Coverage>
+</CoverageReport>

@@ -1,8 +1,9 @@
 {
     "name": "Bossy.Tests.Editor",
     "references": [
+        "Bossy",
         "Bossy.Editor",
-        "Bossy"
+        "Bossy.Tests.Utils"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"

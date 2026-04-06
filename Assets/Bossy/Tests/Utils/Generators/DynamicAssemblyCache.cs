@@ -12,13 +12,16 @@ namespace Bossy.Tests.Utils
     /// </summary>
     public class DynamicAssemblyCache : UnityEngine.MonoBehaviour
     {
-        private static HashSet<string> _definedTypes = new();
+        /// <summary>
+        /// The dynamic assembly.
+        /// </summary>
+        public static Assembly Assembly => _moduleBuilder.Assembly;
         
-        private static long NextId => (uint)Interlocked.Increment(ref _id);
         private static long _id;
+        private static long NextId => (uint)Interlocked.Increment(ref _id);
+        private static readonly HashSet<string> _definedTypes = new();
+        private static readonly ModuleBuilder _moduleBuilder;
         
-        private static ModuleBuilder _moduleBuilder;
-
         static DynamicAssemblyCache()
         {
             try
@@ -48,13 +51,18 @@ namespace Bossy.Tests.Utils
         public static TypeBuilder CreateType(string typeName = null, Type parentType = null, Type[] interfaces = null, bool throwOnDefined = false)
         {
             if (string.IsNullOrEmpty(typeName))
+            {
                 typeName = $"TestType_{NextId}";
+            }
             else if (_definedTypes.Contains(typeName))
             {
                 if (throwOnDefined) throw new ArgumentException($"{typeName} was already defined in the dynamic assembly");
+                
                 typeName += $"_{NextId}";
             }
 
+            _definedTypes.Add(typeName);
+            
             return _moduleBuilder.DefineType(
                 typeName,
                 TypeAttributes.Public,

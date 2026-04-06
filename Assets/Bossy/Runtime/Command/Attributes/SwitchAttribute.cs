@@ -18,8 +18,8 @@ namespace Bossy.Command
         /// </summary>
         /// <param name="shortName">The single letter name.</param>
         /// <param name="description">The description.</param>
-        /// <param name="fullName">The full name - defaults to field name if null.</param>
-        public SwitchAttribute(char shortName, string description, string fullName = null) : base(fullName, description)
+        /// <param name="overrideName">The override name - defaults to field name if null.</param>
+        public SwitchAttribute(char shortName, string description, string overrideName = null) : base(overrideName, description)
         {
             ShortName = shortName;
         }
