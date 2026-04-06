@@ -43,6 +43,9 @@ namespace Bossy.Registry
         public bool ResolveCommand(string root, IEnumerable<string> subcommands, out ICommand command)
         {
             // TODO: Use Activator to return an instance of the command type in a matching schema.
+
+            command = null;
+            return false;
         }
     }
 }
