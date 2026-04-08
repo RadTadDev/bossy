@@ -1,7 +1,8 @@
 {
     "name": "Bossy.Tests.Runtime",
     "references": [
-        "Bossy"
+        "Bossy",
+        "Bossy.Tests.Utils"
     ],
     "optionalUnityReferences": [
         "TestAssemblies"

@@ -1,0 +1,54 @@
+using System.Collections.Generic;
+using System.Reflection;
+using Bossy.Command;
+
+namespace Bossy.Schema
+{
+    /// <summary>
+    /// 
+    /// </summary>
+    internal class ArgumentSchema
+    {
+        /// <summary>
+        /// The name of this argument.
+        /// </summary>
+        public readonly string Name;
+
+        /// <summary>
+        /// The description of this argument.
+        /// </summary>
+        public readonly string Description;
+        
+        /// <summary>
+        /// The reflective field information for this argument.
+        /// </summary>
+        public readonly FieldInfo FieldInfo;
+        
+        /// <summary>
+        /// The argument attribute associated with this argument.
+        /// </summary>
+        public readonly ArgumentAttribute ArgumentAttribute;
+        
+        /// <summary>
+        /// All validator attributes on this argument.
+        /// </summary>
+        public readonly IReadOnlyList<ArgumentValidationAttribute> ValidationAttributes;
+        
+        /// <summary>
+        /// Builds a new Argument schema.
+        /// </summary>
+        /// <param name="name">The name of this argument.</param>
+        /// <param name="description">The description of this argument.</param>
+        /// <param name="fieldInfo">The reflective field information for this argument.</param>
+        /// <param name="argumentAttribute">The argument attribute associated with this argument.</param>
+        /// <param name="validationAttributes">All validator attributes on this argument.</param>
+        public ArgumentSchema(string name, string description, FieldInfo fieldInfo, ArgumentAttribute argumentAttribute, IReadOnlyList<ArgumentValidationAttribute> validationAttributes)
+        {
+            Name = name;
+            Description = description;
+            FieldInfo = fieldInfo;
+            ArgumentAttribute = argumentAttribute;
+            ValidationAttributes = validationAttributes;
+        }
+    }
+}

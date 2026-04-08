@@ -2,10 +2,12 @@ using System;
 using System.Reflection;
 using Bossy.Command;
 using NUnit.Framework;
-using UnityEditor.Compilation;
 
 namespace Bossy.Tests.Utils.Tests
 {
+    /// <summary>
+    /// Tests the <see cref="CommandGenerator"/> class.
+    /// </summary>
     public class CommandGeneratorTest
     {
         [Test]
@@ -47,6 +49,10 @@ namespace Bossy.Tests.Utils.Tests
             var type = typeof(float);
             Assert.Throws(typeof(ArgumentException), () => CommandGenerator.WithName("test").WithSwitch(name, type));
 
+            name = "_3";
+            Assert.Throws(typeof(ArgumentException), () => CommandGenerator.WithName("test").WithSwitch(name, type)
+                .WithSwitch(name, typeof(string)));
+            
             name = "duplicate";
             type = null;
             Assert.Throws(typeof(ArgumentNullException), () => CommandGenerator.WithName("test").WithSwitch(name, type));
@@ -57,7 +63,7 @@ namespace Bossy.Tests.Utils.Tests
 
             Assert.Throws(typeof(ArgumentException), () => CommandGenerator.WithName("test").WithSwitch(name, type)
                 .WithSwitch(name, typeof(string)));
-
+            
             ICommand command = null;
             Assert.DoesNotThrow(() => command = CommandGenerator.WithName("test").WithSwitch(name, type).Generate());
 
@@ -69,7 +75,7 @@ namespace Bossy.Tests.Utils.Tests
             var fieldAttribute = fieldInfo.GetCustomAttribute<SwitchAttribute>();
                 
             Assert.That(fieldAttribute, Is.Not.Null);
-            Assert.That(fieldAttribute.Name, Is.EqualTo(name));
+            Assert.That(fieldAttribute.OverrideName, Is.EqualTo(name));
             Assert.That(fieldAttribute.ShortName, Is.EqualTo(name[0]));
 
             var overrideShort = 'p';
@@ -79,7 +85,7 @@ namespace Bossy.Tests.Utils.Tests
             
             fieldAttribute = fieldInfo.GetCustomAttribute<SwitchAttribute>();
             Assert.That(fieldAttribute, Is.Not.Null);
-            Assert.That(fieldAttribute.Name, Is.EqualTo(name));
+            Assert.That(fieldAttribute.OverrideName, Is.EqualTo(name));
             Assert.That(fieldAttribute.ShortName, Is.EqualTo(overrideShort));
         }
         
@@ -128,7 +134,7 @@ namespace Bossy.Tests.Utils.Tests
                 fieldAttribute = fieldInfo.GetCustomAttribute<PositionalAttribute>();
                 
                 Assert.That(fieldAttribute, Is.Not.Null);
-                Assert.That(fieldAttribute.Name, Is.EqualTo(name + i));
+                Assert.That(fieldAttribute.OverrideName, Is.EqualTo(name + i));
                 Assert.That(fieldAttribute.Index, Is.EqualTo(i - 1));
             }
             
@@ -147,7 +153,7 @@ namespace Bossy.Tests.Utils.Tests
             fieldAttribute = fieldInfo.GetCustomAttribute<PositionalAttribute>();
                 
             Assert.That(fieldAttribute, Is.Not.Null);
-            Assert.That(fieldAttribute.Name, Is.EqualTo(name));
+            Assert.That(fieldAttribute.OverrideName, Is.EqualTo(name));
             Assert.That(fieldAttribute.Index, Is.EqualTo(0));
             
             
@@ -160,7 +166,7 @@ namespace Bossy.Tests.Utils.Tests
             fieldAttribute = fieldInfo.GetCustomAttribute<PositionalAttribute>();
                 
             Assert.That(fieldAttribute, Is.Not.Null);
-            Assert.That(fieldAttribute.Name, Is.EqualTo(duplicate));
+            Assert.That(fieldAttribute.OverrideName, Is.EqualTo(duplicate));
             Assert.That(fieldAttribute.Index, Is.EqualTo(0));
         }
         
@@ -208,7 +214,7 @@ namespace Bossy.Tests.Utils.Tests
                 fieldAttribute = fieldInfo.GetCustomAttribute<OptionalAttribute>();
                 
                 Assert.That(fieldAttribute, Is.Not.Null);
-                Assert.That(fieldAttribute.Name, Is.EqualTo(name + i));
+                Assert.That(fieldAttribute.OverrideName, Is.EqualTo(name + i));
                 Assert.That(fieldAttribute.Index, Is.EqualTo(i - 1));
             }
             
@@ -227,7 +233,7 @@ namespace Bossy.Tests.Utils.Tests
             fieldAttribute = fieldInfo.GetCustomAttribute<OptionalAttribute>();
                 
             Assert.That(fieldAttribute, Is.Not.Null);
-            Assert.That(fieldAttribute.Name, Is.EqualTo(name));
+            Assert.That(fieldAttribute.OverrideName, Is.EqualTo(name));
             Assert.That(fieldAttribute.Index, Is.EqualTo(0));
             
             
@@ -240,7 +246,7 @@ namespace Bossy.Tests.Utils.Tests
             fieldAttribute = fieldInfo.GetCustomAttribute<OptionalAttribute>();
                 
             Assert.That(fieldAttribute, Is.Not.Null);
-            Assert.That(fieldAttribute.Name, Is.EqualTo(duplicate));
+            Assert.That(fieldAttribute.OverrideName, Is.EqualTo(duplicate));
             Assert.That(fieldAttribute.Index, Is.EqualTo(0));
         }
         
@@ -274,7 +280,7 @@ namespace Bossy.Tests.Utils.Tests
             var fieldAttribute = fieldInfo.GetCustomAttribute<VariadicAttribute>();
             
             Assert.That(fieldAttribute, Is.Not.Null);
-            Assert.That(fieldAttribute.Name, Is.EqualTo(name));
+            Assert.That(fieldAttribute.OverrideName, Is.EqualTo(name));
             
             // In type generation we are free to illegally add multiple variadic containers
             var duplicate = name + "_";
@@ -292,7 +298,7 @@ namespace Bossy.Tests.Utils.Tests
             fieldAttribute = fieldInfo.GetCustomAttribute<VariadicAttribute>();
             
             Assert.That(fieldAttribute, Is.Not.Null);
-            Assert.That(fieldAttribute.Name, Is.EqualTo(name));
+            Assert.That(fieldAttribute.OverrideName, Is.EqualTo(name));
             
             
             
@@ -304,7 +310,7 @@ namespace Bossy.Tests.Utils.Tests
             fieldAttribute = fieldInfo.GetCustomAttribute<VariadicAttribute>();
             
             Assert.That(fieldAttribute, Is.Not.Null);
-            Assert.That(fieldAttribute.Name, Is.EqualTo(duplicate));
+            Assert.That(fieldAttribute.OverrideName, Is.EqualTo(duplicate));
             
             
             // We are also free to illegally pass in an array type - it is automatically upgraded to 2D
@@ -321,7 +327,7 @@ namespace Bossy.Tests.Utils.Tests
             fieldAttribute = fieldInfo.GetCustomAttribute<VariadicAttribute>();
             
             Assert.That(fieldAttribute, Is.Not.Null);
-            Assert.That(fieldAttribute.Name, Is.EqualTo(name));
+            Assert.That(fieldAttribute.OverrideName, Is.EqualTo(name));
         }
 
         [Test]
@@ -376,7 +382,7 @@ namespace Bossy.Tests.Utils.Tests
             var optionalAttribute = fieldInfo.GetCustomAttribute<OptionalAttribute>();
             
             Assert.That(optionalAttribute, Is.Not.Null);
-            Assert.That(optionalAttribute.Name, Is.EqualTo("opt"));
+            Assert.That(optionalAttribute.OverrideName, Is.EqualTo("opt"));
             Assert.That(optionalAttribute.Index, Is.EqualTo(0));
 
 
@@ -388,7 +394,7 @@ namespace Bossy.Tests.Utils.Tests
             var variadicAttribute = fieldInfo.GetCustomAttribute<VariadicAttribute>();
             
             Assert.That(variadicAttribute, Is.Not.Null);
-            Assert.That(variadicAttribute.Name, Is.EqualTo("var"));
+            Assert.That(variadicAttribute.OverrideName, Is.EqualTo("var"));
             
             // Test grandchild
             
@@ -406,7 +412,7 @@ namespace Bossy.Tests.Utils.Tests
             var switchAttribute = fieldInfo.GetCustomAttribute<SwitchAttribute>();
             
             Assert.That(switchAttribute, Is.Not.Null);
-            Assert.That(switchAttribute.Name, Is.EqualTo("swi"));
+            Assert.That(switchAttribute.OverrideName, Is.EqualTo("swi"));
             Assert.That(switchAttribute.ShortName, Is.EqualTo('s'));
             
             
@@ -418,7 +424,7 @@ namespace Bossy.Tests.Utils.Tests
             switchAttribute = fieldInfo.GetCustomAttribute<SwitchAttribute>();
             
             Assert.That(switchAttribute, Is.Not.Null);
-            Assert.That(switchAttribute.Name, Is.EqualTo("swi2"));
+            Assert.That(switchAttribute.OverrideName, Is.EqualTo("swi2"));
             Assert.That(switchAttribute.ShortName, Is.EqualTo('l'));
             
             
@@ -430,7 +436,7 @@ namespace Bossy.Tests.Utils.Tests
             var positionalAttribute = fieldInfo.GetCustomAttribute<PositionalAttribute>();
             
             Assert.That(positionalAttribute, Is.Not.Null);
-            Assert.That(positionalAttribute.Name, Is.EqualTo("pos"));
+            Assert.That(positionalAttribute.OverrideName, Is.EqualTo("pos"));
             Assert.That(positionalAttribute.Index, Is.EqualTo(0));
             
             
@@ -442,7 +448,7 @@ namespace Bossy.Tests.Utils.Tests
             optionalAttribute = fieldInfo.GetCustomAttribute<OptionalAttribute>();
             
             Assert.That(optionalAttribute, Is.Not.Null);
-            Assert.That(optionalAttribute.Name, Is.EqualTo("opt"));
+            Assert.That(optionalAttribute.OverrideName, Is.EqualTo("opt"));
             Assert.That(optionalAttribute.Index, Is.EqualTo(0));
 
 
@@ -454,7 +460,7 @@ namespace Bossy.Tests.Utils.Tests
             variadicAttribute = fieldInfo.GetCustomAttribute<VariadicAttribute>();
             
             Assert.That(variadicAttribute, Is.Not.Null);
-            Assert.That(variadicAttribute.Name, Is.EqualTo("var"));
+            Assert.That(variadicAttribute.OverrideName, Is.EqualTo("var"));
         }
     }
 }
