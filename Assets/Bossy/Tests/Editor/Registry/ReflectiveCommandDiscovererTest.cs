@@ -37,8 +37,7 @@ namespace Bossy.Tests.Registry
 		public void Test_GetAllCommandTypes_ExcludesNonCommandTypes()
 		{
 			// Generate a plain type with no CommandAttribute or ICommand
-			var typeBuilder = DynamicAssemblyCache.CreateType("plain_type");
-			typeBuilder.CreateType();
+			var type = DynamicAssemblyCache.CreateType(null, "plain_type");
 
 			var discoverer = new ReflectiveCommandDiscoverer(DynamicAssemblyCache.Assembly);
 			var all = discoverer.GetAllCommandTypes();
@@ -69,6 +68,31 @@ namespace Bossy.Tests.Registry
 			var all = discoverer.GetAllCommandTypes();
 
 			Assert.That(all, Is.Empty);
+		}
+		
+		[Test]
+		public void Test_GetAllCommandTypes_HandlesException()
+		{
+			var cmd = CommandGenerator.WithName("test").Generate().GetType();
+			
+			CommandGenerator.WithName("test_cmd").Generate();
+			
+            // Create incomplete type by not calling builder.CreateType
+			// var builder = DynamicAssemblyCache.CreateType();
+   //          
+			// ArgumentGenerator.WithName("Arg").WithType(typeof(bool)).AsPositional(builder, 0);
+   //          
+   //          builder.CreateType();
+			//
+            
+            
+            var discoverer = new ReflectiveCommandDiscoverer(DynamicAssemblyCache.Assembly);
+  
+            IReadOnlyList<Type> all = null;
+            Assert.DoesNotThrow(() => all = discoverer.GetAllCommandTypes());
+            Assert.That(new List<Type> { cmd }, Is.SubsetOf(all));
+            
+            // Complete it now so it doesn't royally screw everything else up
 		}
 	}
 }

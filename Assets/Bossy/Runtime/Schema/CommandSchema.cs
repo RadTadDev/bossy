@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Bossy.Command;
 
 namespace Bossy.Schema
 {
@@ -32,11 +33,17 @@ namespace Bossy.Schema
         /// The parent schema of this command, or null is there is not one.
         /// </summary>
         public CommandSchema ParentSchema { get; private set; }
-        
+
         /// <summary>
         /// All child schemas of this command.
         /// </summary>
-        public HashSet<CommandSchema> ChildSchemas { get; private set; }
+        public IReadOnlyList<CommandSchema> ChildSchemas => _children;
+        private readonly List<CommandSchema> _children = new(); 
+            
+        /// <summary>
+        /// True if this command has no parent command.
+        /// </summary>
+        public bool IsRoot => ParentSchema == null;
         
         /// <summary>
         /// Builds a new command schema.
@@ -47,20 +54,31 @@ namespace Bossy.Schema
         /// <param name="arguments">All arguments for this command.</param>
         public CommandSchema(string name, string description, Type commandType, HashSet<ArgumentSchema> arguments)
         {
+            if (arguments == null) arguments = new HashSet<ArgumentSchema>();
+            
             Name = name;
             Description = description;
             CommandType = commandType;
             Arguments = arguments;
         }
-
+        
+        /// <summary>
+        /// Instantiates this schema into a command object.
+        /// </summary>
+        /// <returns>The command.</returns>
+        public ICommand Instantiate() => (ICommand)Activator.CreateInstance(CommandType);
+        
         void ICommandSchemaWriter.SetParent(CommandSchema parent)
         {
             ParentSchema = parent;
         }
 
-        void ICommandSchemaWriter.SetChildren(HashSet<CommandSchema> children)
+        void ICommandSchemaWriter.AddChild(CommandSchema child)
         {
-            ChildSchemas = children;
+            if (!_children.Contains(child))
+            {
+                _children.Add(child);
+            }
         }
     }
 }

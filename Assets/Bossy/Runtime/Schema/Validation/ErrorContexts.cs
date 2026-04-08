@@ -85,7 +85,7 @@ namespace Bossy.Schema
             _commandType = commandType;
         }
     }
-    
+
     /// <summary>
     /// Argument missing name error.
     /// </summary>
@@ -195,15 +195,19 @@ namespace Bossy.Schema
     {
         private readonly string _argName;
         private readonly int _index;
-        private readonly string _positional;
         
-        public override string Message => $"{_positional} arg \"{_argName}\" contains negative index {_index}";
+        private readonly string _positionalText;
+        
+        public bool IsPositional { get; }
+        
+        public override string Message => $"{_positionalText} arg \"{_argName}\" contains negative index {_index}";
 
         public NegativeIndexError(string argName, int index, bool positional)
         {
             _argName = argName;
             _index = index;
-            _positional = positional ? "Positional" : "Optional";
+            IsPositional = positional;
+            _positionalText = positional ? "Positional" : "Optional";
         }
     }
     
@@ -214,15 +218,18 @@ namespace Bossy.Schema
     {
         private readonly string _argName;
         private readonly int _index;
-        private readonly string _positional;
+        private readonly string _positionalText;
         
-        public override string Message => $"{_positional} arg \"{_argName}\" contains duplicate index {_index}";
+        public bool IsPositional { get; }
+
+        public override string Message => $"{_positionalText} arg \"{_argName}\" contains duplicate index {_index}";
 
         public DuplicateIndexError(string argName, int index, bool positional)
         {
             _argName = argName;
             _index = index;
-            _positional = positional ? "Positional" : "Optional";
+            IsPositional = positional;
+            _positionalText = positional ? "Positional" : "Optional";
         }
     }
     
@@ -261,14 +268,17 @@ namespace Bossy.Schema
     /// </summary>
     internal class BadIndexOrderError : ErrorContext
     {
-        private readonly string _positional;
+        private readonly string _positionalText;
+
+        public bool IsPositional { get; }
         
-        public override string Message => $"{_positional} indices were badly ordered. " +
+        public override string Message => $"{_positionalText} indices were badly ordered. " +
                                           "Indices should start from 0 and count up";
 
         public BadIndexOrderError(bool positional)
         {
-            _positional = positional ? "Positional" : "Optional";
+            IsPositional = positional;
+            _positionalText = positional ? "Positional" : "Optional";
         }
     }
     /// <summary>

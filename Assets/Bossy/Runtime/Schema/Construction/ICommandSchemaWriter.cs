@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Bossy.Schema
 {
     /// <summary>
@@ -12,11 +10,11 @@ namespace Bossy.Schema
         /// </summary>
         /// <param name="parent">The parent schema.</param>
         public void SetParent(CommandSchema parent);
-        
+
         /// <summary>
-        /// Sets the children of this schema.
+        /// Adds a child of this schema.
         /// </summary>
-        /// <param name="children">The children schemas.</param>
-        public void SetChildren(HashSet<CommandSchema> children);
+        /// <param name="child">The child to add.</param>
+        public void AddChild(CommandSchema child);
     }
 }

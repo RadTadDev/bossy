@@ -1,9 +1,5 @@
 using System;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Text.RegularExpressions;
 using Bossy.Command;
-using UnityEngine;
 
 namespace Bossy.Tests.Utils
 {
@@ -14,10 +10,10 @@ namespace Bossy.Tests.Utils
 
     internal interface IDeclareArgumentStep
     {
-        public void AsSwitch(TypeBuilder typeBuilder, char shortName);
-        public void AsPositional(TypeBuilder typeBuilder, int index);
-        public void AsOptional(TypeBuilder typeBuilder, int index);
-        public void AsVariadic(TypeBuilder typeBuilder);
+        public ArgumentFieldRecord AsSwitch(char shortName);
+        public ArgumentFieldRecord AsPositional(int index);
+        public ArgumentFieldRecord AsOptional(int index);
+        public ArgumentFieldRecord AsVariadic();
     }
     
     /// <summary>
@@ -65,11 +61,11 @@ namespace Bossy.Tests.Utils
         /// <summary>
         /// Declares this field as a switch argument.
         /// </summary>
-        /// <param name="typeBuilder">The builder used to define the type this field will be part of.</param>
         /// <param name="shortName">The short name for the switch.</param>
+        /// <returns>A record to construct this field.</returns>
         /// <exception cref="InvalidOperationException">Throws when it cannot find a constructor for
         /// <see cref="SwitchAttribute"/></exception>
-        public void AsSwitch(TypeBuilder typeBuilder, char shortName)
+        public ArgumentFieldRecord AsSwitch(char shortName)
         {
             var constructorInfo = typeof(SwitchAttribute).GetConstructor(new[] { typeof(char),  typeof(string), typeof(string) });
 
@@ -81,26 +77,18 @@ namespace Bossy.Tests.Utils
             
             var args = new object[] { shortName, "Description.", _name };
          
-            var fieldBuilder = typeBuilder.DefineField(_name, _type, FieldAttributes.Public);
-
-            var builder = new CustomAttributeBuilder(constructorInfo, args);
-            fieldBuilder.SetCustomAttribute(builder);
+            return new ArgumentFieldRecord(_name, _type, constructorInfo, args);
         }
 
         /// <summary>
         /// Declares this field as a positional argument.
         /// </summary>
-        /// <param name="typeBuilder">The builder used to define the type this field will be part of.</param>
         /// <param name="index">The order in which this positional arg applies.</param>
+        /// <returns>A record to construct this field.</returns>
         /// <exception cref="InvalidOperationException">Throws when it cannot find a constructor for
         /// <see cref="PositionalAttribute"/></exception>
-        public void AsPositional(TypeBuilder typeBuilder, int index)
+        public ArgumentFieldRecord AsPositional(int index)
         {
-            if (index < 0)
-            {
-                throw new ArgumentException("Indices for generated positional arguments must be >= 0");
-            }
-            
             var constructorInfo = typeof(PositionalAttribute).GetConstructor(new[] { typeof(int),  typeof(string), typeof(string) });
             
             if (constructorInfo == null)
@@ -111,20 +99,17 @@ namespace Bossy.Tests.Utils
             
             var args = new object[] { index, "Description.", _name };
          
-            var fieldBuilder = typeBuilder.DefineField(_name, _type, FieldAttributes.Public);
-
-            var builder = new CustomAttributeBuilder(constructorInfo, args);
-            fieldBuilder.SetCustomAttribute(builder);
+            return new ArgumentFieldRecord(_name, _type, constructorInfo, args);
         }
         
         /// <summary>
         /// Declares this field as an optional argument.
         /// </summary>
-        /// <param name="typeBuilder">The builder used to define the type this field will be part of.</param>
         /// <param name="index">The order in which this optional arg applies.</param>
+        /// <returns>A record to construct this field.</returns>
         /// <exception cref="InvalidOperationException">Throws when it cannot find a constructor for
         /// <see cref="OptionalAttribute"/></exception>
-        public void AsOptional(TypeBuilder typeBuilder, int index)
+        public ArgumentFieldRecord AsOptional(int index)
         {
             var constructorInfo = typeof(OptionalAttribute).GetConstructor(new[] { typeof(int),  typeof(string), typeof(string) });
             
@@ -136,19 +121,16 @@ namespace Bossy.Tests.Utils
             
             var args = new object[] { index, "Description.", _name };
          
-            var fieldBuilder = typeBuilder.DefineField(_name, _type, FieldAttributes.Public);
-
-            var builder = new CustomAttributeBuilder(constructorInfo, args);
-            fieldBuilder.SetCustomAttribute(builder);
+            return new ArgumentFieldRecord(_name, _type, constructorInfo, args);
         }
 
         /// <summary>
         /// Declares this field as an array of variadic arguments.
         /// </summary>
-        /// <param name="typeBuilder">The builder used to define the type this field will be part of.</param>
+        /// <returns>A record to construct this field.</returns>
         /// <exception cref="InvalidOperationException">Throws when it cannot find a constructor for
         /// <see cref="VariadicAttribute"/></exception>
-        public void AsVariadic(TypeBuilder typeBuilder)
+        public ArgumentFieldRecord AsVariadic()
         {
             var constructorInfo = typeof(VariadicAttribute).GetConstructor(new[] { typeof(string), typeof(string) });
             
@@ -160,10 +142,7 @@ namespace Bossy.Tests.Utils
             
             var args = new object[] { "Description.", _name };
             var arrayType = _type.MakeArrayType();
-            var fieldBuilder = typeBuilder.DefineField(_name, arrayType, FieldAttributes.Public);
-            var builder = new CustomAttributeBuilder(constructorInfo, args);
-
-            fieldBuilder.SetCustomAttribute(builder);
+            return new ArgumentFieldRecord(_name, arrayType, constructorInfo, args);
         }
     }
 }

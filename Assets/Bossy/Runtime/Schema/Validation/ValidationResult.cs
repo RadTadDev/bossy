@@ -10,12 +10,12 @@ namespace Bossy.Schema
         /// <summary>
         /// True if the schema was valid, otherwise false.
         /// </summary>
-        public bool Valid => Errors.Count == 0;
+        public bool IsValid => Errors.Count == 0;
         
         /// <summary>
         /// True is the schema compilation contained warnings.
         /// </summary>
-        public bool HasWarnings => Warnings.Count == 0;
+        public bool HasWarnings => Warnings.Count > 0;
         
         /// <summary>
         /// A list of all errors.

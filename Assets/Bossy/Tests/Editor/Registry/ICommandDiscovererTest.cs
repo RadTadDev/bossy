@@ -9,7 +9,7 @@ namespace Bossy.Tests.Registry
     /// <summary>
     /// Tests the default methods on the <see cref="ICommandDiscoverer"/> interface.
     /// </summary>
-    public class ICommandDiscovererTest
+    internal class ICommandDiscovererTest
     {
         private class MissingAttribute : ICommand
         {

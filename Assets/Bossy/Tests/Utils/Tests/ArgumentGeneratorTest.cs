@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using Bossy.Command;
 using NUnit.Framework;
 
@@ -43,49 +42,30 @@ namespace Bossy.Tests.Utils.Tests
             var name = "test";
             var shortName = 't';
             var type = typeof(int);
-            var typeBuilder = DynamicAssemblyCache.CreateType();
-            
-            Assert.DoesNotThrow(() => ArgumentGenerator.WithName(name).WithType(type).AsSwitch(typeBuilder, shortName));
 
-            var testType = typeBuilder.CreateType();
+            ArgumentFieldRecord rec = null;
+            Assert.DoesNotThrow(() => rec = ArgumentGenerator.WithName(name).WithType(type).AsSwitch(shortName));
             
-            var field = testType.GetField(name);
-            Assert.That(field, Is.Not.Null);
-            Assert.That(field.FieldType, Is.EqualTo(typeof(int)));
-            
-            var attribute = field.GetCustomAttribute<SwitchAttribute>();
-            Assert.That(attribute, Is.Not.Null);
-            Assert.That(attribute.GetType(), Is.EqualTo(typeof(SwitchAttribute)));
-            
-            Assert.That(attribute.ShortName, Is.EqualTo(shortName));
-            Assert.That(attribute.OverrideName, Is.EqualTo(name));
+            Assert.That(rec, Is.Not.Null);
+            Assert.That(rec.Type, Is.EqualTo(typeof(int)));
+            Assert.That(rec.ConstructorArgs, Contains.Item(shortName));
+            Assert.That(rec.ConstructorArgs, Contains.Item(name));
         }
         
         [Test]
         public void Test_AsPositional()
         {
             var name = "test";
-            int index = -1;
+            int index = 0;
             var type = typeof(int);
-            var typeBuilder = DynamicAssemblyCache.CreateType();
 
-            Assert.Throws(typeof(ArgumentException), () => ArgumentGenerator.WithName(name).WithType(type).AsPositional(typeBuilder, index));
+            ArgumentFieldRecord rec = null;
+            Assert.DoesNotThrow(() => rec = ArgumentGenerator.WithName(name).WithType(type).AsPositional(index));
 
-            index = 0;
-            Assert.DoesNotThrow(() => ArgumentGenerator.WithName(name).WithType(type).AsPositional(typeBuilder, index));
-
-            var testType = typeBuilder.CreateType();
-            
-            var field = testType.GetField(name);
-            Assert.That(field, Is.Not.Null);
-            Assert.That(field.FieldType, Is.EqualTo(typeof(int)));
-            
-            var attribute = field.GetCustomAttribute<PositionalAttribute>();
-            Assert.That(attribute, Is.Not.Null);
-            Assert.That(attribute.GetType(), Is.EqualTo(typeof(PositionalAttribute)));
-            
-            Assert.That(attribute.Index, Is.EqualTo(index));
-            Assert.That(attribute.OverrideName, Is.EqualTo(name));
+            Assert.That(rec, Is.Not.Null);
+            Assert.That(rec.Type, Is.EqualTo(typeof(int)));
+            Assert.That(rec.ConstructorArgs, Contains.Item(index));
+            Assert.That(rec.ConstructorArgs, Contains.Item(name));
         }
         
         [Test]
@@ -94,26 +74,17 @@ namespace Bossy.Tests.Utils.Tests
             var name = "test";
             int index = -1;
             var type = typeof(int);
-            var typeBuilder = DynamicAssemblyCache.CreateType();
             
-            Assert.DoesNotThrow(() => ArgumentGenerator.WithName(name).WithType(type).AsOptional(typeBuilder, index));
-
+            Assert.DoesNotThrow(() => ArgumentGenerator.WithName(name).WithType(type).AsOptional(index));
+            
             index = 0;
-            typeBuilder = DynamicAssemblyCache.CreateType();
-            Assert.DoesNotThrow(() => ArgumentGenerator.WithName(name).WithType(type).AsOptional(typeBuilder, index));
+            ArgumentFieldRecord rec = null;
+            Assert.DoesNotThrow(() => rec = ArgumentGenerator.WithName(name).WithType(type).AsOptional(index));
             
-            var testType = typeBuilder.CreateType();
-            
-            var field = testType.GetField(name);
-            Assert.That(field, Is.Not.Null);
-            Assert.That(field.FieldType, Is.EqualTo(typeof(int)));
-            
-            var attribute = field.GetCustomAttribute<OptionalAttribute>();
-            Assert.That(attribute, Is.Not.Null);
-            Assert.That(attribute.GetType(), Is.EqualTo(typeof(OptionalAttribute)));
-            
-            Assert.That(attribute.Index, Is.EqualTo(index));
-            Assert.That(attribute.OverrideName, Is.EqualTo(name));
+            Assert.That(rec, Is.Not.Null);
+            Assert.That(rec.Type, Is.EqualTo(typeof(int)));
+            Assert.That(rec.ConstructorArgs, Contains.Item(index));
+            Assert.That(rec.ConstructorArgs, Contains.Item(name));
         }
         
         [Test]
@@ -121,25 +92,16 @@ namespace Bossy.Tests.Utils.Tests
         {
             var name = "test";
             var type = typeof(int[]);
-            var typeBuilder = DynamicAssemblyCache.CreateType();
             
-            Assert.DoesNotThrow(() => ArgumentGenerator.WithName(name).WithType(type).AsVariadic(typeBuilder));
-
+            Assert.DoesNotThrow(() => ArgumentGenerator.WithName(name).WithType(type).AsVariadic());
+            
             type = typeof(int);
-            typeBuilder = DynamicAssemblyCache.CreateType();
-            Assert.DoesNotThrow(() => ArgumentGenerator.WithName(name).WithType(type).AsVariadic(typeBuilder));
-            
-            var testType = typeBuilder.CreateType();
-            
-            var field = testType.GetField(name);
-            Assert.That(field, Is.Not.Null);
-            Assert.That(field.FieldType, Is.EqualTo(typeof(int[])));
-            
-            var attribute = field.GetCustomAttribute<VariadicAttribute>();
-            Assert.That(attribute, Is.Not.Null);
-            Assert.That(attribute.GetType(), Is.EqualTo(typeof(VariadicAttribute)));
-            
-            Assert.That(attribute.OverrideName, Is.EqualTo(name));
+            ArgumentFieldRecord rec = null;
+            Assert.DoesNotThrow(() => rec = ArgumentGenerator.WithName(name).WithType(type).AsVariadic());
+
+            Assert.That(rec, Is.Not.Null);
+            Assert.That(rec.Type, Is.EqualTo(typeof(int[])));
+            Assert.That(rec.ConstructorArgs, Contains.Item(name));
         }
     }
 }

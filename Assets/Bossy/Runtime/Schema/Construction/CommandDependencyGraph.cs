@@ -52,6 +52,5 @@ namespace Bossy.Schema
         public IEnumerable<Type> GetChildren(Type type) => _graph[type].Children;
         
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
     }
 }

@@ -8,9 +8,9 @@ using Bossy.Utils;
 namespace Bossy.Schema
 {
     /// <summary>
-    /// Builds a schema based on an input command type.
+    /// Builds command schemas.
     /// </summary>
-    internal static class CommandSchemaBuilder
+    internal static class SchemaFactory
     {
         private const BindingFlags AllBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
         
@@ -18,40 +18,37 @@ namespace Bossy.Schema
         {
             var map = new Dictionary<Type, CommandSchema>();
             
+            // Pass 1: Initialize all schema without relationships
+            foreach (var (type, _) in graph)
+            {
+                map.Add(type, InitializeSchema(type));
+            }
+
+            // Pass 2: Wire parents and children
             foreach (var (type, node) in graph)
             {
-                if (!map.ContainsKey(type))
+                ICommandSchemaWriter writer = map[type];
+
+                if (node.Parent != null)
                 {
-                    map.Add(type, InitializeSchema(type));
+                    writer.SetParent(map[node.Parent]);
                 }
-                
-                // TODO: Use schema writer to set parents and children as they appear
+
+                foreach (var child in node.Children)
+                {
+                    writer.AddChild(map[child]); 
+                }
             }
             
-            // Check for naming collisions
+            // Pass 3: Check for naming collisions
             var fullyQualifiedNames = new HashSet<string>();
-            foreach (var schema in map.Values.Where(s => s.ParentSchema == null))
+            
+            foreach (var schema in map.Values.Where(s => s.IsRoot))
             {
                 DetectCollision(schema.Name, schema, fullyQualifiedNames);
             }
 
             return map.Values.ToList();
-        }
-        
-        private static void DetectCollision(string fqn, CommandSchema schema, HashSet<string> visited)
-        {
-            if (!visited.Add(fqn))
-            {
-                var parts = fqn.Split('.');
-                var path = string.Join("->", parts);
-                    
-                throw new BossyInitializationException($"The command name {path} appears more than once!");
-            }
-
-            foreach (var child in schema.ChildSchemas)
-            {
-                DetectCollision(fqn + $".{child.Name}", child, visited);
-            }
         }
         
         private static CommandSchema InitializeSchema(Type type)
@@ -82,6 +79,22 @@ namespace Bossy.Schema
             
             // TODO: Actually get validators when they exist
             return new ArgumentSchema(name, desc, field, attribute, null);
+        }
+        
+        private static void DetectCollision(string fqn, CommandSchema schema, HashSet<string> visited)
+        {
+            if (!visited.Add(fqn))
+            {
+                var parts = fqn.Split('.');
+                var path = string.Join("->", parts);
+                    
+                throw new BossyInitializationException($"The command name {path} appears more than once!");
+            }
+
+            foreach (var child in schema.ChildSchemas)
+            {
+                DetectCollision(fqn + $".{child.Name}", child, visited);
+            }
         }
     }
 }

@@ -2,6 +2,7 @@ using Bossy.Registry;
 using System.Collections.Generic;
 using System.Linq;
 using Bossy.Command;
+using PlasticPipe.PlasticProtocol.Messages;
 
 namespace Bossy.Schema
 {
@@ -40,7 +41,7 @@ namespace Bossy.Schema
             {
                 AddError(new NotACommandError(schema.CommandType));
             }
-
+            
             foreach (var arg in schema.Arguments)
             {
                 ValidateArgument(arg);
@@ -54,7 +55,7 @@ namespace Bossy.Schema
              * the case that a subcommand matches the literal value a user wants to input for a positional or optional
              */
             var posAndOpts = schema.Arguments
-                .Select(a => a.ArgumentAttribute.GetType())
+                .Select(a => a.ArgumentAttribute?.GetType())
                 .Where(t => t == typeof(PositionalAttribute) || t == typeof(OptionalAttribute));
             
             var set = new HashSet<string>(posAndOpts.Select(a => a.Name));
@@ -198,7 +199,14 @@ namespace Bossy.Schema
                     }
                     break;
                 default:
-                    AddError(new UnknownArgumentType(arg.ArgumentAttribute.GetType()));
+                    if (arg.ArgumentAttribute == null)
+                    {
+                        AddError(new ArgumentMissingAttributeError(arg.Name));                        
+                    }
+                    else
+                    {
+                        AddError(new UnknownArgumentType(arg.ArgumentAttribute.GetType()));
+                    }
                     break;
             }
         }

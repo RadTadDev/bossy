@@ -6,33 +6,32 @@ using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Registry;
-using UnityEngine;
 
 namespace Bossy.Tests.Utils
 {
     /// <summary>
     /// Used to generate dummy commands at runtime for testing purposes.
     /// </summary>
-    public class CommandGenerator
+    internal class CommandGenerator
     {
-        private string _name;
-        private HashSet<string> _fieldNames = new();
+        private readonly string _name;
+        private readonly HashSet<string> _fieldNames = new();
         private Type _parentCommandType;
-        private TypeBuilder _typeBuilder;
         private int _positionalIndex;
         private int _optionalIndex;
 
+        private List<ArgumentFieldRecord> _arguments = new();
+        
         private CommandGenerator(string name)
         {
             _name = name;
-            _typeBuilder = DynamicAssemblyCache.CreateType(interfaces: new []{ typeof(ICommand) });
         }
 
         /// <summary>
         /// Starts building a command by declaring its name.
         /// </summary>
         /// <param name="name">The name of the command. Must be unique with in the
-        /// <see cref="CommandRegistry"/> scope.</param>
+        /// <see cref="SchemaRegistry"/> scope.</param>
         /// <returns>The generator.</returns>
         /// <exception cref="ArgumentException">Throws on invalid name - must match C# syntax.</exception>
         public static CommandGenerator WithName(string name)
@@ -101,7 +100,9 @@ namespace Bossy.Tests.Utils
                 shortName = overrideShortName;
             }
             
-            ArgumentGenerator.WithName(fullname).WithType(type).AsSwitch(_typeBuilder, shortName);
+            var arg = ArgumentGenerator.WithName(fullname).WithType(type).AsSwitch(shortName);
+            _arguments.Add(arg);
+            
             return this;
         }
 
@@ -138,7 +139,9 @@ namespace Bossy.Tests.Utils
                 index = _positionalIndex++;    
             }
             
-            ArgumentGenerator.WithName(name).WithType(type).AsPositional(_typeBuilder, index);
+            var arg = ArgumentGenerator.WithName(name).WithType(type).AsPositional(index);
+            _arguments.Add(arg);
+            
             return this;
         }
         
@@ -175,7 +178,9 @@ namespace Bossy.Tests.Utils
                 index = _optionalIndex++;    
             }
             
-            ArgumentGenerator.WithName(name).WithType(type).AsOptional(_typeBuilder, index);
+            var arg = ArgumentGenerator.WithName(name).WithType(type).AsOptional(index);
+            _arguments.Add(arg);
+            
             return this;
         }
         
@@ -207,7 +212,9 @@ namespace Bossy.Tests.Utils
 
             _fieldNames.Add(name);
             
-            ArgumentGenerator.WithName(name).WithType(type).AsVariadic(_typeBuilder);
+            var arg = ArgumentGenerator.WithName(name).WithType(type).AsVariadic();
+            _arguments.Add(arg);
+            
             return this;
         }
         
@@ -217,10 +224,30 @@ namespace Bossy.Tests.Utils
         /// <returns>The generated command.</returns>
         public ICommand Generate()
         {
-            return (ICommand)Activator.CreateInstance(BuildType());
+            var type = DynamicAssemblyCache.CreateType(BuildType, interfaces: new []{ typeof(ICommand) });
+            return (ICommand)Activator.CreateInstance(type);
         }
         
-        private Type BuildType()
+        private void BuildType(TypeBuilder typeBuilder)
+        {
+            GenerateArguments(typeBuilder);
+            GenerateCommandAttribute(typeBuilder);
+            GenerateConstructorStub(typeBuilder);
+            GenerateExecutionStub(typeBuilder);
+        }
+
+        private void GenerateArguments(TypeBuilder typeBuilder)
+        {
+            foreach (var argRecord in _arguments)
+            {
+                var fieldBuilder = typeBuilder.DefineField(argRecord.Name, argRecord.Type, FieldAttributes.Public);
+                
+                var builder = new CustomAttributeBuilder(argRecord.ConstructorInfo, argRecord.ConstructorArgs);
+                fieldBuilder.SetCustomAttribute(builder);
+            }
+        }
+
+        private void GenerateCommandAttribute(TypeBuilder typeBuilder)
         {
             var constructorInfo = typeof(CommandAttribute).GetConstructor(new [] { typeof(string), typeof(string), typeof(Type) });
 
@@ -229,17 +256,12 @@ namespace Bossy.Tests.Utils
                 throw new InvalidOperationException($"Cannot find constructor for {nameof(CommandAttribute)}");
             }
             
-            _typeBuilder.SetCustomAttribute(new CustomAttributeBuilder(constructorInfo, new object[] {_name, "Description.", _parentCommandType}));
-            
-            GenerateConstructorStub();
-            GenerateExecutionStub();
-            
-            return _typeBuilder.CreateType();
+            typeBuilder.SetCustomAttribute(new CustomAttributeBuilder(constructorInfo, new object[] {_name, "Description.", _parentCommandType}));
         }
-
-        private void GenerateConstructorStub()
+        
+        private void GenerateConstructorStub(TypeBuilder typeBuilder)
         {
-            var constructor = _typeBuilder.DefineConstructor(
+            var constructor = typeBuilder.DefineConstructor(
                 MethodAttributes.Public,
                 CallingConventions.Standard,
                 Type.EmptyTypes);
@@ -250,11 +272,11 @@ namespace Bossy.Tests.Utils
             il.Emit(OpCodes.Ret);
         }
         
-        private void GenerateExecutionStub()
+        private void GenerateExecutionStub(TypeBuilder typeBuilder)
         {
             var interfaceMethod = typeof(ICommand).GetMethod(nameof(ICommand.ExecuteAsync))!;
     
-            var methodBuilder = _typeBuilder.DefineMethod(
+            var methodBuilder = typeBuilder.DefineMethod(
                 interfaceMethod.Name,
                 MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.HideBySig,
                 interfaceMethod.ReturnType,
@@ -270,7 +292,7 @@ namespace Bossy.Tests.Utils
             il.Emit(OpCodes.Call, fromResultMethod);
             il.Emit(OpCodes.Ret);
 
-            _typeBuilder.DefineMethodOverride(methodBuilder, interfaceMethod);
+            typeBuilder.DefineMethodOverride(methodBuilder, interfaceMethod);
         }
     }
 }

@@ -49,15 +49,14 @@ namespace Bossy.Schema
                 graph.AddChild(parentType, type);
             }
             
-            // Ensure no cycles
-            foreach (var type in commandTypes)
+            foreach (var (type, _) in graph)
             {
                 DetectCycle(type, graph, new HashSet<Type>());
             }
             
             return graph;
         }
-        
+
         private static void DetectCycle(Type type, CommandDependencyGraph graph, HashSet<Type> visited)
         {
             if (!visited.Add(type))

@@ -2,7 +2,6 @@ using System;
 using System.Reflection;
 using Bossy.Command;
 using NUnit.Framework;
-using UnityEditor.Compilation;
 
 namespace Bossy.Tests.Utils.Tests
 {

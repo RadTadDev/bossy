@@ -42,13 +42,14 @@ namespace Bossy.Tests.Utils
         /// <summary>
         /// Gets a type builder for a custom type.
         /// </summary>
+        /// <param name="recipe">A build function to create the type.</param>
         /// <param name="typeName">The name of the type. If null it will default to a unique name.</param>
         /// <param name="parentType">The type this type inherits from, if unspecified it will be object.</param>
         /// <param name="interfaces">Interfaces that this type implements.</param>
         /// <param name="throwOnDefined">Whether to throw an exception if the typeName is already defined.
-        /// If false, the name will be made unique and succeed.</param>
+        ///     If false, the name will be made unique and succeed.</param>
         /// <returns>The builder.</returns>
-        public static TypeBuilder CreateType(string typeName = null, Type parentType = null, Type[] interfaces = null, bool throwOnDefined = false)
+        public static Type CreateType(Action<TypeBuilder> recipe, string typeName = null, Type parentType = null, Type[] interfaces = null, bool throwOnDefined = false)
         {
             if (string.IsNullOrEmpty(typeName))
             {
@@ -63,12 +64,16 @@ namespace Bossy.Tests.Utils
 
             _definedTypes.Add(typeName);
             
-            return _moduleBuilder.DefineType(
+            var builder = _moduleBuilder.DefineType(
                 typeName,
                 TypeAttributes.Public,
                 parentType ?? typeof(object),
                 interfaces ?? Type.EmptyTypes
             );
+
+            recipe?.Invoke(builder);
+            
+            return builder.CreateType();
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Bossy.Command;
 using Bossy.Utils;
+using UnityEngine;
 
 namespace Bossy.Registry
 {
@@ -40,7 +41,7 @@ namespace Bossy.Registry
                             // This normally happens when an assembly references types in an unloaded assembly.
                             Log.Warning($"Failed to load type during command discovery: {ex?.Message}");
                         }
-
+                        
                         return e.Types.Where(t => t != null);
                     }
                 })
