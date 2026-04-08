@@ -29,7 +29,7 @@ namespace Bossy.Tests.Utils
                 // Create an assembly to hold our generated types
                 var name = new AssemblyName("TestDynamicAssembly");
                 var builder = AssemblyBuilder.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
-
+                
                 // Create a dynamic module in Dynamic Assembly.
                 _moduleBuilder = builder.DefineDynamicModule("TestDynamicModule");
             }

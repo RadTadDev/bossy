@@ -88,7 +88,7 @@ namespace Bossy.Schema
                 var parts = fqn.Split('.');
                 var path = string.Join("->", parts);
                     
-                throw new BossyInitializationException($"The command name {path} appears more than once!");
+                throw new BossyInitializationException($"The command name \"{path}\" appears more than once!");
             }
 
             foreach (var child in schema.ChildSchemas)

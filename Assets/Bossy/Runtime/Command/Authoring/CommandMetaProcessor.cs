@@ -34,9 +34,7 @@ namespace Bossy.Command
 
             var name = field.Name.Trim();
             
-            name = name[name.TakeWhile(c => !char.IsLetter(c)).Count()..];
-            
-            return name;
+            return name[name.TakeWhile(c => !char.IsLetter(c)).Count()..];
         }
 
         /// <summary>

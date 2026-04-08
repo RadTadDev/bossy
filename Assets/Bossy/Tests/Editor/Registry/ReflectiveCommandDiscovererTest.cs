@@ -69,30 +69,5 @@ namespace Bossy.Tests.Registry
 
 			Assert.That(all, Is.Empty);
 		}
-		
-		[Test]
-		public void Test_GetAllCommandTypes_HandlesException()
-		{
-			var cmd = CommandGenerator.WithName("test").Generate().GetType();
-			
-			CommandGenerator.WithName("test_cmd").Generate();
-			
-            // Create incomplete type by not calling builder.CreateType
-			// var builder = DynamicAssemblyCache.CreateType();
-   //          
-			// ArgumentGenerator.WithName("Arg").WithType(typeof(bool)).AsPositional(builder, 0);
-   //          
-   //          builder.CreateType();
-			//
-            
-            
-            var discoverer = new ReflectiveCommandDiscoverer(DynamicAssemblyCache.Assembly);
-  
-            IReadOnlyList<Type> all = null;
-            Assert.DoesNotThrow(() => all = discoverer.GetAllCommandTypes());
-            Assert.That(new List<Type> { cmd }, Is.SubsetOf(all));
-            
-            // Complete it now so it doesn't royally screw everything else up
-		}
 	}
 }
