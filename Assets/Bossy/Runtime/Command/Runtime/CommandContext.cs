@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Bossy.Command
 {
-    public sealed class CommandContext
+    public sealed class CommandContext : SimpleCommandContext
     {
         private readonly CancellationToken _token;
         
