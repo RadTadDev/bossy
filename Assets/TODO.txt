@@ -5,3 +5,6 @@ Roslyn Analyzers
 - Ensure variadic attributes are only on array types
 - Ensure only one variadic per command class
 - Ensure only one argument attribute per field
+
+TODO: 
+inject type adapter registry into adapter base class so complex adapters can use primitive ones.

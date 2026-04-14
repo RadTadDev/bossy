@@ -1,24 +1,23 @@
 using System.Threading.Tasks;
+using Bossy.Shell;
 
 namespace Bossy.Command
 {
     /// <summary>
-    /// A synchronous, runnable command.
+    /// A simple and synchronous command.
     /// </summary>
     public abstract class SimpleCommand : ICommand
     {
         public Task<CommandStatus> ExecuteAsync(CommandContext ctx)
         {
-            return Task.FromResult(Execute());
+            return Task.FromResult(Execute(ctx));
         }
 
-        // TODO: Probably need to pass in a new type of command context which also may require
-        // TODO: making a base class (likely the simple is the base, then the above inherits it)
-        
         /// <summary>
         /// Defines how a command behaves when executed.
         /// </summary>
         /// <returns>The execution status.</returns>
-        protected abstract CommandStatus Execute();
+        /// <param name="ctx">The context object holding information and utility.</param>
+        protected abstract CommandStatus Execute(SimpleContext ctx);
     }
 }
