@@ -5,15 +5,18 @@ namespace Bossy.Shell
     /// </summary>
     public class SimpleContext
     {
-        private IWriteable _outStream;
+        /// <summary>
+        /// The output writer
+        /// </summary>
+        protected readonly IWriteable writer;
         
         /// <summary>
         /// Creates a new simple context.
         /// </summary>
-        /// <param name="outStream">The output target.</param>
-        public SimpleContext(IWriteable outStream)
+        /// <param name="writer">The output writer.</param>
+        public SimpleContext(IWriteable writer)
         {
-            _outStream = outStream;
+            this.writer = writer;
         }
         
         /// <summary>
@@ -22,7 +25,7 @@ namespace Bossy.Shell
         /// <param name="value">The value to write.</param>
         public virtual void Write(object value)
         {
-            _outStream.Write(value);
+            writer.Write(value);
         }
     }
 }

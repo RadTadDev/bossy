@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Bossy.Command;
@@ -16,6 +15,7 @@ namespace Bossy.Shell
         public IGeneralGraphBuilderStep And(ICommand cmd);
         public IGeneralGraphBuilderStep Or(ICommand cmd);
         public IGeneralGraphBuilderStep AndPipeTo(ICommand cmd);
+        public CommandGraph Build();
     }
     
     /// <summary>
@@ -23,23 +23,45 @@ namespace Bossy.Shell
     /// </summary>
     public class CommandGraph : IBeginGraphBuilderStep, IGeneralGraphBuilderStep
     {
-        public IReadable MainReader { get; }
-        public IWriteable MainWriter { get; }
+        /// <summary>
+        /// The main reader.
+        /// </summary>
+        public IReadable DefaultReader { get; }
+        
+        /// <summary>
+        /// The main writer.
+        /// </summary>
+        public IWriteable DefaultWriter { get; }
 
+        /// <summary>
+        /// Tells if the graph should execute in a window.
+        /// </summary>
         public bool InWindow;
+
+        /// <summary>
+        /// Tells if the graph is empty.
+        /// </summary>
+        public bool IsEmpty => _nodes.Count == 0;
         
         private List<CommandGraphNode> _nodes = new();
 
-        private CommandGraph(IReadable mainReader, IWriteable mainWriter, bool windowed)
+        private CommandGraph(IReadable defaultReader, IWriteable defaultWriter, bool windowed)
         {
-            MainReader = mainReader;
-            MainWriter = mainWriter;
+            DefaultReader = defaultReader;
+            DefaultWriter = defaultWriter;
             InWindow = windowed;
         }
 
-        public static IBeginGraphBuilderStep Create(IReadable mainReader, IWriteable mainWriter, bool windowed)
+        /// <summary>
+        /// Creates a new Command graph.
+        /// </summary>
+        /// <param name="defaultReader">The default reader.</param>
+        /// <param name="defaultWriter">The default writer.</param>
+        /// <param name="windowed">Whether this graph will run in a window.</param>
+        /// <returns></returns>
+        public static IBeginGraphBuilderStep Create(IReadable defaultReader, IWriteable defaultWriter, bool windowed)
         {
-            return new CommandGraph(mainReader, mainWriter, windowed);
+            return new CommandGraph(defaultReader, defaultWriter, windowed);
         }
 
         /// <summary>

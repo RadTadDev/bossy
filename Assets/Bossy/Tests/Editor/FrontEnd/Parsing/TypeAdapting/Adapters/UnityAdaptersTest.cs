@@ -2,7 +2,7 @@ using NUnit.Framework;
 using Bossy.FrontEnd.Parsing;
 using UnityEngine;
 
-namespace Bossy.Tests.Editor.FrontEnd.Parsing.TypeAdapting.Adapters
+namespace Bossy.Tests.FrontEnd.Parsing
 {
     /// <summary>
     /// Tests the Unity adapters.

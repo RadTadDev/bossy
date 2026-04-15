@@ -1,6 +1,8 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.FrontEnd.Parsing;
+using Bossy.Utils;
 
 namespace Bossy.Shell
 {
@@ -8,11 +10,12 @@ namespace Bossy.Shell
     {
         public TypeAdapterRegistry TypeAdapterRegistry { get; }
 
-        private CommandExecutor _executor = new();
+        private readonly CommandExecutor _executor;
         
         public Shell(TypeAdapterRegistry typeAdapterRegistry)
         {
             TypeAdapterRegistry = typeAdapterRegistry;
+            _executor = new CommandExecutor(this);
         }
         
         public void CreateSession(FrontEnd.FrontEnd frontEnd)
@@ -30,15 +33,28 @@ namespace Bossy.Shell
         private async Task SessionRunner(Session session)
         {
             var sessionToken = session.CancellationSource.GetSessionToken();
-            
-            // Executor catches all exceptions, so instead we rely on this check to close sessions
-            while (!sessionToken.IsCancellationRequested)
+
+            try
             {
-                var graph = await session.GetCommandGraphAsync(sessionToken);
-                var commandToken = session.CancellationSource.GetCommandToken();
-                var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(sessionToken, commandToken);
-                
-                await Execute(graph, session.FrontEnd, session.FrontEnd, combinedCts.Token);
+                while (!sessionToken.IsCancellationRequested)
+                {
+                    var graph = await session.GetCommandGraphAsync(sessionToken);
+
+                    var commandToken = session.CancellationSource.GetCommandToken();
+
+                    using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(sessionToken, commandToken);
+
+                    await Execute(graph, combinedCts.Token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Happens when the session is canceled while waiting for a command.
+            }
+            catch (Exception e)
+            {
+                // This is an unexpected error, the session will die
+                Log.Exception(e);
             }
             
             // TODO: Clean up like merge in history, destroy gui, etc.

@@ -8,3 +8,4 @@ Roslyn Analyzers
 
 TODO: 
 inject type adapter registry into adapter base class so complex adapters can use primitive ones.
+Actually send null in a stream when it closes.

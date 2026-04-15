@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Bossy.FrontEnd.Parsing;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Editor.FrontEnd.Parsing
+namespace Bossy.Tests.FrontEnd.Parsing
 {
     /// <summary>
     /// Tests the <see cref="TokenStream"/> class.

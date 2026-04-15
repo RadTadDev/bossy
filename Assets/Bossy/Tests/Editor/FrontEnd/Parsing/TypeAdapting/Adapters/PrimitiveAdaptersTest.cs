@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using Bossy.FrontEnd.Parsing;
 
-namespace Bossy.Tests.Editor.FrontEnd.Parsing.TypeAdapting.Adapters
+namespace Bossy.Tests.FrontEnd.Parsing
 {
     /// <summary>
     /// Tests the primitive type adatpers.

@@ -19,5 +19,7 @@ namespace Bossy.Tests.Utils
         {
             _log.Add(value);
         }
+        
+        public void Close() { }
     }
 }

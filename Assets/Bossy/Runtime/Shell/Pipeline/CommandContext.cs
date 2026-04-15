@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.FrontEnd.Parsing;
-using Bossy.Shell;
 using Bossy.Utils;
 
 namespace Bossy.Shell
@@ -12,9 +12,17 @@ namespace Bossy.Shell
     /// </summary>
     public sealed class CommandContext : SimpleContext
     {
+        /// <summary>
+        /// The context's reader.
+        /// </summary>
+        public IReadable Reader { get; }
+        
+        /// <summary>
+        /// The context's writer.
+        /// </summary>
+        public IWriteable Writer => writer;
+        
         private readonly Shell _shell;
-        private readonly IReadable _reader;
-        private readonly IWriteable _writer;
         private readonly bool _allowRetry;
         private readonly CancellationToken _token;
 
@@ -28,8 +36,7 @@ namespace Bossy.Shell
         /// <param name="token">The cancellation token associated with this execution.</param>
         public CommandContext(Shell shell, IReadable reader, IWriteable writer, bool allowRetry, CancellationToken token) : base(writer)
         {
-            _reader = reader;
-            _writer = writer;
+            Reader = reader;
             _allowRetry = allowRetry;
             _shell = shell;
             _token = token;
@@ -61,26 +68,35 @@ namespace Bossy.Shell
         public async Task<T> ReadAsync<T>()
         {
             object response;
-            bool triedAdapting = false;
+            var triedAdapting = false;
             TypeAdapterResult adapterResult = default;
 
             do
             {
-                response = await _reader.ReadAsync(typeof(T), _token);
+                _token.ThrowIfCancellationRequested();
 
+                // Prevent hot loops on suppliers
+                await Task.Yield();
+                response = await Reader.ReadAsync(typeof(T), _token);
+            
+                if (response is null)
+                {
+                    throw new BossyStreamClosedException();
+                }
+                
                 if (response is T original) return original;
-
+                
                 if (response is string textual)
                 {
                     triedAdapting = true;
                     adapterResult = _shell.TypeAdapterRegistry.TryConvert(textual, out T typed);
-
+            
                     if (adapterResult.Success)
                     {
                         return typed;
                     }
                 }
-
+            
                 // Catch and allow all numeric conversions 
                 try
                 {
@@ -92,8 +108,11 @@ namespace Bossy.Shell
                     // Cast failed, ignore
                 }
 
-                _writer.Write($"Type \"{response.GetType()}\" could not be converted to type \"{typeof(T)}\". " +
-                              "Please enter a valid response.");
+                if (_allowRetry)
+                {
+                    writer.Write($"Type \"{response.GetType()}\" could not be converted to type \"{typeof(T)}.");
+                }
+                
             } while (_allowRetry);
 
             if (triedAdapting)
@@ -101,31 +120,40 @@ namespace Bossy.Shell
                 throw new BossyNotAdaptableException($"Could not parse response to type " +
                                                  $"\"{typeof(T)}\":\n{adapterResult.ErrorMessage}");
             }
-            else
-            {
-                throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type {typeof(T)}");
-            }
+            
+            throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type {typeof(T)}");
         }
         
         /// <summary>
         /// Delays the execution of this command.
         /// </summary>
-        /// <param name="seconds">The seconds to delay for.</param>
-        public async Task Delay(float seconds)
+        /// <param name="timeSpan">The time to delay for.</param>
+        public async Task Delay(TimeSpan timeSpan)
         {
-            await Task.Delay(TimeSpan.FromSeconds(seconds), _token);
+            await Task.Delay(timeSpan, _token);
         }
 
-        public async Task ExecuteChildGraph(CommandGraph graph, Action<object> onWrite, CancellationToken token = default)
+        /// <summary>
+        /// Iterates the input stream until it closes.
+        /// </summary>
+        /// <typeparam name="T">The type of data to read.</typeparam>
+        /// <returns>Each enumerated value until the stream closes.</returns>
+        public async IAsyncEnumerable<T> ReadAllAsync<T>()
         {
-            if (token == CancellationToken.None)
+            while (true)
             {
-                token = _token;
+                T value;
+                try
+                {
+                    value = await ReadAsync<T>();
+                }
+                catch (BossyStreamClosedException)
+                {
+                    yield break;
+                }
+
+                yield return value;
             }
-            
-            // TODO: Setup IO context and call onWrite when a write happens
-            
-            await _shell.Execute(graph, token);
         }
     }
 }

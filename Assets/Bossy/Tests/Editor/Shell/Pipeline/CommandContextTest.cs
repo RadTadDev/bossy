@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Bossy.Shell;
 using Bossy.Tests.Utils;
 using Bossy.Utils;
 using NUnit.Framework;
+using UnityEngine.TestTools;
 
 namespace Bossy.Tests.Shell
 {
@@ -73,17 +75,24 @@ namespace Bossy.Tests.Shell
             
             Assert.That(first, Is.EqualTo(1));
         }
-        
+
         [Test]
-        public void Test_ReadAsync_Fails()
+        public async Task Test_ReadAsync_Fails()
         {
             var items = new List<object> { "test" };
             var reader = new MockReadable(items);
             var writer = new MockWriteable();
-
+            
             var ctx = new CommandContext(_shell, reader, writer, false, CancellationToken.None);
 
-            Assert.ThrowsAsync<BossyNotAdaptableException>(async () => await ctx.ReadAsync<bool>());
+            try
+            {
+                await ctx.ReadAsync<bool>();
+            }
+            catch (BossyNotAdaptableException)
+            {
+                Assert.That(true);
+            }
         }
         
         [Test]

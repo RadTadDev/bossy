@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -35,10 +34,11 @@ namespace Bossy.Tests.Utils
         public async Task<object> ReadAsync(Type requestedType, CancellationToken token)
         {
             if (_infinite) return 1;
-            
+
             if (_idx >= _queue.Count)
             {
-                throw new InvalidOperationException("Cannot read from exhausted mock reader queue.");
+                // Mock 'Close' behavior
+                return null;
             }
 
             await Task.CompletedTask;

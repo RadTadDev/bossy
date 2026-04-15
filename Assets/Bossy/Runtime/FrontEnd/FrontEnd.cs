@@ -39,6 +39,8 @@ namespace Bossy.FrontEnd
             
         }
 
+        public abstract void Close();
+        
         /// <summary>
         /// Gets a cancellation token that controls the lifetime of the session.
         /// </summary>

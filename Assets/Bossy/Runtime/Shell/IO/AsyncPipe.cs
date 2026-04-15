@@ -16,13 +16,18 @@ namespace Bossy.Shell
         public async Task<object> ReadAsync(Type requestedType, CancellationToken token)
         {
             await _signal.WaitAsync(token);
-            _queue.TryDequeue(out var obj);
-            return obj;
+
+            return _queue.TryDequeue(out var obj) ? obj : null;
         }
 
         public void Write(object value)
         {
             _queue.Enqueue(value);
+            _signal.Release();
+        }
+
+        public void Close()
+        {
             _signal.Release();
         }
     }

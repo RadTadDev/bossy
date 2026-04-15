@@ -10,5 +10,10 @@ namespace Bossy.Shell
         /// </summary>
         /// <param name="value">The value to write.</param>
         public void Write(object value);
+
+        /// <summary>
+        /// Closes the output stream.
+        /// </summary>
+        public void Close();
     }
 }
