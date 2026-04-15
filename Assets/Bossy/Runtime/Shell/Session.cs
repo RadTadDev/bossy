@@ -11,17 +11,17 @@ namespace Bossy.Shell
         // TODO: Add all session state here. This is a pure data object
         public ICancellationSource CancellationSource { get; }
         
-        private readonly FrontEnd.FrontEnd _frontEnd;
+        public FrontEnd.FrontEnd FrontEnd { get; }
         
         public Session(FrontEnd.FrontEnd frontEnd, ICancellationSource cancellationSource)
         {
-            _frontEnd = frontEnd;
+            FrontEnd = frontEnd;
             CancellationSource = cancellationSource;
         }
         
         public async Task<CommandGraph> GetCommandGraphAsync(CancellationToken token)
         {
-            return await _frontEnd.GetCommandGraph(token);
+            return await FrontEnd.GetCommandGraph(token);
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.FrontEnd.Parsing;
 using Bossy.Shell;
 using Bossy.Utils;
 
@@ -59,9 +60,9 @@ namespace Bossy.Shell
         /// not necessary to handle, but catching it gives you explicit control when a command would otherwise die.</remarks>
         public async Task<T> ReadAsync<T>()
         {
-            _token.ThrowIfCancellationRequested();
-            
             object response;
+            bool triedAdapting = false;
+            TypeAdapterResult adapterResult = default;
 
             do
             {
@@ -71,9 +72,10 @@ namespace Bossy.Shell
 
                 if (response is string textual)
                 {
-                    var convertResult = _shell.TypeAdapterRegistry.TryConvert(textual, out T typed);
+                    triedAdapting = true;
+                    adapterResult = _shell.TypeAdapterRegistry.TryConvert(textual, out T typed);
 
-                    if (convertResult.Success)
+                    if (adapterResult.Success)
                     {
                         return typed;
                     }
@@ -87,14 +89,22 @@ namespace Bossy.Shell
                 }
                 catch
                 {
-                    // cast failed, ignore
+                    // Cast failed, ignore
                 }
 
                 _writer.Write($"Type \"{response.GetType()}\" could not be converted to type \"{typeof(T)}\". " +
                               "Please enter a valid response.");
             } while (_allowRetry);
 
-            throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type \"{typeof(T)}\"");
+            if (triedAdapting)
+            {
+                throw new BossyNotAdaptableException($"Could not parse response to type " +
+                                                 $"\"{typeof(T)}\":\n{adapterResult.ErrorMessage}");
+            }
+            else
+            {
+                throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type {typeof(T)}");
+            }
         }
         
         /// <summary>
@@ -103,9 +113,19 @@ namespace Bossy.Shell
         /// <param name="seconds">The seconds to delay for.</param>
         public async Task Delay(float seconds)
         {
-            _token.ThrowIfCancellationRequested();
-            
             await Task.Delay(TimeSpan.FromSeconds(seconds), _token);
+        }
+
+        public async Task ExecuteChildGraph(CommandGraph graph, Action<object> onWrite, CancellationToken token = default)
+        {
+            if (token == CancellationToken.None)
+            {
+                token = _token;
+            }
+            
+            // TODO: Setup IO context and call onWrite when a write happens
+            
+            await _shell.Execute(graph, token);
         }
     }
 }

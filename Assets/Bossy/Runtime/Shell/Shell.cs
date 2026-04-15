@@ -1,8 +1,6 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.FrontEnd.Parsing;
-using Bossy.Utils;
 
 namespace Bossy.Shell
 {
@@ -10,6 +8,8 @@ namespace Bossy.Shell
     {
         public TypeAdapterRegistry TypeAdapterRegistry { get; }
 
+        private CommandExecutor _executor = new();
+        
         public Shell(TypeAdapterRegistry typeAdapterRegistry)
         {
             TypeAdapterRegistry = typeAdapterRegistry;
@@ -21,42 +21,27 @@ namespace Bossy.Shell
 
             _ = SessionRunner(session);
         }
-
+        
+        public async Task Execute(CommandGraph graph, CancellationToken token)
+        {
+            await _executor.ExecuteAsync(graph, token);
+        }
+        
         private async Task SessionRunner(Session session)
         {
             var sessionToken = session.CancellationSource.GetSessionToken();
             
+            // Executor catches all exceptions, so instead we rely on this check to close sessions
             while (!sessionToken.IsCancellationRequested)
             {
-                try
-                {
-                    var graph = await session.GetCommandGraphAsync(sessionToken);
-
-                    // TODO: Combine session with individual token
-                    var commandToken = session.CancellationSource.GetCommandToken();
-
-                    await Execute(graph, sessionToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    // This is expected when a user closes the session
-                }
-                catch (BossyNotAdaptableException e)
-                {
-                    Log.Exception(e);
-                }
-                catch (Exception exception)
-                {
-                    Log.Exception(exception);
-                }
+                var graph = await session.GetCommandGraphAsync(sessionToken);
+                var commandToken = session.CancellationSource.GetCommandToken();
+                var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(sessionToken, commandToken);
+                
+                await Execute(graph, session.FrontEnd, session.FrontEnd, combinedCts.Token);
             }
             
             // TODO: Clean up like merge in history, destroy gui, etc.
-        }
-        
-        private async Task Execute(CommandGraph graph, CancellationToken token)
-        {
-            await Task.CompletedTask;
         }
     }
 }
