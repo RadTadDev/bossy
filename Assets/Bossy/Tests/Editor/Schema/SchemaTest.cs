@@ -6,7 +6,7 @@ using Bossy.Schema;
 using Bossy.Tests.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Editor.Schema
+namespace Bossy.Tests.Schema
 {
     /// <summary>
     /// Tests the <see cref="CommandSchema"/> class.
