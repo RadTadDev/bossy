@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace Bossy.FrontEnd.Parsing
 {
@@ -9,7 +9,7 @@ namespace Bossy.FrontEnd.Parsing
     public class TokenStream
     {
         private int _cursor;
-        private readonly List<string> _parts;
+        private readonly List<string> _tokens;
         
         /// <summary>
         /// Creates a new token stream.
@@ -17,9 +17,18 @@ namespace Bossy.FrontEnd.Parsing
         /// <param name="line">The input to tokenize.</param>
         public TokenStream(string line)
         {
-            _parts = Tokenize(line);
+            _tokens = Tokenizer.Tokenize(line);
         }
 
+        /// <summary>
+        /// Creates a new token stream.
+        /// </summary>
+        /// <param name="tokens">The tokens.</param>
+        public TokenStream(IEnumerable<string> tokens)
+        {
+            _tokens = tokens.ToList();
+        }
+        
         /// <summary>
         /// Tries to get multiple tokens from the stream.
         /// </summary>
@@ -29,9 +38,9 @@ namespace Bossy.FrontEnd.Parsing
         public bool TryConsume(int count, out List<string> tokens)
         {
             tokens = new List<string>();
-            if (_cursor + count > _parts.Count) return false;
+            if (_cursor + count > _tokens.Count) return false;
             
-            tokens.AddRange(_parts.GetRange(_cursor, count));
+            tokens.AddRange(_tokens.GetRange(_cursor, count));
             _cursor += count;
 
             return true;
@@ -64,33 +73,10 @@ namespace Bossy.FrontEnd.Parsing
         public bool TryPeek(out string token)
         {
             token = null;
-            if (_cursor >= _parts.Count) return false;
+            if (_cursor >= _tokens.Count) return false;
 
-            token = _parts[_cursor];
+            token = _tokens[_cursor];
             return true;
         }
-        
-        private List<string> Tokenize(string line)
-        {
-            var matches = Regex.Matches(line, @"(?:\\.|""(?:\\.|[^""\\])*""|'(?:\\.|[^'\\])*'|\S)+");
-
-            var result = new List<string>();
-            foreach (Match match in matches)
-            {
-                var token = Regex.Replace(match.Value,
-                    @"""([^""\\]*(?:\\.[^""\\]*)*)""|'([^'\\]*(?:\\.[^'\\]*)*)'|\\(.)|(.)",
-                    m => {
-                        if (m.Groups[1].Success) return Unescape(m.Groups[1].Value);
-                        if (m.Groups[2].Success) return Unescape(m.Groups[2].Value);
-                        if (m.Groups[3].Success) return m.Groups[3].Value == "\\" ? "\\" : m.Groups[3].Value;
-                        return m.Groups[4].Value;
-                    });
-                result.Add(token);
-            }
-            return result;
-        }
-
-        private static string Unescape(string s) =>
-            Regex.Replace(s, @"\\(.)", m => m.Groups[1].Value == "\\" ? "\\" : m.Groups[1].Value);
     }
 }

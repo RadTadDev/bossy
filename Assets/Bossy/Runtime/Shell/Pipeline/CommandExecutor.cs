@@ -4,13 +4,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Utils;
+using PlasticPipe.PlasticProtocol.Messages;
 
 namespace Bossy.Shell
 {
     /// <summary>
     /// Executes a command graph.
     /// </summary>
-    public class CommandExecutor
+    internal class CommandExecutor
     {
         private readonly Shell _shell;
 
@@ -27,8 +28,10 @@ namespace Bossy.Shell
         /// Executes a command graph.
         /// </summary>
         /// <param name="graph">The graph to execute.</param>
+        /// <param name="defaultInput">The default input stream.</param>
+        /// <param name="defaultOutput">The default output stream.</param>
         /// <param name="token">The token controlling cancellation.</param>
-        public async Task ExecuteAsync(CommandGraph graph, CancellationToken token)
+        public async Task ExecuteAsync(CommandGraph graph, IReadable defaultInput, IWriteable defaultOutput, CancellationToken token)
         {
             if (graph.IsEmpty) return;
 
@@ -37,7 +40,7 @@ namespace Bossy.Shell
             var previousStatus = CommandStatus.Ok;
             var previousLink = CommandGraphLink.Then;
 
-            var defaultContext = new CommandContext(_shell, graph.DefaultReader, graph.DefaultWriter, true, token);
+            var defaultContext = new CommandContext(_shell, defaultInput, defaultOutput, true, token);
 
             foreach (var group in groups)
             {
@@ -57,22 +60,22 @@ namespace Bossy.Shell
                 }
                 catch (OperationCanceledException)
                 {
-                    graph.DefaultWriter.Write("Task cancelled");
+                    defaultOutput.Write("Task cancelled");
                     previousStatus = CommandStatus.Cancelled;
                 }
                 catch (BossyStreamClosedException)
                 {
-                    graph.DefaultWriter.Write("Command failed after reading from a closed input stream.");
+                    defaultOutput.Write("Command failed after reading from a closed input stream.");
                     previousStatus = CommandStatus.Error;
                 }
                 catch (BossyNotAdaptableException e)
                 {
-                    graph.DefaultWriter.Write(e.Message);
+                    defaultOutput.Write(e.Message);
                     previousStatus = CommandStatus.Error;
                 }
                 catch (Exception e)
                 {
-                    graph.DefaultWriter.Write(e.Message);
+                    defaultOutput.Write(e.Message);
                     previousStatus = CommandStatus.Error;
                 }
             }
@@ -115,8 +118,8 @@ namespace Bossy.Shell
 
             var tasks = group.Select((node, i) =>
             {
-                var reader = i == 0 ? defaultContext.Reader : pipes[i - 1];
-                var writer = i == group.Count - 1 ? defaultContext.Writer : pipes[i];
+                var reader = i == 0 ? defaultContext.InputStream : pipes[i - 1];
+                var writer = i == group.Count - 1 ? defaultContext.OutputStream : pipes[i];
                 return RunNode(node, reader, writer);
             }).ToList();
 

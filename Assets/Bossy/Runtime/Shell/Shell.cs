@@ -25,9 +25,9 @@ namespace Bossy.Shell
             _ = SessionRunner(session);
         }
         
-        public async Task Execute(CommandGraph graph, CancellationToken token)
+        public async Task Execute(CommandGraph graph, IReadable defaultInput, IWriteable defaultOutput, CancellationToken token)
         {
-            await _executor.ExecuteAsync(graph, token);
+            await _executor.ExecuteAsync(graph, defaultInput, defaultOutput, token);
         }
         
         private async Task SessionRunner(Session session)
@@ -44,7 +44,7 @@ namespace Bossy.Shell
 
                     using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(sessionToken, commandToken);
 
-                    await Execute(graph, combinedCts.Token);
+                    await Execute(graph, session.FrontEnd, session.FrontEnd, combinedCts.Token);
                 }
             }
             catch (OperationCanceledException)

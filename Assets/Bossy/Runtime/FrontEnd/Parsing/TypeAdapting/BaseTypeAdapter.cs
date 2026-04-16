@@ -1,17 +1,33 @@
 namespace Bossy.FrontEnd.Parsing
 {
+    /// <summary>
+    /// A generic type adapter.
+    /// </summary>
+    /// <typeparam name="T">The type to handle converting to.</typeparam>
     public abstract class BaseTypeAdapter<T> : ITypeAdapter
     {
-        public TypeAdapterResult TryConvert(TokenStream cursor, out object output)
+        /// <summary>
+        /// Consumes tokens and converts from string to a type.
+        /// </summary>
+        /// <param name="stream">The token stream.</param>
+        /// <param name="output">The output type.</param>
+        /// <returns>The result.</returns>
+        public TypeAdapterResult TryConvert(TokenStream stream, out object output)
         {
-            var result = TryConvertToType(cursor, out var converted);
+            var result = TryConvertToType(stream, out var converted);
 
             output = result.Success ? converted : null;
 
             return result;
         }
 
-        protected abstract TypeAdapterResult TryConvertToType(TokenStream cursor, out T output);
+        /// <summary>
+        /// Consumes tokens and converts from string to a type.
+        /// </summary>
+        /// <param name="stream">The token stream.</param>
+        /// <param name="output">The output type.</param>
+        /// <returns>The result.</returns>
+        protected abstract TypeAdapterResult TryConvertToType(TokenStream stream, out T output);
         
         public override bool Equals(object obj) => obj?.GetType() == GetType();
         public override int GetHashCode() => GetType().GetHashCode();
