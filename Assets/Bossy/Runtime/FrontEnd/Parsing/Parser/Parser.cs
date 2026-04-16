@@ -13,12 +13,14 @@ namespace Bossy.FrontEnd.Parsing
     /// </summary>
     internal class Parser
     {
-        private readonly SchemaRegistry _registry;
+        private readonly SchemaRegistry _schemaRegistry;
+        private readonly TypeAdapterRegistry _adapterRegistry;
         private readonly OperatorList _operators;
         
-        public Parser(SchemaRegistry registry, OperatorList operators)
+        public Parser(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, OperatorList operators)
         {
-            _registry = registry;
+            _schemaRegistry = schemaRegistry;
+            _adapterRegistry = adapterRegistry;
             _operators = operators;
         }
 
@@ -31,12 +33,15 @@ namespace Bossy.FrontEnd.Parsing
         {
             if (string.IsNullOrWhiteSpace(input)) return new EmptyInputError();
             
-            // 1. Split into nodes
+            // 1. Expand macros
+            // TODO: Likely inject the session Macro/Alias manager on construction
+            
+            // 2. Split into nodes
             var tokens = Tokenizer.Tokenize(input, _operators.ToEnumerable());
             var pipelineResult = MakePipeline(tokens, out var isWindowed);
             if (pipelineResult.IsError) return pipelineResult.Error;
             
-            // 2. Parse each node to a command
+            // 3. Parse each node to a command
             var pipeline = pipelineResult.Value;
             foreach (var node in pipeline)
             {
@@ -45,7 +50,7 @@ namespace Bossy.FrontEnd.Parsing
                 node.Command = commandResult.Value;
             }
             
-            // 3. Build the command graph.
+            // 4. Build the command graph.
             return new ParseSucceeded(BuildGraph(pipeline, isWindowed));
         }
 
@@ -114,11 +119,84 @@ namespace Bossy.FrontEnd.Parsing
         private ParseStep<ICommand> ParseCommand(IEnumerable<string> tokens)
         {
             var stream = new TokenStream(tokens);
-
+            
             var result = GetSchema(stream);
             if (result.IsError) return ParseStep<ICommand>.Fail(result.Error);
+            var schema = result.Value;
+            
+            // Begin parsing command as per schema
+            var command = schema.Instantiate();
+            
+            // 1. Explode remaining tokens into arg list
+            var argTokens = stream.Explode();
+            
+            // 2. Expand aggregate flags
+            ExpandAggregateFlags(argTokens);
+            
+            // 3. Foreach flag starting with - or -- ensure match in schema
+            for (var i = 0; i < argTokens.Count; i++)
+            {
+                var token = argTokens[i];
+                
+                if (!token.StartsWith("-")) continue;
+                
+                // 3.a. If false - return unknown switch
+                ArgumentSchema argSchema;
+                if (token.StartsWith("--"))
+                {
+                    if (!schema.TryFindSwitch(token[2..], out argSchema))
+                    {
+                        return ParseStep<ICommand>.Fail(new InvalidSwitchError(token));
+                    }
+                }
+                else
+                {
+                    if (!schema.TryFindSwitch(token[1], out argSchema))
+                    {
+                        return ParseStep<ICommand>.Fail(new InvalidSwitchError(token));
+                    }
+                }
+                
+                // 3.b. Remove name from parent list and dump every value after into substream
+                argTokens.RemoveAt(i);
+                var substream = new TokenStream(argTokens.GetRange(i, argTokens.Count - i));
+                
+                // 3.c. Parse (return on error) and check position of stream. Remove that many tokens from overall list 
+                var targetType = argSchema.FieldInfo.FieldType;
+                var adaptResult = _adapterRegistry.TryConvert(targetType, substream, out var value);
+                if (!adaptResult.Success)
+                {
+                    return ParseStep<ICommand>.Fail(new TypeAdaptError(targetType, token, adaptResult.ErrorMessage));
+                }
+                
+                argSchema.FieldInfo.SetValue(command, value);
+                
+                // 3.d. Run switch validators
+            }
+                
+                
+            // 4. Parse in positionals - return on error or not enough
+            
+            // 5. Parse in optionals - return on error
+            
+            // 6. Parse in variadic - return on error
             
             return ParseStep<ICommand>.Ok(null);
+        }
+
+        private static void ExpandAggregateFlags(List<string> tokens)
+        {
+            for (var i = 0; i < tokens.Count; i++)
+            {
+                var token = tokens[i];
+
+                if (!token.StartsWith("-") || token.StartsWith("--") || token.Length <= 2) continue;
+
+                var flags = token[1..].Select(f => $"-{f}").ToList();
+                tokens.RemoveAt(i);
+                tokens.InsertRange(i, flags);
+                i += flags.Count - 1;
+            }
         }
 
         private ParseStep<CommandSchema> GetSchema(TokenStream stream)
@@ -126,7 +204,7 @@ namespace Bossy.FrontEnd.Parsing
             // Stream will always have at least one token due to previous error checking
             stream.TryConsume(out var root);
 
-            if (!_registry.TryResolveSchema(root, out var schema))
+            if (!_schemaRegistry.TryResolveSchema(root, out var schema))
             {
                 return ParseStep<CommandSchema>.Fail(new NoMatchingCommandError(root));
             }
@@ -134,7 +212,7 @@ namespace Bossy.FrontEnd.Parsing
             var subcommands = new List<string>();
             while (stream.TryPeek(out var next))
             {
-                if (!_registry.TryResolveSchema(root, subcommands.Append(next), out schema))
+                if (!_schemaRegistry.TryResolveSchema(root, subcommands.Append(next), out schema))
                 {
                     break;
                 }
@@ -144,7 +222,7 @@ namespace Bossy.FrontEnd.Parsing
             }
 
             // Get last successful command
-            _registry.TryResolveSchema(root, subcommands, out schema);
+            _schemaRegistry.TryResolveSchema(root, subcommands, out schema);
             return ParseStep<CommandSchema>.Ok(schema);
         }
 

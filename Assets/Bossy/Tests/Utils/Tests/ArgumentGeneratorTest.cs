@@ -1,5 +1,4 @@
 using System;
-using Bossy.Command;
 using NUnit.Framework;
 
 namespace Bossy.Tests.Utils.Tests

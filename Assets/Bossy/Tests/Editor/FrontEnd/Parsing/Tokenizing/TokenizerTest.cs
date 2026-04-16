@@ -7,7 +7,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
     /// <summary>
     /// Tests the <see cref="Tokenizer"/> class.
     /// </summary>
-    public class TokenizerTest
+    internal class TokenizerTest
     {
         private static readonly List<string> Ops = new() { "|", "||", "&&", ";" };
         

@@ -9,7 +9,7 @@ namespace Bossy.Tests.Shell
     /// <summary>
     /// Tests the <see cref="AsyncPipe"/> class.
     /// </summary>
-    public class AsyncPipeTest
+    internal class AsyncPipeTest
     {
         [Test]
         public async Task Test_Nominal()

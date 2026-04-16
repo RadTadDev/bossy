@@ -12,6 +12,11 @@ namespace Bossy.FrontEnd.Parsing
         private readonly List<string> _tokens;
         
         /// <summary>
+        /// The cursor position of the stream. Is equivalent to number of tokens already consumed.
+        /// </summary>
+        public int Cursor => _cursor;
+        
+        /// <summary>
         /// Creates a new token stream.
         /// </summary>
         /// <param name="line">The input to tokenize.</param>
@@ -77,6 +82,15 @@ namespace Bossy.FrontEnd.Parsing
 
             token = _tokens[_cursor];
             return true;
+        }
+
+        /// <summary>
+        /// Gets the remaining tokens as a list.
+        /// </summary>
+        /// <returns>The list of remaining tokens.</returns>
+        public List<string> Explode()
+        {
+            return _tokens.GetRange(_cursor, _tokens.Count - _cursor);
         }
     }
 }

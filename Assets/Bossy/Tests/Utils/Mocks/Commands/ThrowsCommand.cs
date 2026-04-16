@@ -4,7 +4,7 @@ using Bossy.Shell;
 
 namespace Bossy.Tests.Utils.Commands
 {
-    public class ThrowsCommand : SimpleCommand
+    internal class ThrowsCommand : SimpleCommand
     {
         protected override CommandStatus Execute(SimpleContext ctx)
         {

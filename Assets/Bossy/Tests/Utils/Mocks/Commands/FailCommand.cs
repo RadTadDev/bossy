@@ -3,7 +3,7 @@ using Bossy.Shell;
 
 namespace Bossy.Tests.Utils.Commands
 {
-    public class FailCommand : SimpleCommand
+    internal class FailCommand : SimpleCommand
     {
         protected override CommandStatus Execute(SimpleContext ctx)
         {

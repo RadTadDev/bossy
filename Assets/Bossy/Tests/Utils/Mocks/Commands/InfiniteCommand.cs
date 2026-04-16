@@ -5,14 +5,14 @@ using Bossy.Shell;
 
 namespace Bossy.Tests.Utils.Commands
 {
-    public enum InfiniteOperation
+    internal enum InfiniteOperation
     {
         Delay,
         Write,
         Read
     }
     
-    public class InfiniteCommand : ICommand
+    internal class InfiniteCommand : ICommand
     {
         private readonly InfiniteOperation _operation;
         private readonly Action _onStarted;

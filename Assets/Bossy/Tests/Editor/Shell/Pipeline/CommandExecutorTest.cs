@@ -12,7 +12,7 @@ namespace Bossy.Tests.Shell
     /// <summary>
     /// Tests the <see cref="CommandExecutor"/> class.
     /// </summary>
-    public class CommandExecutorTest
+    internal class CommandExecutorTest
     {
         private CommandExecutor _executor;
         

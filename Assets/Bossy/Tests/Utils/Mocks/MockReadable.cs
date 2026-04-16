@@ -9,7 +9,7 @@ namespace Bossy.Tests.Utils
     /// <summary>
     /// A mock readable for testing.
     /// </summary>
-    public class MockReadable : IReadable
+    internal class MockReadable : IReadable
     {
         private int _idx;
         private bool _infinite;

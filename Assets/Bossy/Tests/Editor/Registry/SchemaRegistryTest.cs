@@ -10,7 +10,7 @@ namespace Bossy.Tests.Registry
     /// <summary>
     /// Tests the <see cref="SchemaRegistry"/> class.
     /// </summary>
-    public class SchemaRegistryTest
+    internal class SchemaRegistryTest
     {
         [Test]
         public void Test_TryResolveSchema_Roots()

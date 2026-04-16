@@ -4,29 +4,57 @@ using System.Linq;
 
 namespace Bossy.FrontEnd.Parsing
 {
+    /// <summary>
+    /// A registry of all type adapters.
+    /// </summary>
     public class TypeAdapterRegistry
     {
-        private Dictionary<Type, HashSet<ITypeAdapter>> _adapters = new();
+        private readonly Dictionary<Type, HashSet<ITypeAdapter>> _adapters = new();
 
+        /// <summary>
+        /// Converts a string to type T.
+        /// </summary>
+        /// <param name="input">The string to convert.</param>
+        /// <param name="output">The converted output.</param>
+        /// <typeparam name="T">The type to convert to.</typeparam>
+        /// <returns>The result.</returns>
         public TypeAdapterResult TryConvert<T>(string input, out T output)
         {
-            return TryConvert(new TokenStream(input), out output);
+            var stream = new TokenStream(input);
+            
+            output = default;
+            
+            var result = TryConvert(typeof(T), stream, out var obj);
+
+            if (result.Success)
+            {
+                output = (T)obj;
+            }
+            
+            return result;
         }
         
-        public TypeAdapterResult TryConvert<T>(TokenStream cursor, out T output)
+        /// <summary>
+        /// Converts a string to a type.
+        /// </summary>
+        /// <param name="type">The type to convert to.</param>
+        /// <param name="stream">The token stream.</param>
+        /// <param name="output">The converted output.</param>
+        /// <returns>The result.</returns>
+        public TypeAdapterResult TryConvert(Type type, TokenStream stream, out object output)
         {
-            output = default;
+            output = null;
 
-            if (!_adapters.TryGetValue(typeof(T), out var set))
+            if (!_adapters.TryGetValue(type, out var set))
             {
-                return TypeAdapterResult.Fail($"No registered adapter handles type \"{typeof(T)}\"");
+                return TypeAdapterResult.Fail($"No registered adapter handles type \"{type}\"");
             }
 
             // Multiple adapters are allowed to specify distinct input schemes for the same type.
             var errors = new List<string>();
             foreach (var adapter in set)
             {
-                var result = adapter.TryConvert(cursor, out var converted);
+                var result = adapter.TryConvert(stream, out output);
 
                 if (!result.Success)
                 {
@@ -34,7 +62,6 @@ namespace Bossy.FrontEnd.Parsing
                     continue;
                 }
                 
-                output = (T)converted;
                 return result;   
             }
 
@@ -42,6 +69,11 @@ namespace Bossy.FrontEnd.Parsing
             return TypeAdapterResult.Fail(message);
         }
 
+        /// <summary>
+        /// Adds a type adapter to the registry.
+        /// </summary>
+        /// <param name="type">The type that it converts for.</param>
+        /// <param name="adapter">The adapter.</param>
         public void RegisterAdapter(Type type, ITypeAdapter adapter)
         {
             if (_adapters.TryGetValue(type, out var set))

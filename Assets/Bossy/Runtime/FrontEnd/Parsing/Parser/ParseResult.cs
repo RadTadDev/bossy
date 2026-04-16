@@ -1,3 +1,4 @@
+using System;
 using Bossy.Shell;
 
 namespace Bossy.FrontEnd.Parsing
@@ -106,6 +107,40 @@ namespace Bossy.FrontEnd.Parsing
         public NoMatchingCommandError(string root)
         {
             _root = root;
+        }
+    }
+    
+    /// <summary>
+    /// Invalid switch error.
+    /// </summary>
+    internal class InvalidSwitchError : ParseResult
+    {
+        private readonly string _token;
+        
+        public override string Message => $"Unknown switch \"{_token}\".";
+
+        public InvalidSwitchError(string token)
+        {
+            _token = token;
+        }
+    }
+    
+    /// <summary>
+    /// Type adapt error.
+    /// </summary>
+    internal class TypeAdaptError : ParseResult
+    {
+        private readonly Type _type;
+        private readonly string _token;
+        private readonly string _message;
+
+        public override string Message => $"Could not parse {_token} as type \"{_type}\":\n\t{_message}";
+
+        public TypeAdaptError(Type type, string token, string message)
+        {
+            _type = type;
+            _token = token;
+            _message = message;
         }
     }
 }

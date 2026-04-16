@@ -7,7 +7,7 @@ namespace Bossy.Tests.Utils
     /// <summary>
     /// Information needed to generate an argument field.
     /// </summary>
-    public class ArgumentFieldRecord
+    internal class ArgumentFieldRecord
     {
         /// <summary>
         /// Field name.

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Bossy.FrontEnd.Parsing;
@@ -11,7 +10,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
     /// <summary>
     /// Tests the <see cref="Parser"/> class.
     /// </summary>
-    public class ParserTest
+    internal class ParserTest
     {
         private Parser _parser;
         private ParseResult _result;
@@ -30,9 +29,10 @@ namespace Bossy.Tests.FrontEnd.Parsing
                 new CommandSchema("cmd1", "description", test1.GetType(), null)
             };
             
-            var registry = new SchemaRegistry(schemas);
+            var schemaRegistry = new SchemaRegistry(schemas);
+            var adapterRegistry = new TypeAdapterRegistry();
             
-            _parser = new Parser(registry, ops);
+            _parser = new Parser(schemaRegistry, adapterRegistry, ops);
         }
         
         [Test]

@@ -6,58 +6,67 @@ namespace Bossy.Tests.FrontEnd.Parsing
     /// <summary>
     /// Tests the <see cref="TokenStream"/> class.
     /// </summary>
-    public class TokenStreamTest
+    internal class TokenStreamTest
     {
-        // Cursor mechanics
+        // Stream mechanics
         [Test] public void TryConsumeReturnsFalseWhenEmpty()
         {
-            var cursor = new TokenStream("");
-            Assert.That(cursor.TryConsume(out _), Is.False);
+            var stream = new TokenStream("");
+            Assert.That(stream.TryConsume(out _), Is.False);
         }
 
         [Test] public void TryConsumeMultiple()
         {
-            var cursor = new TokenStream("1 2 3");
-            Assert.That(cursor.TryConsume(3, out var tokens), Is.True);
+            var stream = new TokenStream("1 2 3");
+            Assert.That(stream.TryConsume(3, out var tokens), Is.True);
             Assert.That(tokens, Is.EqualTo(new[] { "1", "2", "3" }));
         }
 
         [Test] public void TryConsumeMultipleFailsIfNotEnough()
         {
-            var cursor = new TokenStream("1 2");
-            Assert.That(cursor.TryConsume(3, out var tokens), Is.False);
+            var stream = new TokenStream("1 2");
+            Assert.That(stream.TryConsume(3, out var tokens), Is.False);
             Assert.That(tokens, Is.Empty);
         }
 
-        [Test] public void TryConsumeMultipleDoesNotAdvanceCursorOnFailure()
+        [Test] public void TryConsumeMultipleDoesNotAdvanceStreamOnFailure()
         {
-            var cursor = new TokenStream("1 2");
-            cursor.TryConsume(3, out _);
-            Assert.That(cursor.TryConsume(out var token), Is.True);
+            var stream = new TokenStream("1 2");
+            stream.TryConsume(3, out _);
+            Assert.That(stream.TryConsume(out var token), Is.True);
             Assert.That(token, Is.EqualTo("1"));
         }
 
         [Test] public void PartialConsumesThenExhausted()
         {
-            var cursor = new TokenStream("a b c");
-            cursor.TryConsume(out _);
-            cursor.TryConsume(out _);
-            cursor.TryConsume(out _);
-            Assert.That(cursor.TryConsume(out _), Is.False);
+            var stream = new TokenStream("a b c");
+            stream.TryConsume(out _);
+            stream.TryConsume(out _);
+            stream.TryConsume(out _);
+            Assert.That(stream.TryConsume(out _), Is.False);
         }
         
         [Test] public void TryPeek()
         {
-            var cursor = new TokenStream("a");
-            Assert.That(cursor.TryPeek(out var token), Is.True);
+            var stream = new TokenStream("a");
+            Assert.That(stream.TryPeek(out var token), Is.True);
             Assert.That(token, Is.EqualTo("a"));
-            Assert.That(cursor.TryPeek(out token), Is.True);
+            Assert.That(stream.TryPeek(out token), Is.True);
             Assert.That(token, Is.EqualTo("a"));
 
-            cursor.TryConsume(out _);
+            stream.TryConsume(out _);
             
-            Assert.False(cursor.TryPeek(out _));
-            Assert.False(cursor.TryPeek(out _));
+            Assert.False(stream.TryPeek(out _));
+            Assert.False(stream.TryPeek(out _));
+        }
+        
+        [Test] public void Explode()
+        {
+            var stream = new TokenStream("a b c");
+            
+            stream.TryConsume(out _);
+
+            Assert.That(stream.Explode(), Is.EquivalentTo(new[] { "b", "c" }));
         }
     }
 }

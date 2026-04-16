@@ -10,7 +10,7 @@ namespace Bossy.Tests.Utils
     /// <summary>
     /// Provides a segregated assembly to hold all generated types.
     /// </summary>
-    public class DynamicAssemblyCache : UnityEngine.MonoBehaviour
+    internal class DynamicAssemblyCache : UnityEngine.MonoBehaviour
     {
         /// <summary>
         /// The dynamic assembly.
