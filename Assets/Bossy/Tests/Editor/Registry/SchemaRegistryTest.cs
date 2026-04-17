@@ -30,11 +30,11 @@ namespace Bossy.Tests.Registry
             
             for (var i = 0; i < 5; i++)
             {
-                Assert.That(registry.TryResolveSchema($"{name}_{i}", out _));
+                Assert.That(registry.TryResolveSchema($"{name}_{i}", out _), Is.EqualTo(SchemaQueryStatus.Found));
             }
             
-            Assert.That(registry.TryResolveSchema($"root", out _), Is.False);
-            Assert.That(registry.TryResolveSchema($"{name}_0 ", out _), Is.False);
+            Assert.That(registry.TryResolveSchema($"root", out _), Is.EqualTo(SchemaQueryStatus.NotFound));
+            Assert.That(registry.TryResolveSchema($"{name}_0 ", out _), Is.EqualTo(SchemaQueryStatus.NotFound));
         }
         
         [Test]
@@ -51,12 +51,12 @@ namespace Bossy.Tests.Registry
             var schemas = SchemaFactory.BuildCommandSchemas(graph);
             var registry = new SchemaRegistry(schemas);
             
-            Assert.That(registry.TryResolveSchema("parent", out _));
-            Assert.That(registry.TryResolveSchema("parent", new [] { "child" }, out _));
-            Assert.That(registry.TryResolveSchema("parent",  new [] { "child", "grandchild" }, out _));
+            Assert.That(registry.TryResolveSchema("parent", out _), Is.EqualTo(SchemaQueryStatus.Found));
+            Assert.That(registry.TryResolveSchema("parent", new [] { "child" }, out _), Is.EqualTo(SchemaQueryStatus.Found));
+            Assert.That(registry.TryResolveSchema("parent",  new [] { "child", "grandchild" }, out _), Is.EqualTo(SchemaQueryStatus.Found));
             
-            Assert.That(registry.TryResolveSchema("parent.child", out _), Is.False);
-            Assert.That(registry.TryResolveSchema(" parent", new [] { "child" }, out _), Is.False);
+            Assert.That(registry.TryResolveSchema("parent.child", out _), Is.EqualTo(SchemaQueryStatus.NotFound));
+            Assert.That(registry.TryResolveSchema(" parent", new [] { "child" }, out _), Is.EqualTo(SchemaQueryStatus.NotFound));
         }
     }
 }

@@ -2,14 +2,13 @@ using Bossy.Registry;
 using System.Collections.Generic;
 using System.Linq;
 using Bossy.Command;
-using PlasticPipe.PlasticProtocol.Messages;
 
 namespace Bossy.Schema
 {
     /// <summary>
     /// Validates a schema to ensure that no errors have been compiled into a command.
     /// </summary>
-    internal class Validator
+    internal class SchemaValidator
     {
         private readonly List<WarningContext> _warnings = new();
         private readonly List<ErrorContext> _errors = new();

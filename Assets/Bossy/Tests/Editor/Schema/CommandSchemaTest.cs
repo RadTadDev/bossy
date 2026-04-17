@@ -56,21 +56,20 @@ namespace Bossy.Tests.Schema
         }
         
         private static ArgumentSchema MakeSwitch(string name, char shortName) =>
-            new ArgumentSchema(name, "desc", null, new SwitchAttribute(shortName, ""), Array.Empty<ArgumentValidationAttribute>());
+            new(name, "desc", null, new SwitchAttribute(shortName, ""), Array.Empty<ArgumentValidationAttribute>());
 
         private static ArgumentSchema MakePositional(string name, int index) =>
-            new ArgumentSchema(name, "desc", null, new PositionalAttribute(index, ""), Array.Empty<ArgumentValidationAttribute>());
+            new(name, "desc", null, new PositionalAttribute(index, ""), Array.Empty<ArgumentValidationAttribute>());
 
         private static ArgumentSchema MakeOptional(string name, int index) =>
-            new ArgumentSchema(name, "desc", null, new OptionalAttribute(index, ""), Array.Empty<ArgumentValidationAttribute>());
+            new(name, "desc", null, new OptionalAttribute(index, ""), Array.Empty<ArgumentValidationAttribute>());
 
         private static ArgumentSchema MakeVariadic(string name) =>
-            new ArgumentSchema(name, "desc", null, new VariadicAttribute(""), Array.Empty<ArgumentValidationAttribute>());
+            new(name, "desc", null, new VariadicAttribute(""), Array.Empty<ArgumentValidationAttribute>());
 
         private static CommandSchema MakeSchema(params ArgumentSchema[] args) =>
-            new CommandSchema("cmd", "desc", typeof(int), args.ToHashSet());
+            new("cmd", "desc", typeof(int), args.ToHashSet());
 
-        // TryFindSwitch(string name)
         [Test] public void FindSwitch_ByName_Found() =>
             Assert.That(MakeSchema(MakeSwitch("verbose", 'v')).TryFindSwitch("verbose", out _), Is.True);
 
@@ -91,7 +90,6 @@ namespace Bossy.Tests.Schema
         [Test] public void FindSwitch_ByName_DoesNotMatchNonSwitch() =>
             Assert.That(MakeSchema(MakePositional("verbose", 0)).TryFindSwitch("verbose", out _), Is.False);
 
-        // TryFindSwitch(char shortName)
         [Test] public void FindSwitch_ByShortName_Found() =>
             Assert.That(MakeSchema(MakeSwitch("verbose", 'v')).TryFindSwitch('v', out _), Is.True);
 
@@ -104,40 +102,46 @@ namespace Bossy.Tests.Schema
         [Test] public void FindSwitch_ByShortName_NotFound() =>
             Assert.That(MakeSchema(MakeSwitch("verbose", 'v')).TryFindSwitch('x', out _), Is.False);
 
-        // TryFindPositional
-        [Test] public void FindPositional_Found() =>
-            Assert.That(MakeSchema(MakePositional("target", 0)).TryFindPositional("target", out _), Is.True);
+        [Test] public void TryGetVariadic_Found() =>
+            Assert.That(MakeSchema(MakeVariadic("verbose")).TryGetVariadic(out _), Is.True);
+        
+        [Test] public void TryGetVariadic_NotFound() =>
+            Assert.That(MakeSchema().TryGetVariadic(out _), Is.False);
+        
+        [Test]
+        public void GetOrderedPositionalArguments_ReturnsOnlyPositionals_InIndexOrder()
+        {
+            var schema = MakeSchema(
+                MakePositional("third", 2),
+                MakePositional("first", 0),
+                MakeSwitch("flag", 'f'),
+                MakePositional("second", 1)
+            );
 
-        [Test] public void FindPositional_ReturnsSchema() {
-            var schema = MakeSchema(MakePositional("target", 0));
-            schema.TryFindPositional("target", out var arg);
-            Assert.That(arg.Name, Is.EqualTo("target"));
+            var result = schema.GetOrderedPositionalArguments();
+
+            Assert.That(result.Count, Is.EqualTo(3));
+            Assert.That(result[0].Name, Is.EqualTo("first"));
+            Assert.That(result[1].Name, Is.EqualTo("second"));
+            Assert.That(result[2].Name, Is.EqualTo("third"));
         }
 
-        [Test] public void FindPositional_NotFound() =>
-            Assert.That(MakeSchema(MakePositional("target", 0)).TryFindPositional("missing", out _), Is.False);
+        [Test]
+        public void GetOrderedOptionalArguments_ReturnsOnlyOptionals_InIndexOrder()
+        {
+            var schema = MakeSchema(
+                MakeOptional("third", 2),
+                MakeOptional("first", 0),
+                MakePositional("pos", 0),
+                MakeOptional("second", 1)
+            );
 
-        [Test] public void FindPositional_DoesNotMatchSwitch() =>
-            Assert.That(MakeSchema(MakeSwitch("target", 't')).TryFindPositional("target", out _), Is.False);
+            var result = schema.GetOrderedOptionalArguments();
 
-        // TryFindOptional
-        [Test] public void FindOptional_Found() =>
-            Assert.That(MakeSchema(MakeOptional("output", 0)).TryFindOptional("output", out _), Is.True);
-
-        [Test] public void FindOptional_NotFound() =>
-            Assert.That(MakeSchema(MakeOptional("output", 0)).TryFindOptional("missing", out _), Is.False);
-
-        [Test] public void FindOptional_DoesNotMatchPositional() =>
-            Assert.That(MakeSchema(MakePositional("output", 0)).TryFindOptional("output", out _), Is.False);
-
-        // TryFindVariadic
-        [Test] public void FindVariadic_Found() =>
-            Assert.That(MakeSchema(MakeVariadic("files")).TryFindVariadic("files", out _), Is.True);
-
-        [Test] public void FindVariadic_NotFound() =>
-            Assert.That(MakeSchema(MakeVariadic("files")).TryFindVariadic("missing", out _), Is.False);
-
-        [Test] public void FindVariadic_DoesNotMatchPositional() =>
-            Assert.That(MakeSchema(MakePositional("files", 0)).TryFindVariadic("files", out _), Is.False);
+            Assert.That(result.Count, Is.EqualTo(3));
+            Assert.That(result[0].Name, Is.EqualTo("first"));
+            Assert.That(result[1].Name, Is.EqualTo("second"));
+            Assert.That(result[2].Name, Is.EqualTo("third"));
+        }
     }
 }

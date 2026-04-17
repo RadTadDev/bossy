@@ -98,49 +98,39 @@ namespace Bossy.Schema
             
             return argument != null;
         }
-        
+
         /// <summary>
-        /// Tries to look for a positional in the argument list.
+        /// Gets an ordered list of all positional arguments.
         /// </summary>
-        /// <param name="name">The name of the positional.</param>
-        /// <param name="argument">The argument schema.</param>
-        /// <returns>True if found, otherwise false.</returns>
-        public bool TryFindPositional(string name, out ArgumentSchema argument)
+        /// <returns>The list of positional arguments.</returns>
+        public List<ArgumentSchema> GetOrderedPositionalArguments()
         {
-            argument = Arguments
+            return Arguments
                 .Where(a => a.ArgumentAttribute is PositionalAttribute)
-                .FirstOrDefault(a => a.Name == name);
-            
-            return argument != null;
+                .OrderBy(a => ((PositionalAttribute)a.ArgumentAttribute).Index)
+                .ToList();
         }
         
         /// <summary>
-        /// Tries to look for an optional in the argument list.
+        /// Gets an ordered list of all optional arguments.
         /// </summary>
-        /// <param name="name">The name of the optional.</param>
-        /// <param name="argument">The argument schema.</param>
-        /// <returns>True if found, otherwise false.</returns>
-        public bool TryFindOptional(string name, out ArgumentSchema argument)
+        /// <returns>The list of optional arguments.</returns>
+        public List<ArgumentSchema> GetOrderedOptionalArguments()
         {
-            argument = Arguments
+            return Arguments
                 .Where(a => a.ArgumentAttribute is OptionalAttribute)
-                .FirstOrDefault(a => a.Name == name);
-            
-            return argument != null;
+                .OrderBy(a => ((OptionalAttribute)a.ArgumentAttribute).Index)
+                .ToList();
         }
         
         /// <summary>
         /// Tries to look for a variadic in the argument list.
         /// </summary>
-        /// <param name="name">The name of the variadic.</param>
         /// <param name="argument">The argument schema.</param>
         /// <returns>True if found, otherwise false.</returns>
-        public bool TryFindVariadic(string name, out ArgumentSchema argument)
+        public bool TryGetVariadic(out ArgumentSchema argument)
         {
-            argument = Arguments
-                .Where(a => a.ArgumentAttribute is VariadicAttribute)
-                .FirstOrDefault(a => a.Name == name);
-            
+            argument = Arguments .FirstOrDefault(a => a.ArgumentAttribute is VariadicAttribute);
             return argument != null;
         }
         

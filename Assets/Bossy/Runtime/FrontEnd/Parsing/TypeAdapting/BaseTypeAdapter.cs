@@ -28,8 +28,5 @@ namespace Bossy.FrontEnd.Parsing
         /// <param name="output">The output type.</param>
         /// <returns>The result.</returns>
         protected abstract TypeAdapterResult TryConvertToType(TokenStream stream, out T output);
-        
-        public override bool Equals(object obj) => obj?.GetType() == GetType();
-        public override int GetHashCode() => GetType().GetHashCode();
     }
 }

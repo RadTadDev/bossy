@@ -134,56 +134,193 @@ namespace Bossy.FrontEnd.Parsing
             ExpandAggregateFlags(argTokens);
             
             // 3. Foreach flag starting with - or -- ensure match in schema
-            for (var i = 0; i < argTokens.Count; i++)
+            var switchResult = ParseSwitches(argTokens, schema, command);
+            if (switchResult.IsError) return ParseStep<ICommand>.Fail(switchResult.Error);
+
+            // 4. Parse in positionals - return on error or not enough
+            var positionalResult = ParsePositionals(argTokens, schema, command);
+            if (positionalResult.IsError) return ParseStep<ICommand>.Fail(positionalResult.Error);
+            
+            // 5. Parse in optionals - return on error
+            var optionalResult = ParseOptionals(argTokens, schema, command);
+            if (optionalResult.IsError) return ParseStep<ICommand>.Fail(optionalResult.Error);
+            
+            // 6. Parse in variadic - return on error
+            var variadicResult = ParseVariadic(argTokens, schema, command);
+            if (variadicResult.IsError) return ParseStep<ICommand>.Fail(variadicResult.Error);
+            
+            return ParseStep<ICommand>.Ok(command);
+        }
+
+        private ParseStep ParseSwitches(List<string> argTokens, CommandSchema schema, ICommand command)
+        {
+            var idx = 0;
+            
+            while (idx < argTokens.Count)
             {
-                var token = argTokens[i];
-                
-                if (!token.StartsWith("-")) continue;
-                
-                // 3.a. If false - return unknown switch
                 ArgumentSchema argSchema;
+                var token = argTokens[idx];
+                
+                // 1. Only match with - or -- style arguments
+                if (!token.StartsWith("-"))
+                {
+                    idx++;
+                    continue;
+                }
+                
+                // 2. Get matching argument in schema
                 if (token.StartsWith("--"))
                 {
                     if (!schema.TryFindSwitch(token[2..], out argSchema))
                     {
-                        return ParseStep<ICommand>.Fail(new InvalidSwitchError(token));
+                        return ParseStep.Fail(new InvalidSwitchError(token));
                     }
                 }
                 else
                 {
                     if (!schema.TryFindSwitch(token[1], out argSchema))
                     {
-                        return ParseStep<ICommand>.Fail(new InvalidSwitchError(token));
+                        return ParseStep.Fail(new InvalidSwitchError(token));
                     }
                 }
                 
-                // 3.b. Remove name from parent list and dump every value after into substream
-                argTokens.RemoveAt(i);
-                var substream = new TokenStream(argTokens.GetRange(i, argTokens.Count - i));
+                // 3. Remove name from tokens and create greedy substream
+                argTokens.RemoveAt(idx);
+                var substream = new TokenStream(argTokens.GetRange(idx, argTokens.Count - idx));
                 
-                // 3.c. Parse (return on error) and check position of stream. Remove that many tokens from overall list 
-                var targetType = argSchema.FieldInfo.FieldType;
-                var adaptResult = _adapterRegistry.TryConvert(targetType, substream, out var value);
+                // 4. Parse and remove consumed tokens 
+                var adaptResult = _adapterRegistry.TryConvert(argSchema.Type, substream, out var value);
                 if (!adaptResult.Success)
                 {
-                    return ParseStep<ICommand>.Fail(new TypeAdaptError(targetType, token, adaptResult.ErrorMessage));
+                    return ParseStep.Fail(new TypeAdaptError(argSchema.Type, token, adaptResult.ErrorMessage));
                 }
                 
-                argSchema.FieldInfo.SetValue(command, value);
+                argTokens.RemoveRange(idx, substream.Cursor);
                 
-                // 3.d. Run switch validators
+                // 5. Run switch validators
+                // TODO: Add when validators are added
+                
+                // 6. Set field value
+                argSchema.SetValue(command, value);
             }
-                
-                
-            // 4. Parse in positionals - return on error or not enough
-            
-            // 5. Parse in optionals - return on error
-            
-            // 6. Parse in variadic - return on error
-            
-            return ParseStep<ICommand>.Ok(null);
+
+            return ParseStep.Ok();
         }
 
+        private ParseStep ParsePositionals(List<string> argTokens, CommandSchema schema, ICommand command)
+        {
+            var positionals = schema.GetOrderedPositionalArguments();
+
+            // 1. Loop over all positionals 
+            foreach (var argSchema in positionals)
+            {
+                // 2. If we run out of tokens but expect an argument, this is an error
+                if (argTokens.Count <= 0)
+                {
+                    return ParseStep.Fail(new MissingPositionalError(argSchema.Type, argSchema.Name));
+                }
+                
+                // 3. Try parsing the tokens to the argument schema and remove consumed tokens
+                var substream = new TokenStream(argTokens);
+                var adaptResult = _adapterRegistry.TryConvert(argSchema.Type, substream, out var value);
+                if (!adaptResult.Success)
+                {
+                    return ParseStep.Fail(new TypeAdaptError(argSchema.Type, argTokens[0], adaptResult.ErrorMessage));
+                }
+                
+                argTokens.RemoveRange(0, substream.Cursor);
+                
+                // 4. Run validators
+                // TODO: Run validators
+                
+                // 5. Set the value
+                argSchema.SetValue(command, value);
+            }
+
+            return ParseStep.Ok();
+        }
+        
+        private ParseStep ParseOptionals(List<string> argTokens, CommandSchema schema, ICommand command)
+        {
+            var optionals = schema.GetOrderedOptionalArguments();
+
+            // 1. Loop over all optionals 
+            foreach (var argSchema in optionals)
+            {
+                // 2. Running out of tokens for optionals is OK, but they must appear in order
+                if (argTokens.Count <= 0) return ParseStep.Ok();
+                
+                // 3. Try parsing the tokens to the argument schema and remove consumed tokens
+                var substream = new TokenStream(argTokens);
+                var adaptResult = _adapterRegistry.TryConvert(argSchema.Type, substream, out var value);
+
+                if (!adaptResult.Success)
+                {
+                    if (!schema.TryGetVariadic(out _))
+                    {
+                        return ParseStep.Fail(new TypeAdaptError(argSchema.Type, argTokens[0], adaptResult.ErrorMessage));
+                    }
+                    return ParseStep.Ok();
+                }
+                
+                argTokens.RemoveRange(0, substream.Cursor);
+                
+                // 4. Run validators
+                // TODO: Run validators
+                
+                // 5. Set the value
+                argSchema.SetValue(command, value);
+            }
+
+            return ParseStep.Ok();
+        }
+
+        private ParseStep ParseVariadic(List<string> argTokens, CommandSchema schema, ICommand command)
+        {
+            // 1. If there are not variadic args, we are done but must check for unexpected tokens
+            if (!schema.TryGetVariadic(out var variadic))
+            {
+                return argTokens.Count > 0 
+                    ? ParseStep.Fail(new UnexpectedTokensError(argTokens))
+                    :  ParseStep.Ok();
+            }
+
+            // This is guaranteed to be an array by the validator
+            var type = variadic.Type.GetElementType()!;
+
+            var args = new List<object>();
+            
+            // 2. Loop over all remaining tokens to put into variadic args
+            while (argTokens.Count > 0)
+            {
+                var substream = new TokenStream(argTokens);
+                var result = _adapterRegistry.TryConvert(type, substream, out var value);
+                if (!result.Success)
+                {
+                    return ParseStep.Fail(new TypeAdaptError(type, argTokens[0], result.ErrorMessage));
+                }
+                
+                argTokens.RemoveRange(0, substream.Cursor);
+                
+                // 3. Run validators
+                // TODO: Run validators
+                
+                // 4. Add to list
+                args.Add(value);
+            }
+
+            // 5. Set the arguments' value
+            var array = Array.CreateInstance(type, args.Count);
+            for (var i = 0; i < args.Count; i++)
+            {
+                array.SetValue(args[i], i);
+            }
+            
+            variadic.SetValue(command, array);
+            
+            return ParseStep.Ok();
+        }
+        
         private static void ExpandAggregateFlags(List<string> tokens)
         {
             for (var i = 0; i < tokens.Count; i++)
@@ -204,20 +341,36 @@ namespace Bossy.FrontEnd.Parsing
             // Stream will always have at least one token due to previous error checking
             stream.TryConsume(out var root);
 
-            if (!_schemaRegistry.TryResolveSchema(root, out var schema))
+            var query = _schemaRegistry.TryResolveSchema(root, out var schema);
+            
+            if (query is SchemaQueryStatus.NotFound)
             {
                 return ParseStep<CommandSchema>.Fail(new NoMatchingCommandError(root));
+            }
+
+            if (query is SchemaQueryStatus.Invalid)
+            {
+                return ParseStep<CommandSchema>.Fail(new InvalidSchemaError(new List<string> { root }));
             }
 
             var subcommands = new List<string>();
             while (stream.TryPeek(out var next))
             {
-                if (!_schemaRegistry.TryResolveSchema(root, subcommands.Append(next), out schema))
+                query = _schemaRegistry.TryResolveSchema(root, subcommands.Append(next), out schema);
+                
+                if (query is SchemaQueryStatus.NotFound)
                 {
                     break;
                 }
                 
                 subcommands.Add(next);
+
+                // Greedily fail on invalid commands to raise the issue
+                if (query is SchemaQueryStatus.Invalid)
+                {
+                    return  ParseStep<CommandSchema>.Fail(new InvalidSchemaError(subcommands));
+                }
+                
                 stream.TryConsume(out _);
             }
 
@@ -229,7 +382,7 @@ namespace Bossy.FrontEnd.Parsing
         private static CommandGraph BuildGraph(List<ParseNode> pipeline, bool isWindowed)
         {
             var builder = CommandGraph.Create(isWindowed).Execute(pipeline.First().Command);
-            pipeline.RemoveAt(0);
+            pipeline = pipeline.Skip(1).ToList();
             
             foreach (var node in pipeline)
             {
@@ -255,6 +408,18 @@ namespace Bossy.FrontEnd.Parsing
             }
             
             return builder.Build();
+        }
+        
+        
+        private readonly struct ParseStep
+        {
+            public readonly ParseResult Error;
+            public bool IsError => Error != null;
+
+            private ParseStep(ParseResult error) { Error = error; }
+
+            public static ParseStep Ok() => new(null);
+            public static ParseStep Fail(ParseResult error) => new(error);
         }
         
         private readonly struct ParseStep<T>

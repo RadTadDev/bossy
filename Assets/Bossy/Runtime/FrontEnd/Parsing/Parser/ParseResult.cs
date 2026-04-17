@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Bossy.Shell;
 
 namespace Bossy.FrontEnd.Parsing
@@ -130,17 +131,64 @@ namespace Bossy.FrontEnd.Parsing
     /// </summary>
     internal class TypeAdaptError : ParseResult
     {
-        private readonly Type _type;
+        private readonly Type _targetType;
         private readonly string _token;
         private readonly string _message;
 
-        public override string Message => $"Could not parse {_token} as type \"{_type}\":\n\t{_message}";
+        public override string Message => $"Could not parse {_token} as type \"{_targetType}\":\n\t{_message}.";
 
-        public TypeAdaptError(Type type, string token, string message)
+        public TypeAdaptError(Type targetType, string token, string message)
         {
-            _type = type;
+            _targetType = targetType;
             _token = token;
             _message = message;
+        }
+    }
+    
+    /// <summary>
+    /// Missing positional error.
+    /// </summary>
+    internal class MissingPositionalError : ParseResult
+    {
+        private readonly Type _type;
+        private readonly string _argName;
+
+        public override string Message => $"Expected argument {_argName} of type {_type} was missing.";
+
+        public MissingPositionalError(Type type, string argName)
+        {
+            _type = type;
+            _argName = argName;
+        }
+    }
+    
+    /// <summary>
+    /// Unexpected tokens error.
+    /// </summary>
+    internal class UnexpectedTokensError : ParseResult
+    {
+        private readonly List<string> _tokens;
+
+        public override string Message => $"Received unexpected token(s): {string.Join(" ", _tokens)}.";
+
+        public UnexpectedTokensError(List<string> tokens)
+        {
+            _tokens = tokens;
+        }
+    }
+    
+    /// <summary>
+    /// Invalid schema error.
+    /// </summary>
+    internal class InvalidSchemaError : ParseResult
+    {
+        private readonly List<string> _tokens;
+
+        public override string Message => $"Command {string.Join("->", _tokens)} is invalid. Please fix it before running it.";
+
+        public InvalidSchemaError(List<string> tokens)
+        {
+            _tokens = tokens;
         }
     }
 }

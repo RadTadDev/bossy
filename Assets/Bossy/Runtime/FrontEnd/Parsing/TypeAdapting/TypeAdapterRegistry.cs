@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Bossy.FrontEnd.Parsing
 {
@@ -9,7 +8,7 @@ namespace Bossy.FrontEnd.Parsing
     /// </summary>
     public class TypeAdapterRegistry
     {
-        private readonly Dictionary<Type, HashSet<ITypeAdapter>> _adapters = new();
+        private readonly Dictionary<Type, ITypeAdapter> _adapters = new();
 
         /// <summary>
         /// Converts a string to type T.
@@ -45,28 +44,14 @@ namespace Bossy.FrontEnd.Parsing
         {
             output = null;
 
-            if (!_adapters.TryGetValue(type, out var set))
+            if (!_adapters.TryGetValue(type, out var adapter))
             {
                 return TypeAdapterResult.Fail($"No registered adapter handles type \"{type}\"");
             }
 
-            // Multiple adapters are allowed to specify distinct input schemes for the same type.
-            var errors = new List<string>();
-            foreach (var adapter in set)
-            {
-                var result = adapter.TryConvert(stream, out output);
+            var result = adapter.TryConvert(stream, out output);
 
-                if (!result.Success)
-                {
-                    errors.Add(result.ErrorMessage);
-                    continue;
-                }
-                
-                return result;   
-            }
-
-            var message = errors.Count == 1 ? errors.First() : "Could not match any converter:\n" + string.Join("\n- ", errors);
-            return TypeAdapterResult.Fail(message);
+            return result.Success ? result : TypeAdapterResult.Fail(result.ErrorMessage);
         }
 
         /// <summary>
@@ -76,14 +61,7 @@ namespace Bossy.FrontEnd.Parsing
         /// <param name="adapter">The adapter.</param>
         public void RegisterAdapter(Type type, ITypeAdapter adapter)
         {
-            if (_adapters.TryGetValue(type, out var set))
-            {
-                set.Add(adapter);
-            }
-            else
-            {
-                _adapters[type] = new HashSet<ITypeAdapter> { adapter };
-            }
+            _adapters[type] = adapter;
         }
     }
 }
