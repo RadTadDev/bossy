@@ -12,7 +12,7 @@ namespace Bossy.Tests.Shell
     /// <summary>
     /// Tests the <see cref="CommandExecutor"/> class.
     /// </summary>
-    public class CommandExecutorTest
+    internal class CommandExecutorTest
     {
         private CommandExecutor _executor;
         
@@ -32,11 +32,11 @@ namespace Bossy.Tests.Shell
             var writer = new MockWriteable();
 
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new EchoCommand())
                 .Build();
             
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
             
             Assert.That(writer.Log, Is.EquivalentTo(new[] { "hello", "world" }));
         }
@@ -52,13 +52,13 @@ namespace Bossy.Tests.Shell
             var tracker3 = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(tracker1)
                 .Then(tracker2)
                 .Then(tracker3)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
             
             Assert.That(tracker1.WasCalled, Is.True);
             Assert.That(tracker2.WasCalled, Is.True);
@@ -74,12 +74,12 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new FailCommand())
                 .And(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
             
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -93,12 +93,12 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new SuccessfulCommand())
                 .And(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
             
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -112,12 +112,12 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new SuccessfulCommand())
                 .Or(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
             
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -131,12 +131,12 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new FailCommand())
                 .Or(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
             
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -153,12 +153,12 @@ namespace Bossy.Tests.Shell
             var infinite = new InfiniteCommand(() => cts.Cancel(), InfiniteOperation.Delay);
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(infinite)
                 .Then(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
 
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -175,12 +175,12 @@ namespace Bossy.Tests.Shell
             var infinite = new InfiniteCommand(() => cts.Cancel(), InfiniteOperation.Write);
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(infinite)
                 .Then(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
 
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -197,12 +197,12 @@ namespace Bossy.Tests.Shell
             var infinite = new InfiniteCommand(() => cts.Cancel(), InfiniteOperation.Read);
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(infinite)
                 .Then(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -218,13 +218,13 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new FailCommand())
                 .And(new SuccessfulCommand())
                 .Or(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -240,13 +240,13 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new SuccessfulCommand())
                 .And(new SuccessfulCommand())
                 .Or(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -262,13 +262,13 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new SuccessfulCommand())
                 .And(new FailCommand())
                 .Or(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -284,13 +284,13 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new SuccessfulCommand())
                 .Or(new FailCommand())
                 .And(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -306,13 +306,13 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new FailCommand())
                 .Or(new FailCommand())
                 .And(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -328,13 +328,13 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
             
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new FailCommand())
                 .Or(new SuccessfulCommand())
                 .And(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -346,12 +346,12 @@ namespace Bossy.Tests.Shell
             var writer = new MockWriteable();
 
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new EchoCommand())
                 .AndPipeTo(new EchoCommand())
                 .Build();
 
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
 
             Assert.That(writer.Log, Is.EquivalentTo(new[] { "hello", "world" }));
         }
@@ -363,13 +363,13 @@ namespace Bossy.Tests.Shell
             var writer = new MockWriteable();
 
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new EchoCommand())
                 .AndPipeTo(new EchoCommand())
                 .AndPipeTo(new EchoCommand())
                 .Build();
 
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
 
             Assert.That(writer.Log, Is.EquivalentTo(new[] { "hello", "world" }));
         }
@@ -383,13 +383,13 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
 
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new EchoCommand())
                 .AndPipeTo(new EchoCommand())
                 .Then(tracker)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
 
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -403,13 +403,13 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
 
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new EchoCommand())
                 .AndPipeTo(new FailCommand())
                 .Then(tracker)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
 
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -423,13 +423,13 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
 
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new EchoCommand())
                 .AndPipeTo(new FailCommand())
                 .Or(tracker)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
 
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -443,13 +443,13 @@ namespace Bossy.Tests.Shell
             var tracker = new TrackingCommand();
 
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new EchoCommand())
                 .AndPipeTo(new SuccessfulCommand())
                 .And(tracker)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
 
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -466,13 +466,13 @@ namespace Bossy.Tests.Shell
             var infinite = new InfiniteCommand(() => cts.Cancel(), InfiniteOperation.Delay);
 
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(infinite)
                 .AndPipeTo(new EchoCommand())
                 .Then(tracker)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
 
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -488,13 +488,13 @@ namespace Bossy.Tests.Shell
             var cts = new CancellationTokenSource();
         
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new InfiniteCommand(null, InfiniteOperation.Read))
                 .AndPipeTo(new FailCommand())
                 .Then(tracker)
                 .Build();
         
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -508,11 +508,11 @@ namespace Bossy.Tests.Shell
             var cts = new CancellationTokenSource();
         
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new IntReaderCommand())
                 .Build();
         
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
         
             Assert.That(writer.Log, Is.Not.Empty);
         }
@@ -526,11 +526,11 @@ namespace Bossy.Tests.Shell
             var cts = new CancellationTokenSource();
         
             var graph = CommandGraph
-                .Create(reader, writer, false)
+                .Create(false)
                 .Execute(new ThrowsCommand())
                 .Build();
         
-            await _executor.ExecuteAsync(graph, cts.Token);
+            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
         
             Assert.That(writer.Log, Is.Not.Empty);
         }

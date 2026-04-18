@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Bossy.Command;
@@ -18,6 +19,11 @@ namespace Bossy.Schema
         /// The description of this argument.
         /// </summary>
         public readonly string Description;
+        
+        /// <summary>
+        /// The type of this argument.
+        /// </summary>
+        public Type Type => FieldInfo.FieldType;
         
         /// <summary>
         /// The reflective field information for this argument.
@@ -49,6 +55,16 @@ namespace Bossy.Schema
             FieldInfo = fieldInfo;
             ArgumentAttribute = argumentAttribute;
             ValidationAttributes = validationAttributes;
+        }
+
+        /// <summary>
+        /// Sets the value of this argument on an object.
+        /// </summary>
+        /// <param name="target">The target object.</param>
+        /// <param name="value">The value to set.</param>
+        public void SetValue(object target, object value)
+        {
+            FieldInfo.SetValue(target, value);
         }
     }
 }

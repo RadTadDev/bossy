@@ -5,9 +5,9 @@ namespace Bossy.FrontEnd.Parsing
 {
     public class Vector2Adapter : BaseTypeAdapter<Vector2>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out Vector2 output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Vector2 output)
         {
-            if (cursor.TryConsume(2, out var tokens)
+            if (stream.TryConsume(2, out var tokens)
                 && float.TryParse(tokens[0], out var x)
                 && float.TryParse(tokens[1], out var y))
             {
@@ -22,9 +22,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class Vector3Adapter : BaseTypeAdapter<Vector3>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out Vector3 output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Vector3 output)
         {
-            if (cursor.TryConsume(3, out var tokens)
+            if (stream.TryConsume(3, out var tokens)
                 && float.TryParse(tokens[0], out var x)
                 && float.TryParse(tokens[1], out var y)
                 && float.TryParse(tokens[2], out var z))
@@ -40,9 +40,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class Vector4Adapter : BaseTypeAdapter<Vector4>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out Vector4 output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Vector4 output)
         {
-            if (cursor.TryConsume(4, out var tokens)
+            if (stream.TryConsume(4, out var tokens)
                 && float.TryParse(tokens[0], out var x)
                 && float.TryParse(tokens[1], out var y)
                 && float.TryParse(tokens[2], out var z)
@@ -59,9 +59,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class Vector2IntAdapter : BaseTypeAdapter<Vector2Int>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out Vector2Int output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Vector2Int output)
         {
-            if (cursor.TryConsume(2, out var tokens)
+            if (stream.TryConsume(2, out var tokens)
                 && int.TryParse(tokens[0], out var x)
                 && int.TryParse(tokens[1], out var y))
             {
@@ -76,9 +76,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class Vector3IntAdapter : BaseTypeAdapter<Vector3Int>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out Vector3Int output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Vector3Int output)
         {
-            if (cursor.TryConsume(3, out var tokens)
+            if (stream.TryConsume(3, out var tokens)
                 && int.TryParse(tokens[0], out var x)
                 && int.TryParse(tokens[1], out var y)
                 && int.TryParse(tokens[2], out var z))
@@ -94,9 +94,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class ColorAdapter : BaseTypeAdapter<Color>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out Color output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Color output)
         {
-            if (!cursor.TryPeek(out var first))
+            if (!stream.TryPeek(out var first))
             {
                 output = default;
                 return TypeAdapterResult.Fail("Expected Color, got nothing");
@@ -104,14 +104,14 @@ namespace Bossy.FrontEnd.Parsing
 
             if (first.StartsWith("#"))
             {
-                cursor.TryConsume(out _);
+                stream.TryConsume(out _);
                 if (ColorUtility.TryParseHtmlString(first, out output))
                     return TypeAdapterResult.Pass();
 
                 return TypeAdapterResult.Fail($"Expected hex color e.g. \"#FF0000\", got \"{first}\"");
             }
 
-            if (cursor.TryConsume(4, out var tokens)
+            if (stream.TryConsume(4, out var tokens)
                 && float.TryParse(tokens[0], out var r)
                 && float.TryParse(tokens[1], out var g)
                 && float.TryParse(tokens[2], out var b)
@@ -121,7 +121,7 @@ namespace Bossy.FrontEnd.Parsing
                 return TypeAdapterResult.Pass();
             }
 
-            if (cursor.TryConsume(3, out tokens)
+            if (stream.TryConsume(3, out tokens)
                 && float.TryParse(tokens[0], out r)
                 && float.TryParse(tokens[1], out g)
                 && float.TryParse(tokens[2], out b))

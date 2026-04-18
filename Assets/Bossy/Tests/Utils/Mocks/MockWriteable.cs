@@ -6,7 +6,7 @@ namespace Bossy.Tests.Utils
     /// <summary>
     /// Creates an inspectable write target for testing.
     /// </summary>
-    public class MockWriteable : IWriteable
+    internal class MockWriteable : IWriteable
     {
         /// <summary>
         /// The output log.

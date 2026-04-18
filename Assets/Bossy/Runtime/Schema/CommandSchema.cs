@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Bossy.Command;
 
 namespace Bossy.Schema
@@ -67,6 +68,71 @@ namespace Bossy.Schema
         /// </summary>
         /// <returns>The command.</returns>
         public ICommand Instantiate() => (ICommand)Activator.CreateInstance(CommandType);
+
+        /// <summary>
+        /// Tries to look for a switch in the argument list.
+        /// </summary>
+        /// <param name="name">The name of the switch.</param>
+        /// <param name="argument">The argument schema.</param>
+        /// <returns>True if found, otherwise false.</returns>
+        public bool TryFindSwitch(string name, out ArgumentSchema argument)
+        {
+            argument = Arguments
+                .Where(a => a.ArgumentAttribute is SwitchAttribute)
+                .FirstOrDefault(a => a.Name == name);
+            
+            return argument != null;
+        }
+        
+        /// <summary>
+        /// Tries to look for a switch in the argument list.
+        /// </summary>
+        /// <param name="shortName">The short name of the switch.</param>
+        /// <param name="argument">The argument schema.</param>
+        /// <returns>True if found, otherwise false.</returns>
+        public bool TryFindSwitch(char shortName, out ArgumentSchema argument)
+        {
+            argument = Arguments
+                .Where(a => a.ArgumentAttribute is SwitchAttribute)
+                .FirstOrDefault(a => ((SwitchAttribute)a.ArgumentAttribute).ShortName == shortName);
+            
+            return argument != null;
+        }
+
+        /// <summary>
+        /// Gets an ordered list of all positional arguments.
+        /// </summary>
+        /// <returns>The list of positional arguments.</returns>
+        public List<ArgumentSchema> GetOrderedPositionalArguments()
+        {
+            return Arguments
+                .Where(a => a.ArgumentAttribute is PositionalAttribute)
+                .OrderBy(a => ((PositionalAttribute)a.ArgumentAttribute).Index)
+                .ToList();
+        }
+        
+        /// <summary>
+        /// Gets an ordered list of all optional arguments.
+        /// </summary>
+        /// <returns>The list of optional arguments.</returns>
+        public List<ArgumentSchema> GetOrderedOptionalArguments()
+        {
+            return Arguments
+                .Where(a => a.ArgumentAttribute is OptionalAttribute)
+                .OrderBy(a => ((OptionalAttribute)a.ArgumentAttribute).Index)
+                .ToList();
+        }
+        
+        /// <summary>
+        /// Tries to look for a variadic in the argument list.
+        /// </summary>
+        /// <param name="argument">The argument schema.</param>
+        /// <returns>True if found, otherwise false.</returns>
+        public bool TryGetVariadic(out ArgumentSchema argument)
+        {
+            argument = Arguments .FirstOrDefault(a => a.ArgumentAttribute is VariadicAttribute);
+            return argument != null;
+        }
         
         void ICommandSchemaWriter.SetParent(CommandSchema parent)
         {

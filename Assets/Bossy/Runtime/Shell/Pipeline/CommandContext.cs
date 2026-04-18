@@ -15,12 +15,12 @@ namespace Bossy.Shell
         /// <summary>
         /// The context's reader.
         /// </summary>
-        public IReadable Reader { get; }
+        public IReadable InputStream { get; }
         
         /// <summary>
         /// The context's writer.
         /// </summary>
-        public IWriteable Writer => writer;
+        public IWriteable OutputStream => writer;
         
         private readonly Shell _shell;
         private readonly bool _allowRetry;
@@ -30,13 +30,13 @@ namespace Bossy.Shell
         /// Builds a new command context.
         /// </summary>
         /// <param name="shell">The shell.</param>
-        /// <param name="reader">A readable source.</param>
+        /// <param name="inputStream">A readable source.</param>
         /// <param name="writer">A writeable sink.</param>
         /// <param name="allowRetry">Whether to allow reads to be retried on bad type input.</param>
         /// <param name="token">The cancellation token associated with this execution.</param>
-        public CommandContext(Shell shell, IReadable reader, IWriteable writer, bool allowRetry, CancellationToken token) : base(writer)
+        public CommandContext(Shell shell, IReadable inputStream, IWriteable writer, bool allowRetry, CancellationToken token) : base(writer)
         {
-            Reader = reader;
+            InputStream = inputStream;
             _allowRetry = allowRetry;
             _shell = shell;
             _token = token;
@@ -77,7 +77,7 @@ namespace Bossy.Shell
 
                 // Prevent hot loops on suppliers
                 await Task.Yield();
-                response = await Reader.ReadAsync(typeof(T), _token);
+                response = await InputStream.ReadAsync(typeof(T), _token);
             
                 if (response is null)
                 {

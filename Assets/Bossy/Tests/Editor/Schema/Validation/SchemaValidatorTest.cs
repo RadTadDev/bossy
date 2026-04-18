@@ -11,16 +11,16 @@ using NUnit.Framework;
 namespace Bossy.Tests.Schema
 {
     /// <summary>
-    /// Tests the <see cref="Validator"/> class.
+    /// Tests the <see cref="SchemaValidator"/> class.
     /// </summary>
-    internal class ValidatorTest
+    internal class SchemaValidatorTest
     {
-        private Validator _validator;
+        private SchemaValidator _schemaValidator;
 
         [SetUp]
         public void SetUp()
         {
-            _validator = new Validator();
+            _schemaValidator = new SchemaValidator();
         }
 
         // -------------------------
@@ -33,7 +33,7 @@ namespace Bossy.Tests.Schema
             var type = CommandGenerator.WithName("test").Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.IsValid, Is.True);
             Assert.That(result.Errors, Is.Empty);
@@ -46,7 +46,7 @@ namespace Bossy.Tests.Schema
             var type = CommandGenerator.WithName("test").Generate().GetType();
             var schema = new CommandSchema("",  "description", type, null);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<MissingNameError>().Any(), Is.True);
         }
@@ -57,7 +57,7 @@ namespace Bossy.Tests.Schema
             var type = CommandGenerator.WithName("test").Generate().GetType();
             var schema = new CommandSchema("1invalid", "description", type, null);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<InvalidNameError>().Any(), Is.True);
         }
@@ -68,7 +68,7 @@ namespace Bossy.Tests.Schema
             var type = CommandGenerator.WithName("test").Generate().GetType();
             var schema = new CommandSchema("test", "", type, null);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Warnings.OfType<MissingDescriptionWarning>().Any(), Is.True);
             Assert.That(result.IsValid, Is.True);
@@ -79,7 +79,7 @@ namespace Bossy.Tests.Schema
         {
             var schema = BuildSchemaFromType(typeof(string)); // not an ICommand
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<NotACommandError>().Any(), Is.True);
         }
@@ -96,7 +96,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.IsValid, Is.True);
         }
@@ -110,7 +110,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<DuplicateSwitchNameError>().Any(), Is.True);
         }
@@ -123,7 +123,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<InvalidShortSwitchNameError>().Any(), Is.True);
         }
@@ -142,7 +142,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.IsValid, Is.True);
         }
@@ -156,7 +156,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<DuplicateIndexError>().Any(e => e.IsPositional), Is.True);
         }
@@ -169,7 +169,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<NegativeIndexError>().Any(e => e.IsPositional), Is.True);
         }
@@ -183,7 +183,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<BadIndexOrderError>().Any(e => e.IsPositional), Is.True);
         }
@@ -201,7 +201,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.IsValid, Is.True);
         }
@@ -215,7 +215,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<DuplicateIndexError>().Any(e => !e.IsPositional), Is.True);
         }
@@ -228,7 +228,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<NegativeIndexError>().Any(e => !e.IsPositional), Is.True);
         }
@@ -242,7 +242,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<BadIndexOrderError>().Any(e => !e.IsPositional), Is.True);
         }
@@ -259,7 +259,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.IsValid, Is.True);
         }
@@ -273,7 +273,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<DuplicateVariadicError>().Any(), Is.True);
         }
@@ -306,7 +306,7 @@ namespace Bossy.Tests.Schema
             
             var schema = new CommandSchema("test", "description", type, args);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<ArgumentDuplicateNameError>().Any(), Is.True);
         }
@@ -320,7 +320,7 @@ namespace Bossy.Tests.Schema
                 .Generate().GetType();
             var schema = BuildSchema(type);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Warnings.OfType<ArgumentDuplicateDescriptionWarning>().Any(), Is.True);
             Assert.That(result.IsValid, Is.True);
@@ -341,7 +341,7 @@ namespace Bossy.Tests.Schema
 
             var schema = new CommandSchema("test", "desc", type, args);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<ArgumentMissingNameError>().Any(), Is.True);
         }
@@ -360,7 +360,7 @@ namespace Bossy.Tests.Schema
 
             var schema = new CommandSchema("test", "desc", type, args);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<ArgumentInvalidNameError>().Any(), Is.True);
         }
@@ -379,7 +379,7 @@ namespace Bossy.Tests.Schema
 
             var schema = new CommandSchema("test", "desc", type, args);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Warnings.OfType<ArgumentMissingDescriptionWarning>().Any(), Is.True);
         }
@@ -398,7 +398,7 @@ namespace Bossy.Tests.Schema
 
             var schema = new CommandSchema("test", "desc", type, args);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<ArgumentMissingAttributeError>().Any(), Is.True);
         }
@@ -420,7 +420,7 @@ namespace Bossy.Tests.Schema
             
             var schema = new CommandSchema("test", "desc", type, args);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<VariadicTypeNotArrayError>().Any(), Is.True);
         }
@@ -451,7 +451,7 @@ namespace Bossy.Tests.Schema
             writer.AddChild(child1Schema);
             writer.AddChild(child2Schema);
             
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<ArgumentDuplicateNameError>().Any(), Is.True);
         }
@@ -472,7 +472,7 @@ namespace Bossy.Tests.Schema
             
             var schema = new CommandSchema("test", "description", cmdType, args);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<UnknownArgumentType>().Any(), Is.True);
         }
@@ -495,7 +495,7 @@ namespace Bossy.Tests.Schema
             
             var schema = new CommandSchema("test", "description", type, args);
 
-            var result = _validator.Validate(schema);
+            var result = _schemaValidator.Validate(schema);
 
             Assert.That(result.Errors.OfType<ArgumentDuplicateNameError>().Any(), Is.True);
             Assert.That(result.Errors.OfType<DuplicateSwitchNameError>().Any(), Is.True);

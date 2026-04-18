@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,14 +6,13 @@ using Bossy.Shell;
 using Bossy.Tests.Utils;
 using Bossy.Utils;
 using NUnit.Framework;
-using UnityEngine.TestTools;
 
 namespace Bossy.Tests.Shell
 {
     /// <summary>
     /// Tests the <see cref="CommandContext"/> class.
     /// </summary>
-    public class CommandContextTest
+    internal class CommandContextTest
     {
         private global::Bossy.Shell.Shell _shell;
         

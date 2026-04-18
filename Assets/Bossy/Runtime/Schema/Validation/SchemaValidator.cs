@@ -2,14 +2,14 @@ using Bossy.Registry;
 using System.Collections.Generic;
 using System.Linq;
 using Bossy.Command;
-using PlasticPipe.PlasticProtocol.Messages;
+using Bossy.Utils;
 
 namespace Bossy.Schema
 {
     /// <summary>
     /// Validates a schema to ensure that no errors have been compiled into a command.
     /// </summary>
-    internal class Validator
+    internal class SchemaValidator
     {
         private readonly List<WarningContext> _warnings = new();
         private readonly List<ErrorContext> _errors = new();
@@ -199,11 +199,8 @@ namespace Bossy.Schema
                     }
                     break;
                 default:
-                    if (arg.ArgumentAttribute == null)
-                    {
-                        AddError(new ArgumentMissingAttributeError(arg.Name));                        
-                    }
-                    else
+                    // Missing attribute is already caught, just catch unknown errors here
+                    if (arg.ArgumentAttribute != null)
                     {
                         AddError(new UnknownArgumentType(arg.ArgumentAttribute.GetType()));
                     }

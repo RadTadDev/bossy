@@ -2,10 +2,10 @@ namespace Bossy.FrontEnd.Parsing
 {
     public class BoolAdapter : BaseTypeAdapter<bool>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out bool output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out bool output)
         {
             // Implicit 'true' on no token
-            if (!cursor.TryPeek(out var token))
+            if (!stream.TryPeek(out var token))
             {
                 output = true;
                 return TypeAdapterResult.Pass();
@@ -13,7 +13,7 @@ namespace Bossy.FrontEnd.Parsing
 
             if (bool.TryParse(token, out output))
             {
-                cursor.TryConsume(out _);
+                stream.TryConsume(out _);
                 return TypeAdapterResult.Pass();
             }
 
@@ -24,9 +24,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class ByteAdapter : BaseTypeAdapter<byte>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out byte output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out byte output)
         {
-            if (cursor.TryConsume(out var token) && byte.TryParse(token, out output))
+            if (stream.TryConsume(out var token) && byte.TryParse(token, out output))
                 return TypeAdapterResult.Pass();
 
             output = 0;
@@ -36,9 +36,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class SByteAdapter : BaseTypeAdapter<sbyte>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out sbyte output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out sbyte output)
         {
-            if (cursor.TryConsume(out var token) && sbyte.TryParse(token, out output))
+            if (stream.TryConsume(out var token) && sbyte.TryParse(token, out output))
                 return TypeAdapterResult.Pass();
 
             output = 0;
@@ -48,9 +48,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class ShortAdapter : BaseTypeAdapter<short>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out short output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out short output)
         {
-            if (cursor.TryConsume(out var token) && short.TryParse(token, out output))
+            if (stream.TryConsume(out var token) && short.TryParse(token, out output))
                 return TypeAdapterResult.Pass();
 
             output = 0;
@@ -60,9 +60,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class UShortAdapter : BaseTypeAdapter<ushort>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out ushort output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out ushort output)
         {
-            if (cursor.TryConsume(out var token) && ushort.TryParse(token, out output))
+            if (stream.TryConsume(out var token) && ushort.TryParse(token, out output))
                 return TypeAdapterResult.Pass();
 
             output = 0;
@@ -72,9 +72,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class IntAdapter : BaseTypeAdapter<int>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out int output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out int output)
         {
-            if (cursor.TryConsume(out var token) && int.TryParse(token, out output))
+            if (stream.TryConsume(out var token) && int.TryParse(token, out output))
                 return TypeAdapterResult.Pass();
 
             output = 0;
@@ -84,9 +84,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class UIntAdapter : BaseTypeAdapter<uint>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out uint output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out uint output)
         {
-            if (cursor.TryConsume(out var token) && uint.TryParse(token, out output))
+            if (stream.TryConsume(out var token) && uint.TryParse(token, out output))
                 return TypeAdapterResult.Pass();
 
             output = 0;
@@ -96,9 +96,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class LongAdapter : BaseTypeAdapter<long>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out long output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out long output)
         {
-            if (cursor.TryConsume(out var token) && long.TryParse(token, out output))
+            if (stream.TryConsume(out var token) && long.TryParse(token, out output))
                 return TypeAdapterResult.Pass();
 
             output = 0;
@@ -108,9 +108,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class ULongAdapter : BaseTypeAdapter<ulong>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out ulong output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out ulong output)
         {
-            if (cursor.TryConsume(out var token) && ulong.TryParse(token, out output))
+            if (stream.TryConsume(out var token) && ulong.TryParse(token, out output))
                 return TypeAdapterResult.Pass();
 
             output = 0;
@@ -120,9 +120,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class FloatAdapter : BaseTypeAdapter<float>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out float output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out float output)
         {
-            if (cursor.TryConsume(out var token) && float.TryParse(token, out output))
+            if (stream.TryConsume(out var token) && float.TryParse(token, out output))
                 return TypeAdapterResult.Pass();
 
             output = 0;
@@ -132,9 +132,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class DoubleAdapter : BaseTypeAdapter<double>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out double output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out double output)
         {
-            if (cursor.TryConsume(out var token) && double.TryParse(token, out output))
+            if (stream.TryConsume(out var token) && double.TryParse(token, out output))
                 return TypeAdapterResult.Pass();
 
             output = 0;
@@ -144,9 +144,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class CharAdapter : BaseTypeAdapter<char>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out char output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out char output)
         {
-            if (cursor.TryConsume(out var token) && token.Length == 1)
+            if (stream.TryConsume(out var token) && token.Length == 1)
             {
                 output = token[0];
                 return TypeAdapterResult.Pass();
@@ -159,9 +159,9 @@ namespace Bossy.FrontEnd.Parsing
 
     public class StringAdapter : BaseTypeAdapter<string>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream cursor, out string output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out string output)
         {
-            if (cursor.TryConsume(out output))
+            if (stream.TryConsume(out output))
                 return TypeAdapterResult.Pass();
 
             output = null;

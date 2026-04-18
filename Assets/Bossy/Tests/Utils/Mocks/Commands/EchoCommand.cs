@@ -4,7 +4,7 @@ using Bossy.Shell;
 
 namespace Bossy.Tests.Utils.Commands
 {
-    public class EchoCommand : ICommand
+    internal class EchoCommand : ICommand
     {
         public async Task<CommandStatus> ExecuteAsync(CommandContext ctx)
         {

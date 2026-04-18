@@ -34,8 +34,8 @@ namespace Bossy.Schema
         /// <param name="errors">A list of string errors.</param>
         public ValidationResult(IReadOnlyList<WarningContext> warnings, IReadOnlyList<ErrorContext> errors)
         {
-            Errors = errors;
-            Warnings = warnings;
+            Warnings = warnings ??  new List<WarningContext>();
+            Errors = errors ?? new List<ErrorContext>();
         }
     }
 }

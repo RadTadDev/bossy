@@ -24,44 +24,30 @@ namespace Bossy.Shell
     public class CommandGraph : IBeginGraphBuilderStep, IGeneralGraphBuilderStep
     {
         /// <summary>
-        /// The main reader.
-        /// </summary>
-        public IReadable DefaultReader { get; }
-        
-        /// <summary>
-        /// The main writer.
-        /// </summary>
-        public IWriteable DefaultWriter { get; }
-
-        /// <summary>
         /// Tells if the graph should execute in a window.
         /// </summary>
-        public bool InWindow;
+        public bool Windowed;
 
         /// <summary>
         /// Tells if the graph is empty.
         /// </summary>
         public bool IsEmpty => _nodes.Count == 0;
         
-        private List<CommandGraphNode> _nodes = new();
+        private readonly List<CommandGraphNode> _nodes = new();
 
-        private CommandGraph(IReadable defaultReader, IWriteable defaultWriter, bool windowed)
+        private CommandGraph(bool windowed = false)
         {
-            DefaultReader = defaultReader;
-            DefaultWriter = defaultWriter;
-            InWindow = windowed;
+            Windowed = windowed;
         }
 
         /// <summary>
         /// Creates a new Command graph.
         /// </summary>
-        /// <param name="defaultReader">The default reader.</param>
-        /// <param name="defaultWriter">The default writer.</param>
         /// <param name="windowed">Whether this graph will run in a window.</param>
         /// <returns></returns>
-        public static IBeginGraphBuilderStep Create(IReadable defaultReader, IWriteable defaultWriter, bool windowed)
+        public static IBeginGraphBuilderStep Create(bool windowed)
         {
-            return new CommandGraph(defaultReader, defaultWriter, windowed);
+            return new CommandGraph(windowed);
         }
 
         /// <summary>

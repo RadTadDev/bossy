@@ -1,8 +1,7 @@
 using System;
-using Bossy.Command;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Utils.Tests
+namespace Bossy.Tests.Utils
 {
     /// <summary>
     /// Tests the <see cref="ArgumentGenerator"/> class.

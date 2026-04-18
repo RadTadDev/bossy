@@ -8,9 +8,9 @@ namespace Bossy.FrontEnd.Parsing
         /// <summary>
         /// Attempts to convert one type to another.
         /// </summary>
-        /// <param name="cursor">The current token cursor.</param>
+        /// <param name="stream">The current token cursor.</param>
         /// <param name="output">The output.</param>
         /// <returns>The result.</returns>
-        public TypeAdapterResult TryConvert(TokenStream cursor, out object output);
+        public TypeAdapterResult TryConvert(TokenStream stream, out object output);
     }
 }

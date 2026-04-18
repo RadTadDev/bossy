@@ -295,4 +295,9 @@ namespace Bossy.Schema
             _type = type;
         }
     }
+
+    internal class NullSchemaError : ErrorContext
+    {
+        public override string Message => "Schema is null.";
+    }
 }

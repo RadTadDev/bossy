@@ -7,7 +7,7 @@ namespace Bossy.Tests.Shell
     /// <summary>
     /// Tests the <see cref="SimpleContext"/> class.
     /// </summary>
-    public class SimpleContextTest
+    internal class SimpleContextTest
     {
         [Test]
         public void Test_Write()

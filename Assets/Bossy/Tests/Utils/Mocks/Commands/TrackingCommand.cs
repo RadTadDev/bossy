@@ -6,7 +6,7 @@ namespace Bossy.Tests.Utils.Commands
     /// <summary>
     /// Tracks whether this command was called. Useful for testing command graphs.
     /// </summary>
-    public class TrackingCommand : SimpleCommand
+    internal class TrackingCommand : SimpleCommand
     {
         /// <summary>
         /// True if this command was called.
