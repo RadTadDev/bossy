@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.FrontEnd;
 
 namespace Bossy.Shell
 {
@@ -11,17 +12,17 @@ namespace Bossy.Shell
         // TODO: Add all session state here. This is a pure data object
         public ICancellationSource CancellationSource { get; }
         
-        public FrontEnd.FrontEnd FrontEnd { get; }
+        public UserInterface UserInterface { get; }
         
-        public Session(FrontEnd.FrontEnd frontEnd, ICancellationSource cancellationSource)
+        public Session(UserInterface userInterface, ICancellationSource cancellationSource)
         {
-            FrontEnd = frontEnd;
+            UserInterface = userInterface;
             CancellationSource = cancellationSource;
         }
         
         public async Task<CommandGraph> GetCommandGraphAsync(CancellationToken token)
         {
-            return await FrontEnd.GetCommandGraph(token);
+            return await UserInterface.GetCommandGraph(token);
         }
     }
 }

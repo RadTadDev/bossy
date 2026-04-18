@@ -1,33 +1,36 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.FrontEnd;
 using Bossy.FrontEnd.Parsing;
 using Bossy.Utils;
 
 namespace Bossy.Shell
 {
-    public class Shell
+    public partial class SessionManager
     {
         public TypeAdapterRegistry TypeAdapterRegistry { get; }
 
         private readonly CommandExecutor _executor;
         
-        public Shell(TypeAdapterRegistry typeAdapterRegistry)
+        public SessionManager(TypeAdapterRegistry typeAdapterRegistry)
         {
             TypeAdapterRegistry = typeAdapterRegistry;
             _executor = new CommandExecutor(this);
         }
         
-        public void CreateSession(FrontEnd.FrontEnd frontEnd)
+        public void CreateSession(UserInterfaceType type)
         {
-            var session = new Session(frontEnd, frontEnd);
+            UserInterface userInterface = UserInterfaceFactory.Get(type);
+            
+            var session = new Session(userInterface, userInterface);
 
             _ = SessionRunner(session);
         }
         
-        public async Task Execute(CommandGraph graph, IReadable defaultInput, IWriteable defaultOutput, CancellationToken token)
+        public async Task Execute(CommandGraph graph, IUserInterface userInterface, IReadable defaultInput, IWriteable defaultOutput, CancellationToken token)
         {
-            await _executor.ExecuteAsync(graph, defaultInput, defaultOutput, token);
+            await _executor.ExecuteAsync(graph, userInterface, defaultInput, defaultOutput, token);
         }
         
         private async Task SessionRunner(Session session)
@@ -44,7 +47,7 @@ namespace Bossy.Shell
 
                     using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(sessionToken, commandToken);
 
-                    await Execute(graph, session.FrontEnd, session.FrontEnd, combinedCts.Token);
+                    await Execute(graph, session.UserInterface, session.UserInterface, session.UserInterface, combinedCts.Token);
                 }
             }
             catch (OperationCanceledException)
@@ -57,6 +60,7 @@ namespace Bossy.Shell
                 Log.Exception(e);
             }
             
+            Log.Info("Doing clean up on closed session.");
             // TODO: Clean up like merge in history, destroy gui, etc.
         }
     }

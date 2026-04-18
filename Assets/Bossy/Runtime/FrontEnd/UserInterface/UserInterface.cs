@@ -9,7 +9,7 @@ namespace Bossy.FrontEnd
     /// <summary>
     /// Base class for front end objects.
     /// </summary>
-    public abstract class FrontEnd : IReadable, IWriteable, ICancellationSource
+    public abstract class UserInterface : IReadable, IWriteable, IUserInterface, ICancellationSource
     {
         // TODO: Inject readonly session state
         
@@ -24,11 +24,6 @@ namespace Bossy.FrontEnd
          * like a jupyter notebook, while another side panel allows command creation.
          */
 
-        protected FrontEnd(TypeAdapterRegistry registry, bool retry) 
-        {
-            
-        }
-
         public async Task<object> ReadAsync(Type requestedType, CancellationToken token)
         {
             return await Task.FromResult(default(object));
@@ -39,7 +34,10 @@ namespace Bossy.FrontEnd
             
         }
 
-        public abstract void Close();
+        public void Close()
+        {
+            Write(null);
+        }
         
         /// <summary>
         /// Gets a cancellation token that controls the lifetime of the session.

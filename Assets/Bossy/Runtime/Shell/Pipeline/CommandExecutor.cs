@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.FrontEnd;
 using Bossy.Utils;
-using PlasticPipe.PlasticProtocol.Messages;
 
 namespace Bossy.Shell
 {
@@ -13,25 +13,26 @@ namespace Bossy.Shell
     /// </summary>
     internal class CommandExecutor
     {
-        private readonly Shell _shell;
+        private readonly SessionManager _sessionManager;
 
         /// <summary>
         /// Creates a new executor.
         /// </summary>
-        /// <param name="shell">The shell.</param>
-        public CommandExecutor(Shell shell)
+        /// <param name="sessionManager">The shell.</param>
+        public CommandExecutor(SessionManager sessionManager)
         {
-            _shell = shell;
+            _sessionManager = sessionManager;
         }
 
         /// <summary>
         /// Executes a command graph.
         /// </summary>
         /// <param name="graph">The graph to execute.</param>
+        /// <param name="userInterface">The user interface executing this.</param>
         /// <param name="defaultInput">The default input stream.</param>
         /// <param name="defaultOutput">The default output stream.</param>
         /// <param name="token">The token controlling cancellation.</param>
-        public async Task ExecuteAsync(CommandGraph graph, IReadable defaultInput, IWriteable defaultOutput, CancellationToken token)
+        public async Task ExecuteAsync(CommandGraph graph, IUserInterface userInterface, IReadable defaultInput, IWriteable defaultOutput, CancellationToken token)
         {
             if (graph.IsEmpty) return;
 
@@ -40,7 +41,7 @@ namespace Bossy.Shell
             var previousStatus = CommandStatus.Ok;
             var previousLink = CommandGraphLink.Then;
 
-            var defaultContext = new CommandContext(_shell, defaultInput, defaultOutput, true, token);
+            var defaultContext = new CommandContext(_sessionManager, userInterface, defaultInput, defaultOutput, true, token);
 
             foreach (var group in groups)
             {
@@ -89,7 +90,7 @@ namespace Bossy.Shell
 
             async Task<CommandStatus> RunNode(CommandGraphNode node, IReadable reader, IWriteable writer)
             {
-                var context = new CommandContext(_shell, reader, writer, false, cts.Token);
+                var context = new CommandContext(_sessionManager, defaultContext.UserInterface, reader, writer, false, cts.Token);
                 try
                 {
                     var status = await node.Command.ExecuteAsync(context);

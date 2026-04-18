@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.FrontEnd;
 using Bossy.FrontEnd.Parsing;
 using Bossy.Utils;
 
@@ -13,6 +14,12 @@ namespace Bossy.Shell
     public sealed class CommandContext : SimpleContext
     {
         /// <summary>
+        /// The user interface that spawned this command.
+        /// Use this to test for specific front end capabilities.
+        /// </summary>
+        public IUserInterface UserInterface { get; }
+        
+        /// <summary>
         /// The context's reader.
         /// </summary>
         public IReadable InputStream { get; }
@@ -22,23 +29,33 @@ namespace Bossy.Shell
         /// </summary>
         public IWriteable OutputStream => writer;
         
-        private readonly Shell _shell;
+        private readonly SessionManager _sessionManager;
         private readonly bool _allowRetry;
         private readonly CancellationToken _token;
 
         /// <summary>
         /// Builds a new command context.
         /// </summary>
-        /// <param name="shell">The shell.</param>
+        /// <param name="sessionManager">The shell.</param>
+        /// <param name="userInterface">The user interface that spawned this command.</param>
         /// <param name="inputStream">A readable source.</param>
         /// <param name="writer">A writeable sink.</param>
         /// <param name="allowRetry">Whether to allow reads to be retried on bad type input.</param>
         /// <param name="token">The cancellation token associated with this execution.</param>
-        public CommandContext(Shell shell, IReadable inputStream, IWriteable writer, bool allowRetry, CancellationToken token) : base(writer)
+        public CommandContext
+        (
+            SessionManager sessionManager,
+            IUserInterface userInterface,
+            IReadable inputStream,
+            IWriteable writer,
+            bool allowRetry,
+            CancellationToken token
+        ) : base(writer)
         {
+            UserInterface = userInterface;
             InputStream = inputStream;
             _allowRetry = allowRetry;
-            _shell = shell;
+            _sessionManager = sessionManager;
             _token = token;
         }
 
@@ -89,7 +106,7 @@ namespace Bossy.Shell
                 if (response is string textual)
                 {
                     triedAdapting = true;
-                    adapterResult = _shell.TypeAdapterRegistry.TryConvert(textual, out T typed);
+                    adapterResult = _sessionManager.TypeAdapterRegistry.TryConvert(textual, out T typed);
             
                     if (adapterResult.Success)
                     {

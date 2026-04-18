@@ -10,19 +10,15 @@ TODO:
 inject type adapter registry into adapter base class so complex adapters can use primitive ones.
 Actually send null in a stream when it closes - currently commands get canceled then errored so maybe this works. But null is a definite way to safely close the stream
 
-Test parser
-
-make top level module
-
 make settings
 
 test settings
 
+build edit mode gui
+
 add prompt builder to context
 
 test prompt builder
-
-build edit mode gui
 
 test edit mode gui (probably smoke tests)
 

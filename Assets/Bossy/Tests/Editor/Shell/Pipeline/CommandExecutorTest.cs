@@ -21,7 +21,7 @@ namespace Bossy.Tests.Shell
         {
             var registry = new TypeAdapterRegistry();
             registry.RegisterAdapter(typeof(string), new StringAdapter());
-            var shell = new global::Bossy.Shell.Shell(registry);
+            var shell = new global::Bossy.Shell.SessionManager(registry);
             _executor = new CommandExecutor(shell);
         }
         
@@ -36,7 +36,7 @@ namespace Bossy.Tests.Shell
                 .Execute(new EchoCommand())
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
             
             Assert.That(writer.Log, Is.EquivalentTo(new[] { "hello", "world" }));
         }
@@ -58,7 +58,7 @@ namespace Bossy.Tests.Shell
                 .Then(tracker3)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
             
             Assert.That(tracker1.WasCalled, Is.True);
             Assert.That(tracker2.WasCalled, Is.True);
@@ -79,7 +79,7 @@ namespace Bossy.Tests.Shell
                 .And(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
             
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -98,7 +98,7 @@ namespace Bossy.Tests.Shell
                 .And(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
             
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -117,7 +117,7 @@ namespace Bossy.Tests.Shell
                 .Or(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
             
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -136,7 +136,7 @@ namespace Bossy.Tests.Shell
                 .Or(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
             
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -158,7 +158,7 @@ namespace Bossy.Tests.Shell
                 .Then(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
 
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -180,7 +180,7 @@ namespace Bossy.Tests.Shell
                 .Then(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
 
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -202,7 +202,7 @@ namespace Bossy.Tests.Shell
                 .Then(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -224,7 +224,7 @@ namespace Bossy.Tests.Shell
                 .Or(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -246,7 +246,7 @@ namespace Bossy.Tests.Shell
                 .Or(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -268,7 +268,7 @@ namespace Bossy.Tests.Shell
                 .Or(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -290,7 +290,7 @@ namespace Bossy.Tests.Shell
                 .And(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -312,7 +312,7 @@ namespace Bossy.Tests.Shell
                 .And(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -334,7 +334,7 @@ namespace Bossy.Tests.Shell
                 .And(tracker)
                 .Build();
             
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -351,7 +351,7 @@ namespace Bossy.Tests.Shell
                 .AndPipeTo(new EchoCommand())
                 .Build();
 
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
 
             Assert.That(writer.Log, Is.EquivalentTo(new[] { "hello", "world" }));
         }
@@ -369,7 +369,7 @@ namespace Bossy.Tests.Shell
                 .AndPipeTo(new EchoCommand())
                 .Build();
 
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
 
             Assert.That(writer.Log, Is.EquivalentTo(new[] { "hello", "world" }));
         }
@@ -389,7 +389,7 @@ namespace Bossy.Tests.Shell
                 .Then(tracker)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
 
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -409,7 +409,7 @@ namespace Bossy.Tests.Shell
                 .Then(tracker)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
 
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -429,7 +429,7 @@ namespace Bossy.Tests.Shell
                 .Or(tracker)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
 
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -449,7 +449,7 @@ namespace Bossy.Tests.Shell
                 .And(tracker)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, reader, writer, CancellationToken.None);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, CancellationToken.None);
 
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -472,7 +472,7 @@ namespace Bossy.Tests.Shell
                 .Then(tracker)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
 
             Assert.That(tracker.WasCalled, Is.False);
         }
@@ -494,7 +494,7 @@ namespace Bossy.Tests.Shell
                 .Then(tracker)
                 .Build();
         
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
         
             Assert.That(tracker.WasCalled, Is.True);
         }
@@ -512,7 +512,7 @@ namespace Bossy.Tests.Shell
                 .Execute(new IntReaderCommand())
                 .Build();
         
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
         
             Assert.That(writer.Log, Is.Not.Empty);
         }
@@ -530,7 +530,7 @@ namespace Bossy.Tests.Shell
                 .Execute(new ThrowsCommand())
                 .Build();
         
-            await _executor.ExecuteAsync(graph, reader, writer, cts.Token);
+            await _executor.ExecuteAsync(graph, new MockUserInterface(), reader, writer, cts.Token);
         
             Assert.That(writer.Log, Is.Not.Empty);
         }
