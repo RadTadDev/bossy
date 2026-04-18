@@ -3,7 +3,7 @@ using System.Reflection;
 using Bossy.Command;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Utils.Tests
+namespace Bossy.Tests.Utils
 {
     /// <summary>
     /// Tests the <see cref="CommandGenerator"/> class.

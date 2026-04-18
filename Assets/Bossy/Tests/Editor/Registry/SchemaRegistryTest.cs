@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Bossy.Registry;
 using Bossy.Schema;
 using Bossy.Tests.Utils;
@@ -57,6 +58,135 @@ namespace Bossy.Tests.Registry
             
             Assert.That(registry.TryResolveSchema("parent.child", out _), Is.EqualTo(SchemaQueryStatus.NotFound));
             Assert.That(registry.TryResolveSchema(" parent", new [] { "child" }, out _), Is.EqualTo(SchemaQueryStatus.NotFound));
+        }
+
+        [Test]
+        public void GetValidationResult_Valid()
+        {
+            var type = CommandGenerator.WithName("test").Generate().GetType();
+            var schema = new CommandSchema("test",  "description", type, null);
+            var registry = new SchemaRegistry(new [] { schema });
+            
+            Assert.That(registry.GetValidationResult(schema).IsValid, Is.True);
+        }
+        
+        [Test]
+        public void GetValidationResult_Invalid()
+        {
+            var type = CommandGenerator.WithName("test").Generate().GetType();
+            var schema = new CommandSchema("",  "description", type, null);
+            var registry = new SchemaRegistry(new [] { schema });
+            
+            Assert.That(registry.GetValidationResult(schema).IsValid, Is.False);
+        }
+        
+        [Test]
+        public void GetInvalidSchemas_Returns_Correct()
+        {
+            var type = CommandGenerator.WithName("test").Generate().GetType();
+            var schema = new CommandSchema("",  "description", type, null);
+            var registry = new SchemaRegistry(new [] { schema });
+            
+            Assert.That(registry.GetInvalidSchemas().ToList(), Is.EquivalentTo(new List<CommandSchema> { schema }));
+        }
+        
+        [Test]
+        public void GetInvalidSchemas_ReturnsChild_Correct()
+        {
+            var type = CommandGenerator.WithName("test").Generate().GetType();
+            var type2 = CommandGenerator.WithName("test2").Generate().GetType();
+            
+            var schema1 = new CommandSchema("parent",  "description", type, null);
+            var schema2 = new CommandSchema("",  "description", type2, null);
+
+            ICommandSchemaWriter writer = schema1;
+            writer.AddChild(schema2);
+            writer = schema2;
+            writer.SetParent(schema1);
+            
+            var registry = new SchemaRegistry(new [] { schema1, schema2 });
+            
+            Assert.That(registry.GetInvalidSchemas().ToList(), Is.EquivalentTo(new List<CommandSchema> { schema2 }));
+        }
+        
+        [Test]
+        public void GetValidSchemas_Unfiltered()
+        {
+            var type = CommandGenerator.WithName("test").Generate().GetType();
+            var type2 = CommandGenerator.WithName("test2").Generate().GetType();
+            
+            var schema1 = new CommandSchema("parent",  "description", type, null);
+            var schema2 = new CommandSchema("child",  "description", type2, null);
+
+            ICommandSchemaWriter writer = schema1;
+            writer.AddChild(schema2);
+            
+            var registry = new SchemaRegistry(new [] { schema1, schema2 });
+            
+            Assert.That(registry.GetValidSchemas().ToList(), Is.EquivalentTo(new List<CommandSchema> { schema1, schema2 }));
+        }
+        
+        [Test]
+        public void GetValidSchemas_FilteredIncludesRoot()
+        {
+            var excludeType = CommandGenerator.WithName("exclude").Generate().GetType();
+            var type = CommandGenerator.WithName("test").Generate().GetType();
+            var type2 = CommandGenerator.WithName("test2").Generate().GetType();
+            
+            var exclude = new CommandSchema("exclude",  "description", excludeType, null);
+            var schema1 = new CommandSchema("parent",  "description", type, null);
+            var schema2 = new CommandSchema("child",  "description", type2, null);
+
+            ICommandSchemaWriter writer = schema1;
+            writer.AddChild(schema2);
+            
+            var registry = new SchemaRegistry(new [] { exclude, schema1, schema2 });
+
+            var actual = registry.GetValidSchemas(new[] { "parent" }).ToList();
+            
+            Assert.That(actual, Is.EquivalentTo(new List<CommandSchema> { schema1, schema2 }));
+        }
+        
+        [Test]
+        public void GetValidSchemas_FilteredSkipsParent()
+        {
+            var type = CommandGenerator.WithName("test").Generate().GetType();
+            var type1 = CommandGenerator.WithName("test1").Generate().GetType();
+            var type2 = CommandGenerator.WithName("test2").Generate().GetType();
+            
+            var root = new CommandSchema("grandparent",  "description", type, null);
+            var schema1 = new CommandSchema("parent",  "description", type1, null);
+            var schema2 = new CommandSchema("child",  "description", type2, null);
+
+            ICommandSchemaWriter writer = schema1;
+            writer.AddChild(schema2);
+            
+            var registry = new SchemaRegistry(new [] { root, schema1, schema2 });
+
+            var actual = registry.GetValidSchemas(new[] { "parent" }).ToList();
+            
+            Assert.That(actual, Is.EquivalentTo(new List<CommandSchema> { schema1, schema2 }));
+        }
+        
+        [Test]
+        public void GetValidSchemas_FilteredSkipsInvalid()
+        {
+            var type = CommandGenerator.WithName("test").Generate().GetType();
+            var type1 = CommandGenerator.WithName("test1").Generate().GetType();
+            var type2 = CommandGenerator.WithName("test2").Generate().GetType();
+            
+            var root = new CommandSchema("grandparent",  "description", type, null);
+            var schema1 = new CommandSchema("parent",  "description", type1, null);
+            var schema2 = new CommandSchema("",  "description", type2, null);
+
+            ICommandSchemaWriter writer = schema1;
+            writer.AddChild(schema2);
+            
+            var registry = new SchemaRegistry(new [] { root, schema1, schema2 });
+
+            var actual = registry.GetValidSchemas(new[] { "parent" }).ToList();
+            
+            Assert.That(actual, Is.EquivalentTo(new List<CommandSchema> { schema1 }));
         }
     }
 }

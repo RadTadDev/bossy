@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bossy.Schema;
+using Bossy.Utils;
 
 namespace Bossy.Registry
 {
@@ -28,14 +29,10 @@ namespace Bossy.Registry
                     
                 if (!result.IsValid)
                 {
-                    /*
-                     * Only valid root commands may be added to the registry.
-                     * All invalid commands are queryable for display, including their problems.
-                     */
                     _invalidSchemas.Add(schema, result);
-                    
-                    continue;
                 }
+
+                // Allow invalid commands into the registry so we can query them for error displays
                 
                 if (schema.IsRoot)
                 {
@@ -66,11 +63,18 @@ namespace Bossy.Registry
         {
             schema = null;
 
+            // Validate root first
             if (!_registry.TryGetValue(root, out schema))
             {
                 return SchemaQueryStatus.NotFound;
             }
 
+            if (_invalidSchemas.ContainsKey(schema))
+            {
+                return SchemaQueryStatus.Invalid;
+            }
+            
+            // Then validate any children
             foreach (var subcommand in subcommands)
             {
                 var child = schema.ChildSchemas.FirstOrDefault(c => c.Name == subcommand);
@@ -107,23 +111,29 @@ namespace Bossy.Registry
             }
 
             var result = new List<CommandSchema> { rootSchema };
-            
+
             foreach (var schema in rootSchema.ChildSchemas)
             {
-                AddValidChildren(schema, result);
+                AddChildren(schema, result);
+            }
+            
+            // Filter out invalid schemas
+            var invalidSchemas = GetInvalidSchemas();
+
+            foreach (var invalid in invalidSchemas)
+            {
+                result.Remove(invalid);
             }
             
             return result;
-            
-            void AddValidChildren(CommandSchema schema, List<CommandSchema> allSchemas)
+
+            void AddChildren(CommandSchema schema, List<CommandSchema> allSchemas)
             {
-                if (_invalidSchemas.ContainsKey(schema)) return;
-            
                 allSchemas.Add(schema);
             
                 foreach (var child in schema.ChildSchemas)
                 {
-                    AddValidChildren(child, allSchemas);
+                    AddChildren(child, allSchemas);
                 }
             }
         }
@@ -144,6 +154,7 @@ namespace Bossy.Registry
         /// <returns>The validation result.</returns>
         public ValidationResult GetValidationResult(CommandSchema schema)
         {
+            if (schema == null) return new ValidationResult(null, new[] { new NullSchemaError() });
             return _invalidSchemas.TryGetValue(schema, out var result) ? result : new ValidationResult(null, null);
         }
     }

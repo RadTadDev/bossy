@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Bossy.Utils;
 
 namespace Bossy.FrontEnd.Parsing
 {
@@ -46,7 +47,7 @@ namespace Bossy.FrontEnd.Parsing
 
             if (!_adapters.TryGetValue(type, out var adapter))
             {
-                return TypeAdapterResult.Fail($"No registered adapter handles type \"{type}\"");
+                return TypeAdapterResult.Fail($"No registered adapter handles type \"{type.GetFriendlyName()}\"");
             }
 
             var result = adapter.TryConvert(stream, out output);

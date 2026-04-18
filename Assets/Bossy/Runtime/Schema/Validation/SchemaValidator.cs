@@ -2,6 +2,7 @@ using Bossy.Registry;
 using System.Collections.Generic;
 using System.Linq;
 using Bossy.Command;
+using Bossy.Utils;
 
 namespace Bossy.Schema
 {
@@ -198,11 +199,8 @@ namespace Bossy.Schema
                     }
                     break;
                 default:
-                    if (arg.ArgumentAttribute == null)
-                    {
-                        AddError(new ArgumentMissingAttributeError(arg.Name));                        
-                    }
-                    else
+                    // Missing attribute is already caught, just catch unknown errors here
+                    if (arg.ArgumentAttribute != null)
                     {
                         AddError(new UnknownArgumentType(arg.ArgumentAttribute.GetType()));
                     }

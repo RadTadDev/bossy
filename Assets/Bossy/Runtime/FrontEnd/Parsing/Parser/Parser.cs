@@ -5,6 +5,7 @@ using Bossy.Command;
 using Bossy.Registry;
 using Bossy.Schema;
 using Bossy.Shell;
+using Bossy.Utils;
 
 namespace Bossy.FrontEnd.Parsing
 {
@@ -50,7 +51,10 @@ namespace Bossy.FrontEnd.Parsing
                 node.Command = commandResult.Value;
             }
             
-            // 4. Build the command graph.
+            // 4. Run argument validators
+            // TODO: Run argument validators
+            
+            // 5. Build the command graph.
             return new ParseSucceeded(BuildGraph(pipeline, isWindowed));
         }
 
@@ -103,7 +107,10 @@ namespace Bossy.FrontEnd.Parsing
                 }
             }
 
-            if (current.Count > 0) pipeline.Add(new ParseNode(current, CommandGraphLink.None));
+            if (current.Count > 0)
+            {
+                pipeline.Add(new ParseNode(current, CommandGraphLink.None));
+            }
             return ParseStep<List<ParseNode>>.Ok(pipeline);
         }
         
@@ -186,6 +193,7 @@ namespace Bossy.FrontEnd.Parsing
                 
                 // 3. Remove name from tokens and create greedy substream
                 argTokens.RemoveAt(idx);
+                token = argTokens.Count > 0 ? argTokens[idx] : "(null)";
                 var substream = new TokenStream(argTokens.GetRange(idx, argTokens.Count - idx));
                 
                 // 4. Parse and remove consumed tokens 
@@ -197,10 +205,7 @@ namespace Bossy.FrontEnd.Parsing
                 
                 argTokens.RemoveRange(idx, substream.Cursor);
                 
-                // 5. Run switch validators
-                // TODO: Add when validators are added
-                
-                // 6. Set field value
+                // 5. Set field value
                 argSchema.SetValue(command, value);
             }
 
@@ -230,10 +235,7 @@ namespace Bossy.FrontEnd.Parsing
                 
                 argTokens.RemoveRange(0, substream.Cursor);
                 
-                // 4. Run validators
-                // TODO: Run validators
-                
-                // 5. Set the value
+                // 4. Set the value
                 argSchema.SetValue(command, value);
             }
 
@@ -265,10 +267,7 @@ namespace Bossy.FrontEnd.Parsing
                 
                 argTokens.RemoveRange(0, substream.Cursor);
                 
-                // 4. Run validators
-                // TODO: Run validators
-                
-                // 5. Set the value
+                // 4. Set the value
                 argSchema.SetValue(command, value);
             }
 
@@ -302,14 +301,11 @@ namespace Bossy.FrontEnd.Parsing
                 
                 argTokens.RemoveRange(0, substream.Cursor);
                 
-                // 3. Run validators
-                // TODO: Run validators
-                
-                // 4. Add to list
+                // 3. Add to list
                 args.Add(value);
             }
 
-            // 5. Set the arguments' value
+            // 4. Set the arguments' value
             var array = Array.CreateInstance(type, args.Count);
             for (var i = 0; i < args.Count; i++)
             {
@@ -342,12 +338,12 @@ namespace Bossy.FrontEnd.Parsing
             stream.TryConsume(out var root);
 
             var query = _schemaRegistry.TryResolveSchema(root, out var schema);
-            
+
             if (query is SchemaQueryStatus.NotFound)
             {
                 return ParseStep<CommandSchema>.Fail(new NoMatchingCommandError(root));
             }
-
+            
             if (query is SchemaQueryStatus.Invalid)
             {
                 return ParseStep<CommandSchema>.Fail(new InvalidSchemaError(new List<string> { root }));
@@ -358,10 +354,7 @@ namespace Bossy.FrontEnd.Parsing
             {
                 query = _schemaRegistry.TryResolveSchema(root, subcommands.Append(next), out schema);
                 
-                if (query is SchemaQueryStatus.NotFound)
-                {
-                    break;
-                }
+                if (query is SchemaQueryStatus.NotFound) break;
                 
                 subcommands.Add(next);
 
@@ -381,14 +374,18 @@ namespace Bossy.FrontEnd.Parsing
 
         private static CommandGraph BuildGraph(List<ParseNode> pipeline, bool isWindowed)
         {
-            var builder = CommandGraph.Create(isWindowed).Execute(pipeline.First().Command);
+            var first = pipeline.First();
             pipeline = pipeline.Skip(1).ToList();
             
+            var builder = CommandGraph.Create(isWindowed).Execute(first.Command);
+            var linkToCurrent = first.Link;
+
             foreach (var node in pipeline)
             {
-                switch (node.Link)
+                switch (linkToCurrent)
                 {
                     case CommandGraphLink.None:
+                        // This should not happen as we switch on the previous link...
                         return builder.Build();
                     case CommandGraphLink.Then:
                         builder.Then(node.Command);
@@ -405,6 +402,8 @@ namespace Bossy.FrontEnd.Parsing
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
+
+                linkToCurrent = node.Link;
             }
             
             return builder.Build();

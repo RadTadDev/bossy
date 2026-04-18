@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Bossy.Shell;
+using Bossy.Utils;
 
 namespace Bossy.FrontEnd.Parsing
 {
@@ -64,7 +65,7 @@ namespace Bossy.FrontEnd.Parsing
         private readonly string _op2;
         
         public override string Message =>
-            $"Operators {_op1} and {_op2} appeared back to back without a command between them.";
+            $"Operators \"{_op1}\" and \"{_op2}\" appeared back to back without a command between them.";
 
         public ContiguousOperatorsError(string op1, string op2)
         {
@@ -88,7 +89,7 @@ namespace Bossy.FrontEnd.Parsing
     {
         private readonly string _op;
         
-        public override string Message => $"Operator {_op} must not appear at the beginning or end of a command.";
+        public override string Message => $"Operator \"{_op}\" must not appear at the beginning or end of a command.";
 
         public BadOperatorPositionError(string op)
         {
@@ -135,7 +136,8 @@ namespace Bossy.FrontEnd.Parsing
         private readonly string _token;
         private readonly string _message;
 
-        public override string Message => $"Could not parse {_token} as type \"{_targetType}\":\n\t{_message}.";
+        public override string Message => $"Could not parse \"{_token}\" as type " +
+                                          $"\"{_targetType.GetFriendlyName()}\":\n\t-{_message}.";
 
         public TypeAdaptError(Type targetType, string token, string message)
         {
@@ -153,7 +155,8 @@ namespace Bossy.FrontEnd.Parsing
         private readonly Type _type;
         private readonly string _argName;
 
-        public override string Message => $"Expected argument {_argName} of type {_type} was missing.";
+        public override string Message => $"Expected argument \"{_argName}\" of type " +
+                                          $"\"{_type.GetFriendlyName()}\" was missing.";
 
         public MissingPositionalError(Type type, string argName)
         {
@@ -169,7 +172,7 @@ namespace Bossy.FrontEnd.Parsing
     {
         private readonly List<string> _tokens;
 
-        public override string Message => $"Received unexpected token(s): {string.Join(" ", _tokens)}.";
+        public override string Message => $"Received unexpected token(s): \"{string.Join(" ", _tokens)}\".";
 
         public UnexpectedTokensError(List<string> tokens)
         {
@@ -184,7 +187,7 @@ namespace Bossy.FrontEnd.Parsing
     {
         private readonly List<string> _tokens;
 
-        public override string Message => $"Command {string.Join("->", _tokens)} is invalid. Please fix it before running it.";
+        public override string Message => $"Command \"{string.Join("->", _tokens)}\" is invalid. Please fix it before running it.";
 
         public InvalidSchemaError(List<string> tokens)
         {
