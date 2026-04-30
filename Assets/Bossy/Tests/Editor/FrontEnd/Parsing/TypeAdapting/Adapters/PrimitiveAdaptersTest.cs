@@ -1,5 +1,5 @@
 using NUnit.Framework;
-using Bossy.FrontEnd.Parsing;
+using Bossy.Frontend.Parsing;
 
 namespace Bossy.Tests.FrontEnd.Parsing
 {
@@ -352,6 +352,60 @@ namespace Bossy.Tests.FrontEnd.Parsing
             adapter.TryConvert(cursor, out _);
             Assert.That(cursor.TryPeek(out var next), Is.True);
             Assert.That(next, Is.EqualTo("bar"));
+        }
+        
+        // ── Enum ──────────────────────────────────────────────────────────
+        private enum Animal
+        {
+            Dog = 10,
+            Cat = 20
+        }
+        
+        [Test] public void Enum_Valid()
+        {
+            var cursor = new TokenStream("Dog");
+            var adapter = new EnumAdapter<Animal>();
+            adapter.TryConvert(cursor, out var output);
+            Assert.That(output, Is.EqualTo(Animal.Dog));
+            Assert.That(cursor.TryPeek(out _), Is.False);
+        }
+        
+        [Test] public void Enum_OtherCase_Valid()
+        {
+            var cursor = new TokenStream("dog");
+            var adapter = new EnumAdapter<Animal>();
+            adapter.TryConvert(cursor, out var output);
+            Assert.That(output, Is.EqualTo(Animal.Dog));
+            Assert.That(cursor.TryPeek(out _), Is.False);
+        }
+        
+        [Test] public void Enum_Numeric_Valid()
+        {
+            var cursor = new TokenStream("10");
+            var adapter = new EnumAdapter<Animal>();
+            adapter.TryConvert(cursor, out var output);
+            Assert.That(output, Is.EqualTo(Animal.Dog));
+            Assert.That(cursor.TryPeek(out _), Is.False);
+        }
+        
+        [Test] public void Enum_Numeric_Invalid()
+        {
+            var cursor = new TokenStream("5");
+            var adapter = new EnumAdapter<Animal>();
+            var result = adapter.TryConvert(cursor, out _);
+            
+            Assert.That(result.Success, Is.False);
+            Assert.That(cursor.TryPeek(out _), Is.False);
+        }
+        
+        [Test] public void Enum_Fails()
+        {
+            var cursor = new TokenStream("Bad");
+            var adapter = new EnumAdapter<Animal>();
+            var result = adapter.TryConvert(cursor, out _);
+            
+            Assert.That(result.Success, Is.False);
+            Assert.That(cursor.TryPeek(out _), Is.False);
         }
     }
 }

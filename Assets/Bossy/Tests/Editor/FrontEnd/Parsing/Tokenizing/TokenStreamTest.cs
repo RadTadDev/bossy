@@ -1,4 +1,4 @@
-using Bossy.FrontEnd.Parsing;
+using Bossy.Frontend.Parsing;
 using NUnit.Framework;
 
 namespace Bossy.Tests.FrontEnd.Parsing

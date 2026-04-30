@@ -1,6 +1,9 @@
 {
     "name": "Bossy",
-    "references": [],
+    "references": [
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
     "includePlatforms": [],
     "excludePlatforms": []
 }

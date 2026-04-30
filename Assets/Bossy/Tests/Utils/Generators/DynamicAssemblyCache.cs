@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
-using Bossy.Global;
 
 namespace Bossy.Tests.Utils
 {
@@ -35,7 +34,7 @@ namespace Bossy.Tests.Utils
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Failed to initialize {BossyData.Name} dynamic assembly for testing.", e);
+                throw new InvalidOperationException($"Failed to initialize Bossy dynamic assembly for testing.", e);
             }
         }
 

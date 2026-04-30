@@ -17,3 +17,4 @@ namespace Bossy.Tests.Utils.Commands
         }
     }
 }
+

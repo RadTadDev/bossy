@@ -33,16 +33,10 @@ namespace Bossy.Tests.Utils
         
         public async Task<object> ReadAsync(Type requestedType, CancellationToken token)
         {
-            if (_infinite) return 1;
-
-            if (_idx >= _queue.Count)
-            {
-                // Mock 'Close' behavior
-                return null;
-            }
-
-            await Task.CompletedTask;
-            return _queue[_idx++];
+            if (!_infinite) return _idx >= _queue.Count ? CloseWriterSentinel.Object : _queue[_idx++];
+            
+            await Task.Yield();
+            return 1;
         }
     }
 }

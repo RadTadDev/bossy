@@ -1,5 +1,5 @@
 using NUnit.Framework;
-using Bossy.FrontEnd.Parsing;
+using Bossy.Frontend.Parsing;
 using UnityEngine;
 
 namespace Bossy.Tests.FrontEnd.Parsing

@@ -16,11 +16,10 @@ namespace Bossy.Registry
         /// <summary>
         /// Creates a reflective command discoverer.
         /// </summary>
-        /// <param name="first">An assembly to search for command types.</param>
-        /// <param name="rest">Additional assemblies to search for command types.</param>
-        public ReflectiveCommandDiscoverer(Assembly first, params Assembly[] rest)
+        /// <param name="assemblies">The assemblies to search for command types.</param>
+        public ReflectiveCommandDiscoverer(List<Assembly> assemblies)
         {
-            _assemblies = new [] { first }.Concat(rest).ToArray();
+            _assemblies = assemblies.ToArray();
         }
         
         public IReadOnlyList<Type> GetAllCommandTypes()

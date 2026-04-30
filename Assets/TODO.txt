@@ -7,14 +7,14 @@ Roslyn Analyzers
 - Ensure only one argument attribute per field
 
 TODO: 
+When the dust settles, add back the ability to add capabilities to classes and inject into context so commands can target them
+Verify namespaces and TODOs and remove dead usings
+
+fix settings
+
 inject type adapter registry into adapter base class so complex adapters can use primitive ones.
-Actually send null in a stream when it closes - currently commands get canceled then errored so maybe this works. But null is a definite way to safely close the stream
 
-make settings
-
-test settings
-
-build edit mode gui
+Add CloseWriter() method to context so commands can declare that they are done writing.
 
 add prompt builder to context
 
@@ -23,3 +23,33 @@ test prompt builder
 test edit mode gui (probably smoke tests)
 
 auto complete
+
+To Document:
+commands overriding gui
+piping
+help commands and such
+    (how to display parse rules and what not in terminal)
+type adapters
+bootstrap
+command context methods (especially foraech)
+
+Future features:
+- Autocomplete
+    
+- Session restoration 
+    Allowing editor windows to survive domain reload requires hosts being able to serialize their state
+    Likely best as an optional interface
+    Will require a stable unique key for each window
+
+- Permissions
+
+- GUI - require slight rework for spawning new windows to take in param as to which.
+      - host manager will need a slight change
+      
+      
+DEV NOTES: 
+    - Currently, the graphics host only knows a window has closed when querying it to see if its toggleable.
+      This is done because editor windows especially can close from outside sources. I dont think its unclean, just be aware.
+    - Not including headless host in design, this is never going to be useful or implemented
+
+

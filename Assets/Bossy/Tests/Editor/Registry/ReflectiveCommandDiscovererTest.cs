@@ -24,7 +24,7 @@ namespace Bossy.Tests.Registry
 				ours.Add(CommandGenerator.WithName($"test_cmd_{i}").Generate().GetType());
 			}
 
-			var discoverer = new ReflectiveCommandDiscoverer(DynamicAssemblyCache.Assembly);
+			var discoverer = new ReflectiveCommandDiscoverer(new List<Assembly> { DynamicAssemblyCache.Assembly });
 
 			var all = discoverer.GetAllCommandTypes();
 			
@@ -39,7 +39,8 @@ namespace Bossy.Tests.Registry
 			// Generate a plain type with no CommandAttribute or ICommand
 			var type = DynamicAssemblyCache.CreateType(null, "plain_type");
 
-			var discoverer = new ReflectiveCommandDiscoverer(DynamicAssemblyCache.Assembly);
+			var discoverer = new ReflectiveCommandDiscoverer(new List<Assembly> { DynamicAssemblyCache.Assembly });
+
 			var all = discoverer.GetAllCommandTypes();
 
 			Assert.That(all.Any(t => t.Name == "plain_type"), Is.False);
@@ -49,7 +50,7 @@ namespace Bossy.Tests.Registry
 		public void Test_GetAllCommandTypes_DeduplicatesAssemblies()
 		{
 			var assembly = DynamicAssemblyCache.Assembly;
-			var discoverer = new ReflectiveCommandDiscoverer(assembly, assembly);
+			var discoverer = new ReflectiveCommandDiscoverer(new List<Assembly> { assembly, assembly });
 
 			var all = discoverer.GetAllCommandTypes();
 
@@ -64,7 +65,7 @@ namespace Bossy.Tests.Registry
 				.DefineDynamicModule("EmptyModule")
 				.Assembly;
 
-			var discoverer = new ReflectiveCommandDiscoverer(emptyAssembly);
+			var discoverer = new ReflectiveCommandDiscoverer(new List<Assembly> { emptyAssembly });
 			var all = discoverer.GetAllCommandTypes();
 
 			Assert.That(all, Is.Empty);

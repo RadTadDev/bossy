@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Bossy.Command;
 using NUnit.Framework;
-using Bossy.FrontEnd.Parsing;
+using Bossy.Frontend.Parsing;
 using Bossy.Registry;
 using Bossy.Schema;
 using Bossy.Tests.Utils;
@@ -16,11 +16,11 @@ namespace Bossy.Tests.FrontEnd.Parsing
     {
         private Parser _parser;
         private ParseResult _result;
-
+        private OperatorList _ops = new(";", "&&", "||", "|", "!");
+        
         [OneTimeSetUp]
         public void Setup()
         {
-            var ops = new OperatorList(";", "&&", "||", "|", "!");
 
             // Fake command types
             var root = CommandGenerator.WithName("root").Generate();
@@ -174,115 +174,115 @@ namespace Bossy.Tests.FrontEnd.Parsing
             adapterRegistry.RegisterAdapter(typeof(float), new FloatAdapter());
             adapterRegistry.RegisterAdapter(typeof(bool), new BoolAdapter());
             
-            _parser = new Parser(schemaRegistry, adapterRegistry, ops);
+            _parser = new Parser(schemaRegistry, adapterRegistry);
         }
         
         [Test]
         public void Parse_EmptyInput()
         {
-            _result = _parser.Parse("");
+            _result = _parser.Parse("", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(EmptyInputError)));
             
-            _result = _parser.Parse(" ");
+            _result = _parser.Parse(" ", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(EmptyInputError)));
         }
         
         [Test]
         public void Parse_BadOperatorPositions()
         {
-            _result = _parser.Parse(";root");
+            _result = _parser.Parse(";root", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(BadOperatorPositionError)));
             
-            _result = _parser.Parse("; root");
+            _result = _parser.Parse("; root", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(BadOperatorPositionError)));
             
-            _result = _parser.Parse("root;");
+            _result = _parser.Parse("root;", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(BadOperatorPositionError)));
             
-            _result = _parser.Parse("root ;");
+            _result = _parser.Parse("root ;", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(BadOperatorPositionError)));
         
-            _result = _parser.Parse("; root ;");
+            _result = _parser.Parse("; root ;", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(BadOperatorPositionError)));
         }
         
         [Test]
         public void Parse_BadWindowPositions()
         {
-            _result = _parser.Parse("root!cmd2");
+            _result = _parser.Parse("root!cmd2", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(BadWindowOperatorError)));
             
-            _result = _parser.Parse("root ! cmd2");
+            _result = _parser.Parse("root ! cmd2", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(BadWindowOperatorError)));
         }
         
         [Test]
         public void Parse_ContiguousOperators()
         {
-            _result = _parser.Parse("root;;cmd2");
+            _result = _parser.Parse("root;;cmd2", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ContiguousOperatorsError)));
         }
 
         [Test]
         public void Parse_ContiguousOperators_SameCharacter()
         {
-            _result = _parser.Parse("root|||cmd2");
+            _result = _parser.Parse("root|||cmd2", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ContiguousOperatorsError)));
         }
         
         [Test]
         public void Parse_NoMatchingCommand()
         {
-            _result = _parser.Parse("none");
+            _result = _parser.Parse("none", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(NoMatchingCommandError)));
         }
         
         [Test]
         public void Parse_InvalidSchema()
         {
-            _result = _parser.Parse("_invalid");
+            _result = _parser.Parse("_invalid", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(InvalidSchemaError)));
         }
         
         [Test]
         public void Parse_ChildCommandNotConsideredInvalid_ShouldBeMissing()
         {
-            _result = _parser.Parse("_invalidGrandChild");
+            _result = _parser.Parse("_invalidGrandChild", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(NoMatchingCommandError)));
         }
         
         [Test]
         public void Parse_InvalidGrandchild()
         {
-            _result = _parser.Parse("root child _invalidGrandChild");
+            _result = _parser.Parse("root child _invalidGrandChild", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(InvalidSchemaError)));
         }
         
         [Test]
         public void Parse_Switches_ExtraneousSwitch()
         {
-            _result = _parser.Parse("switches --name");
+            _result = _parser.Parse("switches --name", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(InvalidSwitchError)));
         }
         
         [Test]
         public void Parse_Switches_ExtraneousSwitch_Short()
         {
-            _result = _parser.Parse("switches -n");
+            _result = _parser.Parse("switches -n", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(InvalidSwitchError)));
         }
         
         [Test]
         public void Parse_Switches_Adapt_Fails()
         {
-            _result = _parser.Parse("switches --sw1");
+            _result = _parser.Parse("switches --sw1", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(TypeAdaptError)));
         }
         
         [Test]
         public void Parse_Switches_Valid()
         {
-            _result = _parser.Parse("switches --sw1 1");
+            _result = _parser.Parse("switches --sw1 1", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
@@ -296,7 +296,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Switches_Short_Valid()
         {
-            _result = _parser.Parse("switches -s 1");
+            _result = _parser.Parse("switches -s 1", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -309,7 +309,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Switches_Multiple_Valid()
         {
-            _result = _parser.Parse("switches --sw1 1 --sw2 2");
+            _result = _parser.Parse("switches --sw1 1 --sw2 2", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -322,7 +322,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Switches_Multiple_Short_Valid()
         {
-            _result = _parser.Parse("switches -s 1 -w 2");
+            _result = _parser.Parse("switches -s 1 -w 2", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -335,7 +335,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Switches_Multiple_ShortAndLong_Valid()
         {
-            _result = _parser.Parse("switches --sw1 1 -w 2");
+            _result = _parser.Parse("switches --sw1 1 -w 2", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -348,14 +348,14 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Switches_AggregatedNotBools_InValid()
         {
-            _result = _parser.Parse("switches -sw");
+            _result = _parser.Parse("switches -sw", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(TypeAdaptError)));
         }
         
         [Test]
         public void Parse_Switches_AggregatedBools_Valid()
         {
-            _result = _parser.Parse("switchesBool -ab");
+            _result = _parser.Parse("switchesBool -ab", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -368,7 +368,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Positionals_Valid()
         {
-            _result = _parser.Parse("positionals 1 2");
+            _result = _parser.Parse("positionals 1 2", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -381,21 +381,21 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Positionals_BadAdapt_Fails()
         {
-            _result = _parser.Parse("positionals 1 false");
+            _result = _parser.Parse("positionals 1 false", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(TypeAdaptError)));
         }
         
         [Test]
         public void Parse_Positionals_NotEnoughTokens_Fails()
         {
-            _result = _parser.Parse("positionals 1");
+            _result = _parser.Parse("positionals 1", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(MissingPositionalError)));
         }
         
         [Test]
         public void Parse_OptionalsNone_Valid()
         {
-            _result = _parser.Parse("optionals");
+            _result = _parser.Parse("optionals", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out _), Is.True);
         }
@@ -403,7 +403,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_OptionalsAll_Valid()
         {
-            _result = _parser.Parse("optionals 1 2");
+            _result = _parser.Parse("optionals 1 2", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -416,7 +416,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_OptionalsSome_Valid()
         {
-            _result = _parser.Parse("optionals 1");
+            _result = _parser.Parse("optionals 1", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -428,14 +428,14 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Optionals_BadAdapt_Fails()
         {
-            _result = _parser.Parse("optionals 1 false");
+            _result = _parser.Parse("optionals 1 false", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(TypeAdaptError)));
         }
         
         [Test]
         public void Parse_Optionals_BadAdaptWithVariadic_Valid()
         {
-            _result = _parser.Parse("optionalAndVariadic 1 true");
+            _result = _parser.Parse("optionalAndVariadic 1 true", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -448,7 +448,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Variadic_None_Valid()
         {
-            _result = _parser.Parse("variadic");
+            _result = _parser.Parse("variadic", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -460,7 +460,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Variadic_One_Valid()
         {
-            _result = _parser.Parse("variadic 1");
+            _result = _parser.Parse("variadic 1", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -472,7 +472,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Variadic_Many_Valid()
         {
-            _result = _parser.Parse("variadic 1 2 3");
+            _result = _parser.Parse("variadic 1 2 3", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -484,21 +484,21 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_Variadic_BadType_Invalid()
         {
-            _result = _parser.Parse("variadic true");
+            _result = _parser.Parse("variadic true", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(TypeAdaptError)));
         }
         
         [Test]
         public void Parse_NotVariadic_ExtraToken()
         {
-            _result = _parser.Parse("root 1");
+            _result = _parser.Parse("root 1", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(UnexpectedTokensError)));
         }
         
         [Test]
         public void Parse_AllArgs_Valid()
         {
-            _result = _parser.Parse("all 1 2 true true true");
+            _result = _parser.Parse("all 1 2 true true true", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -513,7 +513,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_AllArgs_SwitchFirst_Valid()
         {
-            _result = _parser.Parse("all --sw 10 1 2 true true true");
+            _result = _parser.Parse("all --sw 10 1 2 true true true", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -528,7 +528,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_AllArgs_SwitchBeforeOptional_Valid()
         {
-            _result = _parser.Parse("all 1 --sw 10 2 true true true");
+            _result = _parser.Parse("all 1 --sw 10 2 true true true", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -543,7 +543,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_AllArgs_SwitchBeforeVariadic_Valid()
         {
-            _result = _parser.Parse("all 1 2 --sw 10 true true true");
+            _result = _parser.Parse("all 1 2 --sw 10 true true true", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -558,7 +558,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_AllArgs_NoOptionals_Valid()
         {
-            _result = _parser.Parse("all 1 --sw 10 true true true");
+            _result = _parser.Parse("all 1 --sw 10 true true true", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -572,7 +572,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_AllArgs_NoVariadic_Valid()
         {
-            _result = _parser.Parse("all 1 --sw 10");
+            _result = _parser.Parse("all 1 --sw 10", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             
@@ -585,21 +585,21 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_ProperWindow_Start()
         {
-            _result = _parser.Parse("!root");
+            _result = _parser.Parse("!root", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
         }
         
         [Test]
         public void Parse_ProperWindow_End()
         {
-            _result = _parser.Parse("root!");
+            _result = _parser.Parse("root!", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
         }
         
         [Test]
         public void Parse_ThenOperator_Success()
         {
-            _result = _parser.Parse("root ; root");
+            _result = _parser.Parse("root ; root", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             Assert.That(graph.ToArray().Length, Is.EqualTo(2));
@@ -608,7 +608,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void AndOperator_Success()
         {
-            _result = _parser.Parse("root && root");
+            _result = _parser.Parse("root && root", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             Assert.That(graph.ToArray().Length, Is.EqualTo(2));
@@ -617,7 +617,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_OrOperator_Success()
         {
-            _result = _parser.Parse("root || root");
+            _result = _parser.Parse("root || root", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             Assert.That(graph.ToArray().Length, Is.EqualTo(2));
@@ -626,7 +626,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_PipeOperator_Success()
         {
-            _result = _parser.Parse("root | root");
+            _result = _parser.Parse("root | root", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             Assert.That(graph.ToArray().Length, Is.EqualTo(2));
@@ -635,7 +635,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_LongPipeline_Success()
         {
-            _result = _parser.Parse("root | switches --sw1 5 ; all 1 2 || root && root");
+            _result = _parser.Parse("root | switches --sw1 5 ; all 1 2 || root && root", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             Assert.That(graph.ToArray().Length, Is.EqualTo(5));
@@ -644,7 +644,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_LongPipeline_FrontWindow_Success()
         {
-            _result = _parser.Parse("!root | switches --sw1 5 ; all 1 2 || root && root");
+            _result = _parser.Parse("!root | switches --sw1 5 ; all 1 2 || root && root", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             Assert.That(graph.ToArray().Length, Is.EqualTo(5));
@@ -653,7 +653,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         [Test]
         public void Parse_LongPipeline_BackWindow_Success()
         {
-            _result = _parser.Parse("root | switches --sw1 5 ; all 1 2 || root && root!");
+            _result = _parser.Parse("root | switches --sw1 5 ; all 1 2 || root && root!", _ops);
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             Assert.That(graph.ToArray().Length, Is.EqualTo(5));
