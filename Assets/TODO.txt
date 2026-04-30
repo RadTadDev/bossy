@@ -7,7 +7,6 @@ Roslyn Analyzers
 - Ensure only one argument attribute per field
 
 TODO: 
-When the dust settles, add back the ability to add capabilities to classes and inject into context so commands can target them
 Verify namespaces and TODOs and remove dead usings
 
 fix settings

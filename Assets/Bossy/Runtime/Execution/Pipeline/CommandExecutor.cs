@@ -13,14 +13,17 @@ namespace Bossy.Shell
     /// </summary>
     internal class CommandExecutor
     {
+        private Session _session;
         private readonly TypeAdapterRegistry _adapterRegistry;
-        
+
         /// <summary>
         /// Creates a new executor.
         /// </summary>
+        /// <param name="session">The session that owns this executor.</param>
         /// <param name="adapterRegistry">A type adapter registry to convert string to type.</param>
-        public CommandExecutor(TypeAdapterRegistry adapterRegistry)
+        public CommandExecutor(Session session, TypeAdapterRegistry adapterRegistry)
         {
+            _session = session;
             _adapterRegistry = adapterRegistry;
         }
 
@@ -36,6 +39,12 @@ namespace Bossy.Shell
         {
             if (graph.IsEmpty) return;
 
+            if (graph.Windowed)
+            {
+                _session.CreateCommandSession(graph);
+                return;
+            }
+            
             var groups = GroupCommands(graph);
 
             var previousStatus = CommandStatus.Ok;

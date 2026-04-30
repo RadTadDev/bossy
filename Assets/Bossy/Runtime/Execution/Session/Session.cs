@@ -16,15 +16,37 @@ namespace Bossy.Shell
         
         private readonly CommandExecutor _commandExecutor;
 
+        private TypeAdapterRegistry _adapterRegistry;
+        private Action<Session, CommandGraph> _createCommandSession;
         private CancellationTokenSource _commandSource;
         private readonly CancellationTokenSource _sessionSource = new();
+        public readonly SessionSpace Space;
         
-        public Session(Bridge bridge, TypeAdapterRegistry adapterRegistry)
+        public Session(Bridge bridge, TypeAdapterRegistry adapterRegistry, Action<Session, CommandGraph> createCommandSession, SessionSpace space)
         {
             Bridge = bridge;
-            _commandExecutor = new CommandExecutor(adapterRegistry);
+            _adapterRegistry = adapterRegistry;
+            _commandExecutor = new CommandExecutor(this, adapterRegistry);
+            _createCommandSession = createCommandSession;
+            Space = space;
+        }
+
+        /// <summary>
+        /// Runs a single graph.
+        /// </summary>
+        /// <param name="graph">The graph to run.</param>
+        public async Task RunGraphAsync(CommandGraph graph)
+        {
+            _commandSource = new CancellationTokenSource();
+            var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandSource.Token, _sessionSource.Token);
+
+            await _commandExecutor.ExecuteAsync(graph, this, linkedSource.Token);
         }
         
+        /// <summary>
+        /// Starts the session execution REPL.
+        /// </summary>
+        /// <exception cref="BossyNotAdaptableException">Throws when a front end fails to give a command graph after one is requested.</exception>
         public async Task RunAsync()
         {
             while (!_sessionSource.IsCancellationRequested)
@@ -44,6 +66,11 @@ namespace Bossy.Shell
             }
         }
 
+        public void CreateCommandSession(CommandGraph graph)
+        {
+            _createCommandSession?.Invoke(this, graph);
+        }
+        
         public void CancelCommand()
         {
             if (_commandSource.Token.CanBeCanceled)
@@ -52,6 +79,15 @@ namespace Bossy.Shell
             }
         }
 
+        public Session Clone(Bridge bridge)
+        {
+            var session = new Session(bridge, _adapterRegistry, _createCommandSession, Space);
+            
+            // TODO: Set other properties
+            
+            return session;
+        }
+        
         public void Dispose()
         {
             _commandSource?.Cancel();

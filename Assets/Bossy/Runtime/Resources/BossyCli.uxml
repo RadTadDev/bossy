@@ -1,11 +1,11 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <ui:VisualElement name="cli-root" style="width: 100%; height: 100%; flex-direction: column;">
-        <ui:ListView name="output-list" style="flex-grow: 1;"/>
+        <ui:ListView name="output-list" style="flex-grow: 1; background-color: rgb(56, 56, 56);"/>
         <ui:VisualElement name="autocomplete-anchor" style="width: 100%; position: relative;">
             <ui:VisualElement name="autocomplete-popup" style="position: absolute; bottom: 0; width: 100%; display: none;"/>
         </ui:VisualElement>
         <ui:VisualElement name="input-row" style="flex-direction: row; align-items: center; border-top-width: 1px; padding: 4px;">
-            <ui:Label name="prompt-label" text="&gt;" style="margin-right: 4px;"/>
+            <ui:Label name="prompt-label" text="&gt;" style="margin-right: 4px; background-color: rgba(0, 0, 0, 0); color: rgb(255, 255, 255);"/>
             <ui:TextField name="input-field" style="flex-grow: 1;"/>
         </ui:VisualElement>
     </ui:VisualElement>

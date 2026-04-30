@@ -24,7 +24,7 @@ namespace Bossy.Tests.Shell
             _adapterRegistry = new TypeAdapterRegistry();
             _adapterRegistry.RegisterAdapter(typeof(int), new IntAdapter()); 
             
-            _session = new Session(new Bridge(_ => { }, _ => { }), _adapterRegistry);
+            _session = new Session(new Bridge(_ => { }, _ => { }), _adapterRegistry, (_, _) => { }, SessionSpace.Edit);
         }
         
         [Test]

@@ -12,7 +12,6 @@ namespace Bossy
     internal class LifecycleManager
     {
         private readonly HostManager _hostManager;
-        private readonly SessionManager _sessionManager;
         private readonly TypeAdapterRegistry _adapterRegistry;
         private readonly GlobalInput _globalInput;
         private readonly Parser _parser;
@@ -34,8 +33,7 @@ namespace Bossy
             _globalInput.OnToggleMainHost += OnToggleHostInput;
             
             _frontEndFactory = new FrontEndFactory(_parser, _settings.BossyInputSettings, _settings.BossyCliSettings);
-            
-            _sessionManager = new SessionManager(this);
+
             _hostManager = new HostManager(this, CreateBossySession);
 
             _runtimeManager = new BossyRuntimeManager();
@@ -47,7 +45,7 @@ namespace Bossy
             var content = _frontEndFactory.Create(frontendType);
             
             var bridge = new Bridge(CloseSession, CancelCommand);
-            var session = new Session(bridge, _adapterRegistry);
+            var session = new Session(bridge, _adapterRegistry, CreateCommandSession, space);
             var viewer = new SessionViewer(bridge, content);
             var container = new LifecycleContainer(session, viewer);
             
@@ -117,7 +115,7 @@ namespace Bossy
                 host.Initialize(_hostManager, CreateBossySession, SessionSpace.Edit);
                 
                 var bridge = new Bridge(CloseSession, CancelCommand);
-                var session = new Session(bridge, _adapterRegistry);
+                var session = new Session(bridge, _adapterRegistry, CreateCommandSession, SessionSpace.Edit);
                 
                 // TODO: Remember correct view via session serializing system (which does not exist yet)
                 var content = new CliContentView(_parser, _settings.BossyCliSettings, _settings.BossyInputSettings);
@@ -135,6 +133,28 @@ namespace Bossy
                 container.Start();
             }
 #endif
+        }
+
+        private void CreateCommandSession(Session template, CommandGraph graph)
+        {
+            var content = _frontEndFactory.Create(FrontendType.CommandDisplay);
+            
+            var bridge = new Bridge(CloseSession, CancelCommand);
+            var session = template.Clone(bridge);
+            var viewer = new SessionViewer(bridge, content);
+            var container = new LifecycleContainer(session, viewer);
+            
+            _containers[bridge] = container;
+            var host = _hostManager.AssignCommandHost(viewer, session.Space);
+
+            void ReleaseAction() => _hostManager.NotifyFocusLost(host, false);
+            
+            var signaler = new Signaler(ReleaseAction, bridge);
+            content.SetSignaler(signaler);
+
+            // We have set this up as a windowed command, don't detect it again
+            graph.Windowed = false;
+            container.Start(graph);
         }
     }
 }

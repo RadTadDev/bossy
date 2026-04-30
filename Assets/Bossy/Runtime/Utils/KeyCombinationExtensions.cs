@@ -1,3 +1,5 @@
+#if UNITY_EDITOR
+
 using UnityEditor.ShortcutManagement;
 
 namespace Bossy.Utils.Editor
@@ -15,3 +17,5 @@ namespace Bossy.Utils.Editor
         }
     }
 }
+
+#endif

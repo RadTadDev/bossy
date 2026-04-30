@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Frontend.Parsing;
 using Bossy.Shell;
-using Bossy.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -20,7 +19,7 @@ namespace Bossy.Frontend
 
         private readonly List<string> _outputBuffer = new() { string.Empty };
         
-        private TextField _input;
+        protected TextField Input;
         private ListView _view;
 
         private string _cachedInput = string.Empty;
@@ -38,21 +37,21 @@ namespace Bossy.Frontend
             _inputSettings = inputSettings;
         }
 
-        public VisualElement CreateView()
+        public virtual VisualElement CreateView()
         {
             var root = ContentViewUtility.GetRootFromUxml("BossyCli");
             
-            _input = root.Q<TextField>("input-field");
-            _input.selectAllOnFocus = false;
-            _input.selectAllOnMouseUp = false;
-            _input.RegisterCallback<KeyDownEvent>(evt =>
+            Input = root.Q<TextField>("input-field");
+            Input.selectAllOnFocus = false;
+            Input.selectAllOnMouseUp = false;
+            Input.RegisterCallback<KeyDownEvent>(evt =>
             {
                 if (_blockInput) return;
                 
                 if (_inputSettings.ToggleMainHost.IsAsserted(evt))
                 {
                     _signaler.ReleaseFocus();
-                    _input.focusController.IgnoreEvent(evt);
+                    Input.focusController.IgnoreEvent(evt);
                     evt.StopPropagation();
                 }
                 else if (_inputSettings.SubmitCommand.IsAsserted(evt))
@@ -61,7 +60,7 @@ namespace Bossy.Frontend
                 }
                 else if (_inputSettings.CancelCommand.IsAsserted(evt))
                 {
-                    _input.value = string.Empty;
+                    Input.value = string.Empty;
                     _cachedInput = string.Empty;
                     _signaler.CancelCommand();
                 }
@@ -100,7 +99,7 @@ namespace Bossy.Frontend
             _view.ScrollToItem(_outputBuffer.Count - 1);
         }
 
-        public async Task<object> ReadAsync(Type requestedType, CancellationToken token)
+        public virtual async Task<object> ReadAsync(Type requestedType, CancellationToken token)
         {
             _requestingCommand = requestedType == typeof(CommandGraph);
             
@@ -114,10 +113,10 @@ namespace Bossy.Frontend
 
         public void Submit()
         {
-            var line = _input.value;
+            var line = Input.value;
             object result = line;
             
-            _input.value = string.Empty;
+            Input.value = string.Empty;
             FocusInput();
         
             if (_requestingCommand)
@@ -153,17 +152,17 @@ namespace Bossy.Frontend
         public void Focus()
         {
             _blockInput = true;
-            _input.focusable = true;
-            _input.schedule.Execute(() =>
+            Input.focusable = true;
+            Input.schedule.Execute(() =>
             {
-                _input.Focus();
-                _input.schedule.Execute(() =>
+                Input.Focus();
+                Input.schedule.Execute(() =>
                 {
-                    _input.value = _cachedInput;
-                    _input.schedule.Execute(() =>
+                    Input.value = _cachedInput;
+                    Input.schedule.Execute(() =>
                     {
-                        _input.cursorIndex = _cachedInput.Length;
-                        _input.selectIndex = _cachedInput.Length;
+                        Input.cursorIndex = _cachedInput.Length;
+                        Input.selectIndex = _cachedInput.Length;
                         _blockInput = false;
                     });
                 });
@@ -172,13 +171,13 @@ namespace Bossy.Frontend
 
         public void Defocus()
         {
-            _cachedInput = _input.value;
-            _input.focusable = false;
+            _cachedInput = Input.value;
+            Input.focusable = false;
         }
 
         private void FocusInput()
         {
-            _input?.schedule.Execute(() => _input?.Focus());
+            Input?.schedule.Execute(() => Input?.Focus());
         }
     }
 }

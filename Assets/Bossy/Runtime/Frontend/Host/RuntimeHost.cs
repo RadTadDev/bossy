@@ -21,14 +21,19 @@ namespace Bossy.Frontend
             Space = space;
             
             var settings = ScriptableObject.CreateInstance<PanelSettings>();
-            settings.sortingOrder = 9999;
+            settings.sortingOrder = 9998;
             settings.scaleMode = PanelScaleMode.ConstantPixelSize;
             settings.themeStyleSheet = Resources.Load<ThemeStyleSheet>("UnityDefaultRuntimeTheme");
             
             _document = gameObject.AddComponent<UIDocument>();
             _document.panelSettings = settings;
 
-            _controller = new RuntimeHostController(_document);
+            if (space is SessionSpace.RuntimeCommand)
+            {
+                settings.sortingOrder = 9999;
+            }
+            
+            _controller = new RuntimeHostController(_document, space);
         }
 
         public void Open()

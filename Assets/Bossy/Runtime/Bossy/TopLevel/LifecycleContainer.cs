@@ -19,9 +19,9 @@ namespace Bossy
             _viewer = viewer;
         }
         
-        public void Start()
+        public void Start(CommandGraph graph = null)
         {
-            var task = _session.RunAsync();
+            var task = graph == null ? _session.RunAsync() : _session.RunGraphAsync(graph);
             _ = ObserveExceptions(task);
         }
         

@@ -25,8 +25,8 @@ namespace Bossy.Tests.Shell
             registry.RegisterAdapter(typeof(string), new StringAdapter());
             
             var bridge = new Bridge(_ => { }, _ => { });
-            _session = new Session(bridge, registry);
-            _executor = new CommandExecutor(registry);
+            _session = new Session(bridge, registry, (_, _) => { }, SessionSpace.Edit);
+            _executor = new CommandExecutor(_session, registry);
         }
         
         [Test]

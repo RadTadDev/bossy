@@ -11,8 +11,13 @@ namespace Bossy
         Edit,
         
         /// <summary>
-        /// When in the editor and in playmode or in a build.
+        /// When in a build or in playmode in the editor.
         /// </summary>
-        Runtime
+        Runtime,
+        
+        /// <summary>
+        /// When running a command in a build or in playmode in the editor.
+        /// </summary>
+        RuntimeCommand
     }
 }

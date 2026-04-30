@@ -3,10 +3,10 @@ using UnityEngine;
 using System.Linq;
 using Bossy.Settings;
 using Bossy.Utils;
-using Bossy.Utils.Editor;
 using UnityEngine.InputSystem;
 
 #if UNITY_EDITOR
+using Bossy.Utils.Editor;
 using UnityEditor.ShortcutManagement;
 #endif
 

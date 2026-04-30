@@ -1,5 +1,6 @@
+#if UNITY_EDITOR
+
 using System;
-using Bossy.Utils;
 using UnityEditor;
 
 namespace Bossy.Frontend
@@ -73,3 +74,5 @@ namespace Bossy.Frontend
         }
     }
 }
+
+#endif

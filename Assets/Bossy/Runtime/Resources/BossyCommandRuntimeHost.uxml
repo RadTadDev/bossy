@@ -1,0 +1,10 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement name="root" picking-mode="Ignore" view-data-key="" style="flex-grow: 1;">
+        <ui:VisualElement name="window" style="flex-grow: 1; position: absolute; top: auto; left: auto; bottom: auto; right: auto; background-color: rgb(121, 187, 226); width: 250px; height: 350px;">
+            <ui:VisualElement name="title-handle" style="flex-grow: 1; position: absolute; top: 0; left: 0; right: 0; height: 25px;"/>
+            <ui:Button text="X" name="button-close" style="top: 0; left: auto; position: absolute; right: 0; width: 15px; height: 15px; font-size: 17px; bottom: auto;"/>
+            <ui:VisualElement name="content-area" picking-mode="Position" style="flex-grow: 1; position: absolute; top: 25px; background-color: rgb(55, 55, 55); left: 0; right: 0; bottom: 0;"/>
+            <ui:VisualElement name="drag-handle" style="flex-grow: 1; width: 10px; height: 10px; background-color: rgb(229, 229, 229); right: 0; bottom: 0; position: absolute;"/>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

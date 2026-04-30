@@ -31,7 +31,7 @@ namespace Bossy.Frontend
             {
                 // Create runtime
                 var obj = BossyRuntime.Instance.CreateChildObject("[Bossy Runtime Host]");
-                host = obj.AddComponent<RuntimeHost>();
+                host = obj.AddComponent<RuntimeHost>();    
             }
             
             host.Initialize(_hostManager, _createNewSession, space);

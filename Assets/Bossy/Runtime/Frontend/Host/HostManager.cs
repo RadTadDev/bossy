@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Utils;
 
 namespace Bossy.Frontend
 {
@@ -57,8 +56,19 @@ namespace Bossy.Frontend
             
             return host;
         }
+
+        public IHost AssignCommandHost(SessionViewer viewer, SessionSpace space)
+        {
+            // Runtime commands need help to behave like editor ones already do (i.e. resizeable and draggable)
+            if (space is SessionSpace.Runtime)
+            {
+                space = SessionSpace.RuntimeCommand;
+            }
+            
+            return MakeAndFocusHost(space, viewer, true);
+        }
         
-        public void ReconnectEditor(SessionViewer viewer, EditorHost host)
+        public void ReconnectEditor(SessionViewer viewer, IHost host)
         {
             host.Initialize(this, _createNewSession, SessionSpace.Edit);
             host.Controller.AddViewer(viewer);
@@ -93,9 +103,12 @@ namespace Bossy.Frontend
         {
             _lifeCycle.HandleHostClosure(host);
 
-            if (_mainHosts[host.Space] == host)
+            if (_mainHosts.TryGetValue(host.Space, out var focusedHost))
             {
-                _mainHosts.Remove(host.Space);
+                if (focusedHost == host)
+                {
+                    _mainHosts.Remove(host.Space);
+                }
             }
             
             NotifyFocusLost(host, hostAlreadyClosed);
@@ -114,10 +127,14 @@ namespace Bossy.Frontend
             }
         }
 
-        private IHost MakeAndFocusHost(SessionSpace space, SessionViewer viewer = null)
+        private IHost MakeAndFocusHost(SessionSpace space, SessionViewer viewer = null, bool asCommand = false)
         {
             var host = _hostFactory.CreateHost(space);
-            _allHosts.Add(host);
+
+            if (asCommand)
+            {
+                _allHosts.Add(host);
+            }
             
             host.Controller.NoSessionRemains += () => RequestClose(host, false);
 

@@ -19,15 +19,13 @@ namespace Bossy.Frontend
 
         public IContentView Create(FrontendType frontendType)
         {
-            switch (frontendType)
+            return frontendType switch
             {
-                case FrontendType.CommandLine:
-                    return new CliContentView(_parser, _cliSettings, _inputSettings);
-                case FrontendType.Graphical:
-                    return new GuiContentView();
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(frontendType), frontendType, null);
-            }
+                FrontendType.CommandLine => new CliContentView(_parser, _cliSettings, _inputSettings),
+                FrontendType.Graphical => new GuiContentView(),
+                FrontendType.CommandDisplay => new CommandDisplay(_parser, _cliSettings, _inputSettings),
+                _ => throw new ArgumentOutOfRangeException(nameof(frontendType), frontendType, null)
+            };
         }
     }
 }
