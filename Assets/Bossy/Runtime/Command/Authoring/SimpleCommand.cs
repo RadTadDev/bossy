@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using Bossy.Shell;
+using Bossy.Session;
 
 namespace Bossy.Command
 {

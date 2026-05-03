@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Bossy.Registry;
+using Bossy.Schema.Registry;
 
 namespace Bossy.Tests.Utils
 {

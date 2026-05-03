@@ -1,4 +1,4 @@
-namespace Bossy.Shell
+namespace Bossy.Session
 {
     /// <summary>
     /// Enumerates possible command links in a graph.

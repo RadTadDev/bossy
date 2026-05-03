@@ -1,6 +1,7 @@
 using Bossy.Frontend.Parsing;
-using Bossy.Registry;
+using Bossy.Schema.Registry;
 using Bossy.Settings;
+using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -12,10 +13,7 @@ namespace Bossy
     /// </summary>
     public class BossyConsole 
     {
-        private readonly SchemaRegistry _schemaRegistry;
-        private readonly TypeAdapterRegistry _typeAdapterRegistry;
-        private readonly LifecycleManager _lifecycleManager;
-        private readonly SettingsManager _settingsManager;
+        [UsedImplicitly] private readonly LifecycleManager _lifecycleManager;
         
         private static readonly string SettingsPath = Application.persistentDataPath + "/bossy/settings.json";
         
@@ -28,10 +26,6 @@ namespace Bossy
         {
             // TODO: Make this annoying default a setting. This is disabled because it globally overrides ctrl + backspace input 
             DebugManager.instance.enableRuntimeUI = false;
-            
-            _schemaRegistry = schemaRegistry;
-            _typeAdapterRegistry = typeAdapterRegistry;
-            _settingsManager = new SettingsManager(new FileSource(SettingsPath));
             
             _lifecycleManager = new LifecycleManager(schemaRegistry, typeAdapterRegistry, new FileSource(SettingsPath));
         }

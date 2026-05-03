@@ -1,4 +1,4 @@
-using Bossy.Shell;
+using Bossy.Session;
 using Bossy.Tests.Utils;
 using NUnit.Framework;
 
@@ -13,7 +13,7 @@ namespace Bossy.Tests.Shell
         public void Test_Write()
         {
             var output = new MockWriteable();
-            var context = new SimpleContext(output);
+            var context = new SimpleContext(output, null);
             
             context.Write("hello");
             context.Write("world");

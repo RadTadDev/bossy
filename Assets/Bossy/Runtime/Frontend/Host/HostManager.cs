@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Bossy.Settings;
 
 namespace Bossy.Frontend
 {
@@ -13,15 +14,17 @@ namespace Bossy.Frontend
         private readonly LifecycleManager _lifeCycle;
         
         private readonly Action<FrontendType, SessionSpace> _createNewSession;
-
+        private readonly BossyInputSettings _inputSettings;
+        
         private readonly List<IHost> _allHosts = new();
         private readonly Dictionary<SessionSpace, IHost> _mainHosts = new();
         
-        public HostManager(LifecycleManager lifeCycle, Action<FrontendType, SessionSpace> createNewSession)
+        public HostManager(LifecycleManager lifeCycle, BossyInputSettings settings, Action<FrontendType, SessionSpace> createNewSession)
         {
             _lifeCycle = lifeCycle;
+            _inputSettings = settings;
             _createNewSession = createNewSession;
-            _hostFactory = new HostFactory(this, createNewSession);
+            _hostFactory = new HostFactory(this, settings, createNewSession);
         }
         
         public bool HasOpenHost(SessionSpace space) => _mainHosts.ContainsKey(space);
@@ -70,8 +73,9 @@ namespace Bossy.Frontend
         
         public void ReconnectEditor(SessionViewer viewer, IHost host)
         {
-            host.Initialize(this, _createNewSession, SessionSpace.Edit);
+            host.Initialize(this, _inputSettings, _createNewSession, SessionSpace.Edit);
             host.Controller.AddViewer(viewer);
+            host.Controller.NoSessionRemains += () => RequestClose(host, false);
             _mainHosts[host.Space] = host;
             _allHosts.Add(host);
         }

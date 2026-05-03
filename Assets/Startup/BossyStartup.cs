@@ -1,6 +1,4 @@
 using Bossy;
-using Bossy.Frontend.Parsing;
-using UnityEngine;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -11,15 +9,23 @@ public static class BossyStartup
     private static BossyConsole _bossy;
     static BossyStartup()
     {
+        EditorApplication.delayCall += Start;
+    }
+
+    private static void Start()
+    {
+        EditorApplication.delayCall -= Start;
         _bossy = BossyBuilder
             .GetCommands()
             .Automatically()
-            .WithAdapter<StringAdapter>()
             .Build();
     }
 }
 
 #else
+
+using UnityEngine;
+
 public class BossyStartup
 {
     private static BossyConsole _bossy;
@@ -30,7 +36,6 @@ public class BossyStartup
         _bossy = BossyBuilder
             .GetCommands()
             .Automatically()
-            .WithAdapter<StringAdapter>()
             .Build();
     }
 }

@@ -8,7 +8,7 @@ namespace Bossy.Schema
     /// <summary>
     /// 
     /// </summary>
-    internal class ArgumentSchema
+    public class ArgumentSchema
     {
         /// <summary>
         /// The name of this argument.

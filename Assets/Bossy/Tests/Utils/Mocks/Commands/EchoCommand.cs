@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 using Bossy.Command;
-using Bossy.Shell;
+using Bossy.Session;
 
 namespace Bossy.Tests.Utils.Commands
 {

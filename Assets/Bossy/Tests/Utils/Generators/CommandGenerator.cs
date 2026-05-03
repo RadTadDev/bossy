@@ -5,8 +5,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Bossy.Command;
-using Bossy.Registry;
-using Bossy.Shell;
+using Bossy.Schema.Registry;
+using Bossy.Session;
 
 namespace Bossy.Tests.Utils
 {

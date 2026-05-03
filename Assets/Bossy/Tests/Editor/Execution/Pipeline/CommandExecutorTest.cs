@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
-using Bossy.Shell;
+using Bossy.Session;
 using Bossy.Tests.Utils;
 using Bossy.Tests.Utils.Commands;
 using NUnit.Framework;
@@ -15,7 +15,7 @@ namespace Bossy.Tests.Shell
     /// </summary>
     internal class CommandExecutorTest
     {
-        private Session _session;
+        private Session.Session _session;
         private CommandExecutor _executor;
         
         [OneTimeSetUp]
@@ -24,9 +24,10 @@ namespace Bossy.Tests.Shell
             var registry = new TypeAdapterRegistry();
             registry.RegisterAdapter(typeof(string), new StringAdapter());
             
+            var context = new BossyContext(null, registry, null);
             var bridge = new Bridge(_ => { }, _ => { });
-            _session = new Session(bridge, registry, (_, _) => { }, SessionSpace.Edit);
-            _executor = new CommandExecutor(_session, registry);
+            _session = new Session.Session(context, bridge, (_, _) => { }, SessionSpace.Edit);
+            _executor = new CommandExecutor(_session, context);
         }
         
         [Test]

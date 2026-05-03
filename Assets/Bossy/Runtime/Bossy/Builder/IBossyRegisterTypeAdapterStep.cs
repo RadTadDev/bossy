@@ -1,6 +1,6 @@
 using System;
 using Bossy.Frontend.Parsing;
-using Bossy.Registry;
+using Bossy.Schema.Registry;
 using UnityEngine;
 
 namespace Bossy

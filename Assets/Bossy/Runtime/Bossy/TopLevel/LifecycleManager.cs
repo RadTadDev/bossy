@@ -2,41 +2,42 @@ using System;
 using System.Collections.Generic;
 using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
-using Bossy.Registry;
+using Bossy.Schema.Registry;
 using Bossy.Settings;
-using Bossy.Shell;
+using Bossy.Session;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Bossy
 {
     internal class LifecycleManager
     {
-        private readonly HostManager _hostManager;
-        private readonly TypeAdapterRegistry _adapterRegistry;
-        private readonly GlobalInput _globalInput;
+        private readonly BossyContext _context;
         private readonly Parser _parser;
-        private readonly SettingsManager _settings;
+        private readonly HostManager _hostManager;
+        private readonly GlobalInput _globalInput;
         private readonly FrontEndFactory _frontEndFactory;
-        private readonly BossyRuntimeManager _runtimeManager;
+        [UsedImplicitly] private readonly BossyRuntimeManager _runtimeManager;
         
         private Dictionary<Bridge, LifecycleContainer> _containers = new();
 
+        
         public LifecycleManager(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, ISettingsSource settingsSource)
         {
-            _adapterRegistry = adapterRegistry;
             _parser = new Parser(schemaRegistry, adapterRegistry);
-
-            _settings = new SettingsManager(settingsSource);
-            _settings.Load();
+            var settings = new SettingsManager(settingsSource);
+            settings.Load();
             
-            _globalInput = new GlobalInput(_settings.BossyInputSettings);
+            _globalInput = new GlobalInput(settings.BossyInputSettings);
             _globalInput.OnToggleMainHost += OnToggleHostInput;
             
-            _frontEndFactory = new FrontEndFactory(_parser, _settings.BossyInputSettings, _settings.BossyCliSettings);
+            _frontEndFactory = new FrontEndFactory(_parser, settings.BossyInputSettings, settings.BossyCliSettings);
 
-            _hostManager = new HostManager(this, CreateBossySession);
-
+            _hostManager = new HostManager(this, settings.BossyInputSettings, CreateBossySession);
             _runtimeManager = new BossyRuntimeManager();
+
+            _context = new BossyContext(schemaRegistry, adapterRegistry, settings);
+            
             ReconnectEditorSessions();
         }
         
@@ -45,7 +46,7 @@ namespace Bossy
             var content = _frontEndFactory.Create(frontendType);
             
             var bridge = new Bridge(CloseSession, CancelCommand);
-            var session = new Session(bridge, _adapterRegistry, CreateCommandSession, space);
+            var session = new Session.Session(_context, bridge, CreateCommandSession, space);
             var viewer = new SessionViewer(bridge, content);
             var container = new LifecycleContainer(session, viewer);
             
@@ -112,13 +113,13 @@ namespace Bossy
 
             foreach (var host in hosts)
             {
-                host.Initialize(_hostManager, CreateBossySession, SessionSpace.Edit);
+                host.Initialize(_hostManager, _context.Settings.BossyInputSettings, CreateBossySession, SessionSpace.Edit);
                 
                 var bridge = new Bridge(CloseSession, CancelCommand);
-                var session = new Session(bridge, _adapterRegistry, CreateCommandSession, SessionSpace.Edit);
+                var session = new Session.Session(_context, bridge, CreateCommandSession, SessionSpace.Edit);
                 
                 // TODO: Remember correct view via session serializing system (which does not exist yet)
-                var content = new CliContentView(_parser, _settings.BossyCliSettings, _settings.BossyInputSettings);
+                var content = new CliUserInterfaceView(_parser, _context.Settings.BossyCliSettings, _context.Settings.BossyInputSettings);
                 var viewer = new SessionViewer(bridge, content);
                 var container = new LifecycleContainer(session, viewer);
             
@@ -135,7 +136,7 @@ namespace Bossy
 #endif
         }
 
-        private void CreateCommandSession(Session template, CommandGraph graph)
+        private void CreateCommandSession(Session.Session template, CommandGraph graph)
         {
             var content = _frontEndFactory.Create(FrontendType.CommandDisplay);
             

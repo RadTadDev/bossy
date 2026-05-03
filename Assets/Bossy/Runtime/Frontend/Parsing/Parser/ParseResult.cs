@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Bossy.Shell;
+using Bossy.Session;
 using Bossy.Utils;
 
 namespace Bossy.Frontend.Parsing

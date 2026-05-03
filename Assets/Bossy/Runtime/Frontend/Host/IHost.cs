@@ -1,4 +1,5 @@
 using System;
+using Bossy.Settings;
 
 namespace Bossy.Frontend
 {
@@ -8,7 +9,7 @@ namespace Bossy.Frontend
 
         public SessionSpace Space { get; }
         
-        public void Initialize(HostManager manager, Action<FrontendType, SessionSpace> createNewSession, SessionSpace space);
+        public void Initialize(HostManager manager, BossyInputSettings settings, Action<FrontendType, SessionSpace> createNewSession, SessionSpace space);
         
         public void Open();
 

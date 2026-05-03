@@ -1,8 +1,9 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using Bossy.Utils;
+using Bossy.Settings;
 using UnityEngine;
+using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
@@ -16,7 +17,7 @@ namespace Bossy.Frontend
         // TODO: This will change once multiple tabs are allowed
         private VisualElement _rect;
         
-        public RuntimeHostController(UIDocument document, SessionSpace space)
+        public RuntimeHostController(UIDocument document, BossyInputSettings settings, SessionSpace space)
         {
             VisualTreeAsset hostTree;
             if (space is SessionSpace.Runtime)
@@ -29,10 +30,20 @@ namespace Bossy.Frontend
             }
             
             document.visualTreeAsset = hostTree;
-
+            
             var root = document.rootVisualElement;
+            root.style.unityFontDefinition = new StyleFontDefinition(Resources.Load<FontAsset>("Font/JetBrainsMono-Regular"));
+            
             _rect = root.Q<VisualElement>("content-area");
-
+            _rect.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (settings.CancelCommand.IsAsserted(evt))
+                {
+                    _attachedViewers[0]?.Bridge.RequestCancelCommand();
+                    evt.StopImmediatePropagation();
+                }
+            }, TrickleDown.TrickleDown);
+            
             
             if (space is SessionSpace.Runtime)
             {
@@ -54,7 +65,7 @@ namespace Bossy.Frontend
         public void AddViewer(SessionViewer viewer)
         {
             _attachedViewers.Add(viewer);
-            viewer.InitializeView(_rect);
+            viewer.SetRootAndInitializeView(_rect);
         }
 
         public IEnumerable<Bridge> GetHostedBridges()

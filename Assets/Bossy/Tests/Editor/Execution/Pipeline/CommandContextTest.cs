@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
-using Bossy.Shell;
+using Bossy.Session;
 using Bossy.Tests.Utils;
 using Bossy.Utils;
 using NUnit.Framework;
@@ -15,16 +15,18 @@ namespace Bossy.Tests.Shell
     /// </summary>
     internal class CommandContextTest
     {
-        private Session _session;
+        private Session.Session _session;
         private TypeAdapterRegistry _adapterRegistry;
+        private BossyContext _context;
         
         [OneTimeSetUp]
         public void Setup()
         {
             _adapterRegistry = new TypeAdapterRegistry();
             _adapterRegistry.RegisterAdapter(typeof(int), new IntAdapter()); 
+            _context = new BossyContext(null, _adapterRegistry, null);
             
-            _session = new Session(new Bridge(_ => { }, _ => { }), _adapterRegistry, (_, _) => { }, SessionSpace.Edit);
+            _session = new Session.Session(_context, new Bridge(_ => { }, _ => { }), (_, _) => { }, SessionSpace.Edit);
         }
         
         [Test]
@@ -34,7 +36,7 @@ namespace Bossy.Tests.Shell
             var reader = new MockReadable(items);
             var writer = new MockWriteable();
 
-            var ctx = new CommandContext(_session, _adapterRegistry, reader, writer, false, CancellationToken.None);
+            var ctx = new CommandContext(_session, _context, reader, writer, false, CancellationToken.None);
 
             var first = await ctx.ReadAsync<int>();
             var second = await ctx.ReadAsync<float>();
@@ -52,7 +54,7 @@ namespace Bossy.Tests.Shell
             var reader = new MockReadable(items);
             var writer = new MockWriteable();
 
-            var ctx = new CommandContext(_session, _adapterRegistry, reader, writer, false, CancellationToken.None);
+            var ctx = new CommandContext(_session, _context, reader, writer, false, CancellationToken.None);
 
             var first = await ctx.ReadAsync<double>();
             var second = await ctx.ReadAsync<uint>();
@@ -68,7 +70,7 @@ namespace Bossy.Tests.Shell
             var reader = new MockReadable(items);
             var writer = new MockWriteable();
 
-            var ctx = new CommandContext(_session, _adapterRegistry, reader, writer, false, CancellationToken.None);
+            var ctx = new CommandContext(_session, _context, reader, writer, false, CancellationToken.None);
 
             var first = await ctx.ReadAsync<int>();
             
@@ -82,7 +84,7 @@ namespace Bossy.Tests.Shell
             var reader = new MockReadable(items);
             var writer = new MockWriteable();
             
-            var ctx = new CommandContext(_session, _adapterRegistry, reader, writer, false, CancellationToken.None);
+            var ctx = new CommandContext(_session, _context, reader, writer, false, CancellationToken.None);
 
             try
             {
@@ -101,7 +103,7 @@ namespace Bossy.Tests.Shell
             var reader = new MockReadable(items);
             var writer = new MockWriteable();
 
-            var ctx = new CommandContext(_session, _adapterRegistry, reader, writer, true, CancellationToken.None);
+            var ctx = new CommandContext(_session, _context, reader, writer, true, CancellationToken.None);
 
             var first = await ctx.ReadAsync<int>();
             

@@ -4,7 +4,7 @@
         <ui:VisualElement name="autocomplete-anchor" style="width: 100%; position: relative;">
             <ui:VisualElement name="autocomplete-popup" style="position: absolute; bottom: 0; width: 100%; display: none;"/>
         </ui:VisualElement>
-        <ui:VisualElement name="input-row" style="flex-direction: row; align-items: center; border-top-width: 1px; padding: 4px;">
+        <ui:VisualElement name="input-row" style="flex-direction: row; align-items: center; border-top-width: 1px; padding: 4px; flex-shrink: 0;">
             <ui:Label name="prompt-label" text="&gt;" style="margin-right: 4px; background-color: rgba(0, 0, 0, 0); color: rgb(255, 255, 255);"/>
             <ui:TextField name="input-field" style="flex-grow: 1;"/>
         </ui:VisualElement>

@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Bossy.Shell
+namespace Bossy.Session
 {
     /// <summary>
     /// Able to read from a standard stream.

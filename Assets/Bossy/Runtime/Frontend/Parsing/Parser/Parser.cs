@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bossy.Command;
-using Bossy.Registry;
+using Bossy.Schema.Registry;
 using Bossy.Schema;
-using Bossy.Shell;
+using Bossy.Session;
 
 namespace Bossy.Frontend.Parsing
 {

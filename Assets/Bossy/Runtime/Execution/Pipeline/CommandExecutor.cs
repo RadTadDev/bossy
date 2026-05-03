@@ -3,28 +3,28 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Frontend.Parsing;
+using Bossy.Frontend;
 using Bossy.Utils;
 
-namespace Bossy.Shell
+namespace Bossy.Session
 {
     /// <summary>
     /// Executes a command graph.
     /// </summary>
     internal class CommandExecutor
     {
-        private Session _session;
-        private readonly TypeAdapterRegistry _adapterRegistry;
+        private readonly Session _session;
+        private readonly BossyContext _context;
 
         /// <summary>
         /// Creates a new executor.
         /// </summary>
         /// <param name="session">The session that owns this executor.</param>
-        /// <param name="adapterRegistry">A type adapter registry to convert string to type.</param>
-        public CommandExecutor(Session session, TypeAdapterRegistry adapterRegistry)
+        /// <param name="context">The Bossy context.</param>
+        public CommandExecutor(Session session, BossyContext context)
         {
             _session = session;
-            _adapterRegistry = adapterRegistry;
+            _context = context;
         }
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace Bossy.Shell
             input ??= session.Bridge;
             output ??= session.Bridge;
 
-            var defaultContext = new CommandContext(session, _adapterRegistry, input, output, true, token);
+            var defaultContext = new CommandContext(session, _context, input, output, true, token);
             defaultContext.SetCapabilitySourcer(session.Bridge.GetCapabilities);
             
             foreach (var group in groups)
@@ -65,11 +65,16 @@ namespace Bossy.Shell
 
                 try
                 {
-                    var task = group.Count == 1
-                        ? group[0].Command.ExecuteAsync(defaultContext)
-                        : BuildPipeline(group, session, defaultContext);
+                    if (group.View != null)
+                    {
+                        session.Bridge.PushContent(group.View);
+                    }
+                    
+                    var task = group.Commands.Count == 1
+                        ? group.Commands[0].Command.ExecuteAsync(defaultContext)
+                        : BuildPipeline(group.Commands, session, defaultContext);
 
-                    previousLink = group.Last().Link;
+                    previousLink = group.Commands.Last().Link;
                     previousStatus = await task;
                 }
                 catch (OperationCanceledException)
@@ -92,10 +97,17 @@ namespace Bossy.Shell
                     output.Write(e.Message);
                     previousStatus = CommandStatus.Error;
                 }
+                finally
+                {
+                    if (group.View != null)
+                    {
+                        session.Bridge.PopContent();
+                    }
+                }
             }
         }
 
-        private async Task<CommandStatus> BuildPipeline(List<CommandGraphNode> group, Session session, CommandContext defaultContext)
+        private async Task<CommandStatus> BuildPipeline(IReadOnlyList<CommandGraphNode> group, Session session, CommandContext defaultContext)
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(defaultContext.CancellationToken);
 
@@ -103,7 +115,7 @@ namespace Bossy.Shell
 
             async Task<CommandStatus> RunNode(CommandGraphNode node, IReadable reader, IWriteable writer)
             {
-                var context = new CommandContext(session, _adapterRegistry, reader, writer, false, cts.Token);
+                var context = new CommandContext(session, _context, reader, writer, false, cts.Token);
                 try
                 {
                     var status = await node.Command.ExecuteAsync(context);
@@ -132,8 +144,8 @@ namespace Bossy.Shell
 
             var tasks = group.Select((node, i) =>
             {
-                var reader = i == 0 ? defaultContext.Reader : pipes[i - 1];
-                var writer = i == group.Count - 1 ? defaultContext.OutputStream : pipes[i];
+                var reader = i == 0 ? defaultContext.GetReader() : pipes[i - 1];
+                var writer = i == group.Count - 1 ? defaultContext.GetWriter() : pipes[i];
                 return RunNode(node, reader, writer);
             }).ToList();
 
@@ -145,25 +157,27 @@ namespace Bossy.Shell
                 : CommandStatus.Ok;
         }
 
-        private List<List<CommandGraphNode>> GroupCommands(CommandGraph graph)
+        private List<CommandGroup> GroupCommands(CommandGraph graph)
         {
-            List<List<CommandGraphNode>> groups = new();
+            List<CommandGroup> groups = new();
             List<CommandGraphNode> current = new();
-
+            CommandGraphNode last = null;
+            
             foreach (var node in graph.ToArray())
             {
+                last = node;
+                
                 current.Add(node);
 
-                if (node.Link is not CommandGraphLink.Pipe)
-                {
-                    groups.Add(current);
-                    current = new List<CommandGraphNode>();
-                }
+                if (node.Link is CommandGraphLink.Pipe) continue;
+                
+                groups.Add(new CommandGroup(current, node.Command as IContentView));
+                current = new List<CommandGraphNode>();
             }
             
             if (current.Count > 0)
             {
-                groups.Add(current);
+                groups.Add(new CommandGroup(current, last?.Command as IContentView));
             }
 
             return groups;

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Bossy.Settings;
 using UnityEngine;
+using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
@@ -11,12 +13,13 @@ namespace Bossy.Frontend
 
         private VisualElement _contentRect;
         
-        public EditorHostController(Action<FrontendType, SessionSpace> createNewSession, VisualElement root)
+        public EditorHostController(BossyInputSettings settings, Action<FrontendType, SessionSpace> createNewSession, VisualElement root)
         {
             var tree = Resources.Load<VisualTreeAsset>("BossyEditorHost");
 
             // This is needed when reconnecting existing editor views
             root.Clear();
+            root.style.unityFontDefinition = new StyleFontDefinition(Resources.Load<FontAsset>("Font/JetBrainsMono-Regular"));
             
             tree.CloneTree(root);
             root.Q<Button>("button-close").clicked += () => NoSessionRemains?.Invoke();
@@ -25,6 +28,15 @@ namespace Bossy.Frontend
             root.Q<Button>("button-new").clicked += () => createNewSession?.Invoke(FrontendType.CommandLine, SessionSpace.Edit);
             
             _contentRect = root.Q<VisualElement>("content-area");
+            
+            _contentRect.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (settings.CancelCommand.IsAsserted(evt))
+                {
+                    _sessionViewer?.Bridge.RequestCancelCommand();
+                    evt.StopImmediatePropagation();
+                }
+            }, TrickleDown.TrickleDown);
         }
 
         public Action NoSessionRemains { get; set; }
@@ -35,7 +47,7 @@ namespace Bossy.Frontend
             _contentRect.Clear();
             
             _sessionViewer = viewer;
-            _sessionViewer.InitializeView(_contentRect);
+            _sessionViewer.SetRootAndInitializeView(_contentRect);
         }
 
         public IEnumerable<Bridge> GetHostedBridges()

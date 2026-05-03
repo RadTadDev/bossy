@@ -1,4 +1,4 @@
-using Bossy.Shell;
+using Bossy.Session;
 using System.Collections.Generic;
 
 namespace Bossy.Tests.Utils

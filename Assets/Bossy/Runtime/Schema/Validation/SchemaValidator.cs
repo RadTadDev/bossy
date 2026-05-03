@@ -1,4 +1,4 @@
-using Bossy.Registry;
+using Bossy.Schema.Registry;
 using System.Collections.Generic;
 using System.Linq;
 using Bossy.Command;

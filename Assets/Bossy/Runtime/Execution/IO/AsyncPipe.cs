@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Threading;
 
-namespace Bossy.Shell
+namespace Bossy.Session
 {
     /// <summary>
     /// A standard asynchronous communication stream.

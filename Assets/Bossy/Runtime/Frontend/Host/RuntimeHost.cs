@@ -1,5 +1,7 @@
 using System;
+using Bossy.Settings;
 using UnityEngine;
+using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
@@ -15,25 +17,25 @@ namespace Bossy.Frontend
         
         private RuntimeHostController _controller;
         
-        public void Initialize(HostManager manager, Action<FrontendType, SessionSpace> createNewSession, SessionSpace space)
+        public void Initialize(HostManager manager, BossyInputSettings settings, Action<FrontendType, SessionSpace> createNewSession, SessionSpace space)
         {
             _manager = manager;
             Space = space;
             
-            var settings = ScriptableObject.CreateInstance<PanelSettings>();
-            settings.sortingOrder = 9998;
-            settings.scaleMode = PanelScaleMode.ConstantPixelSize;
-            settings.themeStyleSheet = Resources.Load<ThemeStyleSheet>("UnityDefaultRuntimeTheme");
+            var panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            panelSettings.sortingOrder = 9998;
+            panelSettings.scaleMode = PanelScaleMode.ConstantPixelSize;
+            panelSettings.themeStyleSheet = Resources.Load<ThemeStyleSheet>("UnityDefaultRuntimeTheme");
             
             _document = gameObject.AddComponent<UIDocument>();
-            _document.panelSettings = settings;
+            _document.panelSettings = panelSettings;
 
             if (space is SessionSpace.RuntimeCommand)
             {
-                settings.sortingOrder = 9999;
+                panelSettings.sortingOrder = 9999;
             }
             
-            _controller = new RuntimeHostController(_document, space);
+            _controller = new RuntimeHostController(_document, settings, space);
         }
 
         public void Open()

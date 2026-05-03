@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Bossy.Utils;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
@@ -8,23 +10,94 @@ namespace Bossy.Frontend
     {
         public readonly Bridge Bridge;
         
-        private readonly Stack<IContentView> _contentStack = new();
-
-        public SessionViewer(Bridge bridge, IContentView initialView)
+        private VisualElement _root;
+        private readonly IUserInterfaceView _userInterface;
+        
+        private readonly Stack<ViewState> _contentStack = new();
+        
+        public SessionViewer(Bridge bridge, IUserInterfaceView userInterface)
         {
             Bridge = bridge;
-            
-            PushView(initialView);
+
+            Bridge.OnPushContent += PushContent;
+            Bridge.OnPopContent += PopContent;
+
+            _userInterface = userInterface;
+            Bridge.SetUIView(_userInterface);
         }
 
-        public void InitializeView(VisualElement root)
+        public void SetRootAndInitializeView(VisualElement root)
         {
-            if (_contentStack.Count == 0)
+            _root = root;
+            PushContent(_userInterface);
+        }
+
+        public void Focus()
+        {
+            if (_contentStack.TryPeek(out var current))
             {
-                throw new InvalidOperationException("Cannot create view without content stack");
+                current.Content.OnFocus();
+            }
+        }
+
+        public void Defocus()
+        {
+            if (_contentStack.TryPeek(out var current))
+            {
+                current.Content.OnDefocus();
+            }
+        }
+
+        private void PushContent(IContentView view)
+        {
+            /*
+             * NOTE: Due to what is apparently a Unity UI-Toolkit bug, we
+             * cannot just remove or hide the current UI because focus stops being tracked.
+             * Instead, we just paste the new UI overtop.
+             */
+            
+            if (_contentStack.TryPeek(out var current))
+            {
+                current.Content.OnDefocus();
+            }
+            
+            var root = view.CreateView();
+            root.style.position = Position.Absolute;
+            root.style.top = 0;
+            root.style.left = 0;
+            root.style.right = 0;
+            root.style.bottom = 0;
+            
+            const float value = 55f / 255;
+            root.style.backgroundColor = new Color(value, value, value, 1);
+            
+            _contentStack.Push(new ViewState
+            {
+                Root = root,
+                Content = view,
+            });
+
+            _root.Add(root);
+            view.OnFocus();
+        }
+
+        private void PopContent()
+        {
+            if (!_contentStack.TryPop(out var popped))
+            {
+                return;
             }
 
-            root.Add(_contentStack.Peek().CreateView());
+            popped.Content.OnDefocus();
+            _root.Remove(popped.Root);
+            
+            if (!_contentStack.TryPeek(out var current))
+            {
+                return;
+            }
+            
+            // _root.Add(current.Root);
+            current.Content.OnFocus();
         }
         
         public void Dispose()
@@ -32,20 +105,17 @@ namespace Bossy.Frontend
             // TODO release managed resources here
         }
 
-        public void Focus()
+        private struct ViewState
         {
-            _contentStack.Peek().Focus();
-        }
-
-        public void Defocus()
-        {
-            _contentStack.Peek().Defocus();
-        }
-        
-        private void PushView(IContentView view)
-        {
-            _contentStack.Push(view);
-            Bridge.SetCurrentView(view);
+            /// <summary>
+            /// The root of the view.
+            /// </summary>
+            public VisualElement Root;
+            
+            /// <summary>
+            /// The view.
+            /// </summary>
+            public IContentView Content;
         }
     }
 }

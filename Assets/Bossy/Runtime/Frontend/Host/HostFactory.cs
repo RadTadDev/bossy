@@ -1,5 +1,6 @@
 
 using System;
+using Bossy.Settings;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -8,12 +9,14 @@ namespace Bossy.Frontend
 {
     internal sealed class HostFactory
     {
-        private readonly Action<FrontendType, SessionSpace> _createNewSession;
         private readonly HostManager _hostManager;
+        private readonly BossyInputSettings _inputSettings;
+        private readonly Action<FrontendType, SessionSpace> _createNewSession;
         
-        public HostFactory(HostManager hostManager, Action<FrontendType, SessionSpace> createNewSession)
+        public HostFactory(HostManager hostManager, BossyInputSettings settings, Action<FrontendType, SessionSpace> createNewSession)
         {
             _hostManager = hostManager;
+            _inputSettings = settings;
             _createNewSession = createNewSession;
         }
         
@@ -34,7 +37,7 @@ namespace Bossy.Frontend
                 host = obj.AddComponent<RuntimeHost>();    
             }
             
-            host.Initialize(_hostManager, _createNewSession, space);
+            host.Initialize(_hostManager, _inputSettings, _createNewSession, space);
             return host;
         }
     }

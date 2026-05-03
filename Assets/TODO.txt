@@ -7,21 +7,14 @@ Roslyn Analyzers
 - Ensure only one argument attribute per field
 
 TODO: 
-Verify namespaces and TODOs and remove dead usings
-
-fix settings
-
-inject type adapter registry into adapter base class so complex adapters can use primitive ones.
-
-Add CloseWriter() method to context so commands can declare that they are done writing.
-
-add prompt builder to context
-
-test prompt builder
-
-test edit mode gui (probably smoke tests)
-
-auto complete
+- alias capability
+- fix settings
+- unity object binding
+- inject type adapter registry into adapter base class so complex adapters can use primitive ones.
+- add prompt builder to context
+- auto complete
+- style facelift and conformance
+- verify namespaces and TODOs and remove dead usings
 
 To Document:
 commands overriding gui
@@ -30,11 +23,9 @@ help commands and such
     (how to display parse rules and what not in terminal)
 type adapters
 bootstrap
-command context methods (especially foraech)
+command context methods (especially foreach)
 
 Future features:
-- Autocomplete
-    
 - Session restoration 
     Allowing editor windows to survive domain reload requires hosts being able to serialize their state
     Likely best as an optional interface
@@ -42,9 +33,7 @@ Future features:
 
 - Permissions
 
-- GUI - require slight rework for spawning new windows to take in param as to which.
-      - host manager will need a slight change
-      
+- GUI
       
 DEV NOTES: 
     - Currently, the graphics host only knows a window has closed when querying it to see if its toggleable.

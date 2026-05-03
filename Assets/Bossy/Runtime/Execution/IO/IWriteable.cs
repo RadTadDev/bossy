@@ -1,6 +1,4 @@
-using UnityEngine;
-
-namespace Bossy.Shell
+namespace Bossy.Session
 {
     public static class CloseWriterSentinel
     {

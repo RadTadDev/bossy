@@ -1,7 +1,10 @@
 #if UNITY_EDITOR
 
 using System;
+using Bossy.Settings;
 using UnityEditor;
+using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
 {
@@ -16,13 +19,13 @@ namespace Bossy.Frontend
 
         private static EditorWindow _lastFocused;
 
-        public void Initialize(HostManager manager, Action<FrontendType, SessionSpace> createNewSession, SessionSpace space)
+        public void Initialize(HostManager manager, BossyInputSettings settings, Action<FrontendType, SessionSpace> createNewSession, SessionSpace space)
         {
             EditorApplication.update += TrackFocus;
             
             _manager = manager;
             Space = space;
-            _controller = new EditorHostController(createNewSession, rootVisualElement);
+            _controller = new EditorHostController(settings, createNewSession, rootVisualElement);
         }
 
         public void Open()
@@ -56,7 +59,7 @@ namespace Bossy.Frontend
 
         private void OnLostFocus()
         {
-            _manager.NotifyFocusLost(this, true);
+            _manager?.NotifyFocusLost(this, true);
         }
         
         private void TrackFocus()
@@ -70,7 +73,7 @@ namespace Bossy.Frontend
         private void OnDestroy()
         {
             EditorApplication.update -= TrackFocus;
-            _manager.RequestClose(this, true);
+            _manager?.RequestClose(this, true);
         }
     }
 }

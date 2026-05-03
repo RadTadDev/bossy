@@ -1,4 +1,4 @@
-namespace Bossy.Shell
+namespace Bossy.Session
 {
     /// <summary>
     /// Enumerates the possible statuses that a command can return with.

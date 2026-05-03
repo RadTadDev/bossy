@@ -7,7 +7,7 @@ using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
 {
-    internal class CommandDisplay : CliContentView
+    internal class CommandDisplay : CliUserInterfaceView
     {
         public CommandDisplay(Parser parser, BossyCliSettings cliSettings, BossyInputSettings inputSettings) : base(parser, cliSettings, inputSettings) { }
 

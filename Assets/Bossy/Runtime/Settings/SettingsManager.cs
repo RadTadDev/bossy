@@ -7,7 +7,7 @@ namespace Bossy.Settings
     /// Database of all Bossy settings.
     /// </summary>
     [Serializable]
-    internal class SettingsManager
+    public class SettingsManager
     {
         // Enumerate all settings containers here
         

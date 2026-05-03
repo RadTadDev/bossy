@@ -3,7 +3,7 @@ using System.Reflection;
 using Bossy.Command;
 using NUnit.Framework;
 using Bossy.Frontend.Parsing;
-using Bossy.Registry;
+using Bossy.Schema.Registry;
 using Bossy.Schema;
 using Bossy.Tests.Utils;
 

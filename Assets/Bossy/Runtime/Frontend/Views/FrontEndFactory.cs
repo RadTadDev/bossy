@@ -17,12 +17,12 @@ namespace Bossy.Frontend
             _inputSettings = inputSettings;
         }
 
-        public IContentView Create(FrontendType frontendType)
+        public IUserInterfaceView Create(FrontendType frontendType)
         {
             return frontendType switch
             {
-                FrontendType.CommandLine => new CliContentView(_parser, _cliSettings, _inputSettings),
-                FrontendType.Graphical => new GuiContentView(),
+                FrontendType.CommandLine => new CliUserInterfaceView(_parser, _cliSettings, _inputSettings),
+                FrontendType.Graphical => new GuiUserInterfaceView(),
                 FrontendType.CommandDisplay => new CommandDisplay(_parser, _cliSettings, _inputSettings),
                 _ => throw new ArgumentOutOfRangeException(nameof(frontendType), frontendType, null)
             };

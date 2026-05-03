@@ -2,41 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
 using Bossy.Utils;
 
-namespace Bossy.Shell
+namespace Bossy.Session
 {
     /// <summary>
     /// A context object providing utility functionality to commands.
     /// </summary>
     public sealed class CommandContext : SimpleContext
     {
-        /// <summary>
-        /// The user interface that spawned this command.
-        /// Use this to test for specific front end capabilities.
-        /// </summary>
-        public IFrontEndCapabilities Capabilities => _capabilitiesSourcer?.Invoke();
-
-        /// <summary>
-        /// The session running this command.
-        /// </summary>
-        public ISafeSession Session => _session;
-        
-        /// <summary>
-        /// The context's reader.
-        /// </summary>
-        public IReadable Reader { get; }
-        
-        /// <summary>
-        /// The context's writer.
-        /// </summary>
-        public IWriteable OutputStream => Writer;
-
+        private IReadable _reader;
         private Session _session;
-        private TypeAdapterRegistry _adapterRegistry;
-        private Func<IFrontEndCapabilities> _capabilitiesSourcer;
         
         private readonly bool _allowRetry;
         private readonly CancellationToken _token;
@@ -45,7 +22,7 @@ namespace Bossy.Shell
         /// Builds a new command context.
         /// </summary>
         /// <param name="session">The session running this command.</param>
-        /// <param name="adapterRegistry">An adapter registry to convert string to type.</param>
+        /// <param name="context">The Bossy context.</param>
         /// <param name="reader">A readable source.</param>
         /// <param name="writer">A writeable sink.</param>
         /// <param name="allowRetry">Whether to allow reads to be retried on bad type input.</param>
@@ -53,23 +30,17 @@ namespace Bossy.Shell
         public CommandContext
         (
             Session session,
-            TypeAdapterRegistry adapterRegistry,
+            BossyContext context,
             IReadable reader,
             IWriteable writer,
             bool allowRetry,
             CancellationToken token
-        ) : base(writer)
+        ) : base(writer, context)
         {
             _session = session;
-            _adapterRegistry = adapterRegistry;
-            Reader = reader;
+            _reader = reader;
             _allowRetry = allowRetry;
             _token = token;
-        }
-
-        public void SetCapabilitySourcer(Func<IFrontEndCapabilities> sourcer)
-        {
-            _capabilitiesSourcer = sourcer;
         }
         
         /// <summary>
@@ -88,6 +59,20 @@ namespace Bossy.Shell
             base.Write(value);
         }
 
+        public override void WriteWarning(object value, int indentCount = 0)
+        {
+            _token.ThrowIfCancellationRequested();
+            
+            base.WriteWarning(value, indentCount);
+        }
+
+        public override void WriteError(object value, int indentCount = 0)
+        {
+            _token.ThrowIfCancellationRequested();
+            
+            base.WriteError(value, indentCount);
+        }
+        
         /// <summary>
         /// Reads a value of the given type.
         /// </summary>
@@ -107,7 +92,7 @@ namespace Bossy.Shell
             {
                 _token.ThrowIfCancellationRequested();
 
-                response = await Reader.ReadAsync(typeof(T), _token);
+                response = await _reader.ReadAsync(typeof(T), _token);
             
                 if (response == CloseWriterSentinel.Object)
                 {
@@ -119,7 +104,7 @@ namespace Bossy.Shell
                 if (response is string textual)
                 {
                     triedAdapting = true;
-                    adapterResult = _adapterRegistry.TryConvert(textual, out T typed);
+                    adapterResult = Bossy.TypeAdapterRegistry.TryConvert(textual, out T typed);
             
                     if (adapterResult.Success)
                     {
@@ -194,6 +179,21 @@ namespace Bossy.Shell
             }
         }
 
+        /// <summary>
+        /// Gets the context's reader.
+        /// </summary>
+        /// <returns>The reader.</returns>
+        public IReadable GetReader() => _reader;
+        
+        /// <summary>
+        /// Gets the context's writer.
+        /// </summary>
+        /// <returns>The writer.</returns>
+        public IWriteable GetWriter() => Writer;
+        
+        /// <summary>
+        /// Closes the output stream to indicate no more data is coming.
+        /// </summary>
         public void CloseOutStream()
         {
             Writer.CloseWriter();

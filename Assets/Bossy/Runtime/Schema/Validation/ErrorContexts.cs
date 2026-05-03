@@ -6,7 +6,7 @@ namespace Bossy.Schema
     /// <summary>
     /// A context for a command schema error.
     /// </summary>
-    internal abstract class ErrorContext
+    public abstract class ErrorContext
     {
         /// <summary>
         /// The human-readable error message.
@@ -17,7 +17,7 @@ namespace Bossy.Schema
     /// <summary>
     /// A context for a command schema warning.
     /// </summary>
-    internal abstract class WarningContext
+    public abstract class WarningContext
     {
         /// <summary>
         /// The human-readable warning message.
@@ -28,7 +28,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Missing name error.
     /// </summary>
-    internal class MissingNameError : ErrorContext
+    public class MissingNameError : ErrorContext
     {
         public override string Message => "Name is null or empty";
     }
@@ -36,7 +36,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Invalid name error.
     /// </summary>
-    internal class InvalidNameError : ErrorContext
+    public class InvalidNameError : ErrorContext
     {
         private readonly string _name;
         
@@ -51,7 +51,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Argument invalid name error.
     /// </summary>
-    internal class ArgumentInvalidNameError : ErrorContext
+    public class ArgumentInvalidNameError : ErrorContext
     {
         private readonly string _name;
         
@@ -66,7 +66,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Missing description warning.
     /// </summary>
-    internal class MissingDescriptionWarning : WarningContext
+    public class MissingDescriptionWarning : WarningContext
     {
         public override string Message => "Description is null or empty";
     }
@@ -74,7 +74,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Not a command error.
     /// </summary>
-    internal class NotACommandError : ErrorContext
+    public class NotACommandError : ErrorContext
     {
         private readonly Type _commandType;
         
@@ -89,7 +89,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Argument missing name error.
     /// </summary>
-    internal class ArgumentMissingNameError : ErrorContext
+    public class ArgumentMissingNameError : ErrorContext
     {
         public override string Message => $"Argument name is null or empty";
     }
@@ -97,7 +97,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Argument missing description warning.
     /// </summary>
-    internal class ArgumentMissingDescriptionWarning : WarningContext
+    public class ArgumentMissingDescriptionWarning : WarningContext
     {
         private readonly string _argName;
         
@@ -112,7 +112,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Argument missing attribute error.
     /// </summary>
-    internal class ArgumentMissingAttributeError : ErrorContext
+    public class ArgumentMissingAttributeError : ErrorContext
     {
         private readonly string _argName;
         
@@ -127,7 +127,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Argument duplicate name error.
     /// </summary>
-    internal class ArgumentDuplicateNameError : ErrorContext
+    public class ArgumentDuplicateNameError : ErrorContext
     {
         private readonly string _argName;
         
@@ -142,7 +142,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Argument duplicate description warning.
     /// </summary>
-    internal class ArgumentDuplicateDescriptionWarning : WarningContext
+    public class ArgumentDuplicateDescriptionWarning : WarningContext
     {
         private readonly string _argName;
         private readonly string _argDescription;
@@ -159,7 +159,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Duplicate switch name error.
     /// </summary>
-    internal class DuplicateSwitchNameError : ErrorContext
+    public class DuplicateSwitchNameError : ErrorContext
     {
         private readonly char _shortName;
         
@@ -174,7 +174,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Invalid short name error.
     /// </summary>
-    internal class InvalidShortSwitchNameError : ErrorContext
+    public class InvalidShortSwitchNameError : ErrorContext
     {
         private readonly char _shortName;
         private readonly string _fullName;
@@ -191,7 +191,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Negative index error.
     /// </summary>
-    internal class NegativeIndexError : ErrorContext
+    public class NegativeIndexError : ErrorContext
     {
         private readonly string _argName;
         private readonly int _index;
@@ -214,7 +214,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Duplicate index error.
     /// </summary>
-    internal class DuplicateIndexError : ErrorContext
+    public class DuplicateIndexError : ErrorContext
     {
         private readonly string _argName;
         private readonly int _index;
@@ -236,7 +236,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Duplicate variadic error.
     /// </summary>
-    internal class DuplicateVariadicError : ErrorContext
+    public class DuplicateVariadicError : ErrorContext
     {
         private readonly string _argName;
         
@@ -251,7 +251,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Variadic type not array error.
     /// </summary>
-    internal class VariadicTypeNotArrayError : ErrorContext
+    public class VariadicTypeNotArrayError : ErrorContext
     {
         private readonly string _argName;
         
@@ -266,7 +266,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Bad index order error.
     /// </summary>
-    internal class BadIndexOrderError : ErrorContext
+    public class BadIndexOrderError : ErrorContext
     {
         private readonly string _positionalText;
 
@@ -284,7 +284,7 @@ namespace Bossy.Schema
     /// <summary>
     /// Unknown argument type error.
     /// </summary>
-    internal class UnknownArgumentType : ErrorContext
+    public class UnknownArgumentType : ErrorContext
     {
         private readonly Type _type;
 
@@ -296,7 +296,7 @@ namespace Bossy.Schema
         }
     }
 
-    internal class NullSchemaError : ErrorContext
+    public class NullSchemaError : ErrorContext
     {
         public override string Message => "Schema is null.";
     }

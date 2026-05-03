@@ -8,7 +8,7 @@ namespace Bossy.Schema
     /// <summary>
     /// A readonly blueprint declaring the structure of a command.
     /// </summary>
-    internal class CommandSchema : ICommandSchemaWriter
+    public class CommandSchema : ICommandSchemaWriter
     {
         /// <summary>
         /// The name of this command.

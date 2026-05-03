@@ -5,7 +5,7 @@ namespace Bossy.Schema
     /// <summary>
     /// A container for the result of running a validation check against a schema.
     /// </summary>
-    internal class ValidationResult
+    public class ValidationResult
     {
         /// <summary>
         /// True if the schema was valid, otherwise false.

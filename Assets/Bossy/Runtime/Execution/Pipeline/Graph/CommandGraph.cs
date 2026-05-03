@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Bossy.Command;
 
-namespace Bossy.Shell
+namespace Bossy.Session
 {
     public interface IBeginGraphBuilderStep
     {

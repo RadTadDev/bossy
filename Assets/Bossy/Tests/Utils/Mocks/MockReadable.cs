@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Shell;
+using Bossy.Session;
 
 namespace Bossy.Tests.Utils
 {

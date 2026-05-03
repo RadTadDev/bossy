@@ -40,7 +40,7 @@ namespace Bossy.Utils
         /// </summary>
         /// <param name="keyCode">The key.</param>
         /// <param name="keyModifiers">The modifiers.</param>
-        public KeyCombination(KeyCode keyCode, KeyModifiers keyModifiers)
+        public KeyCombination(KeyCode keyCode, KeyModifiers keyModifiers = KeyModifiers.None)
         {
             KeyCode = keyCode;
             Modifiers = keyModifiers;

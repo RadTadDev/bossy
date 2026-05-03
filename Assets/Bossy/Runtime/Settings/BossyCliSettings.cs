@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Bossy.Settings
 {
     [Serializable]
-    internal class BossyCliSettings
+    public class BossyCliSettings
     {
         [Setting("The key used to enter responses when pressed together with ctrl.")]
         public readonly KeyCombination CancelCombination = new(KeyCode.C, KeyModifiers.Control);
