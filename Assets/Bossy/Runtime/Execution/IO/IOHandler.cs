@@ -1,4 +1,4 @@
-namespace Bossy.Session
+namespace Bossy.Execution
 {
     /// <summary>
     /// An object that can both read and write.

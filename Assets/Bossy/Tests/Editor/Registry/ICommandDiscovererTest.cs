@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Schema.Registry;
-using Bossy.Session;
+using Bossy.Execution;
 using Bossy.Tests.Utils;
 using NUnit.Framework;
 

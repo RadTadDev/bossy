@@ -7,7 +7,7 @@ using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Utils;
 
-namespace Bossy.Session
+namespace Bossy.Execution
 {
     /// <summary>
     /// Executes a command graph.
@@ -56,6 +56,8 @@ namespace Bossy.Session
 
             var defaultContext = new CommandContext(session, _context, input, output, true, token);
             defaultContext.SetCapabilitySourcer(session.Bridge.GetCapabilities);
+
+            var status = CommandStatus.Ok;
             
             foreach (var group in groups)
             {

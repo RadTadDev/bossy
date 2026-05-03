@@ -1,6 +1,6 @@
 using System;
 using Bossy.Command;
-using Bossy.Session;
+using Bossy.Execution;
 
 namespace Bossy.Tests.Utils.Commands
 {
@@ -8,7 +8,7 @@ namespace Bossy.Tests.Utils.Commands
     {
         protected override CommandStatus Execute(SimpleContext ctx)
         {
-            throw new ArgumentException("This throws");
+            throw new ArgumentException("Expected test exception: This throws");
         }
     }
 }

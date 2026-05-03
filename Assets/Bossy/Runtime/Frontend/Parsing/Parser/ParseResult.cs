@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Bossy.Session;
+using Bossy.Execution;
 using Bossy.Utils;
 
 namespace Bossy.Frontend.Parsing
@@ -8,7 +8,7 @@ namespace Bossy.Frontend.Parsing
     /// <summary>
     /// The result of parsing text into a command graph.
     /// </summary>
-    internal abstract class ParseResult
+    public abstract class ParseResult
     {
         /// <summary>
         /// A message about the result.
@@ -192,6 +192,19 @@ namespace Bossy.Frontend.Parsing
         public InvalidSchemaError(List<string> tokens)
         {
             _tokens = tokens;
+        }
+    }
+
+    /// <summary>
+    /// Argument validation error.
+    /// </summary>
+    internal class ArgumentValidationError : ParseResult
+    {
+        public override string Message { get; }
+
+        public ArgumentValidationError(string message, string argName)
+        {
+            Message = $"(Argument '{argName}') {message}";
         }
     }
 }

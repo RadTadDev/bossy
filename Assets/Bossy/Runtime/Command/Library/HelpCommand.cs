@@ -5,7 +5,7 @@ using System.Text;
 using Bossy.Command;
 using Bossy.Schema;
 using Bossy.Schema.Registry;
-using Bossy.Session;
+using Bossy.Execution;
 using Bossy.Utils;
 
 [Command("help", "Displays information about a command and its arguments.")]
@@ -172,10 +172,10 @@ public class HelpCommand : SimpleCommand
         sb.Append(indent).Append("  ")
           .AppendLine(Format.Color($"Field: {arg.FieldInfo.DeclaringType?.Name}.{arg.FieldInfo.Name}", Format.Gray));
 
-        if (arg.ValidationAttributes.Count > 0)
+        if (arg.Validators.Count > 0)
         {
             sb.Append(indent).Append("  ").AppendLine(Format.Color("Validators:", Format.Gray));
-            foreach (var validator in arg.ValidationAttributes)
+            foreach (var validator in arg.Validators)
             {
                 sb.Append(indent).Append("    ")
                   .AppendLine(Format.Color($"[{validator.GetType().Name}]", Format.Gray));

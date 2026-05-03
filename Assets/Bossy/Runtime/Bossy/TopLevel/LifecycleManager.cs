@@ -4,7 +4,7 @@ using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
 using Bossy.Schema.Registry;
 using Bossy.Settings;
-using Bossy.Session;
+using Bossy.Execution;
 using JetBrains.Annotations;
 using UnityEngine;
 
@@ -36,7 +36,7 @@ namespace Bossy
             _hostManager = new HostManager(this, settings.BossyInputSettings, CreateBossySession);
             _runtimeManager = new BossyRuntimeManager();
 
-            _context = new BossyContext(schemaRegistry, adapterRegistry, settings);
+            _context = new BossyContext(schemaRegistry, adapterRegistry, settings, _parser);
             
             ReconnectEditorSessions();
         }
@@ -46,7 +46,7 @@ namespace Bossy
             var content = _frontEndFactory.Create(frontendType);
             
             var bridge = new Bridge(CloseSession, CancelCommand);
-            var session = new Session.Session(_context, bridge, CreateCommandSession, space);
+            var session = new Session(_context, bridge, CreateCommandSession, space);
             var viewer = new SessionViewer(bridge, content);
             var container = new LifecycleContainer(session, viewer);
             
@@ -116,7 +116,7 @@ namespace Bossy
                 host.Initialize(_hostManager, _context.Settings.BossyInputSettings, CreateBossySession, SessionSpace.Edit);
                 
                 var bridge = new Bridge(CloseSession, CancelCommand);
-                var session = new Session.Session(_context, bridge, CreateCommandSession, SessionSpace.Edit);
+                var session = new Session(_context, bridge, CreateCommandSession, SessionSpace.Edit);
                 
                 // TODO: Remember correct view via session serializing system (which does not exist yet)
                 var content = new CliUserInterfaceView(_parser, _context.Settings.BossyCliSettings, _context.Settings.BossyInputSettings);
@@ -136,7 +136,7 @@ namespace Bossy
 #endif
         }
 
-        private void CreateCommandSession(Session.Session template, CommandGraph graph)
+        private void CreateCommandSession(Session template, CommandGraph graph)
         {
             var content = _frontEndFactory.Create(FrontendType.CommandDisplay);
             

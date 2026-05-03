@@ -1,8 +1,9 @@
 using System;
 using Bossy.Command;
 using Bossy.Frontend;
+using Bossy.Execution;
 
-namespace Bossy.Session
+namespace Bossy.Command
 {
     /// <summary>
     /// A simple command context.

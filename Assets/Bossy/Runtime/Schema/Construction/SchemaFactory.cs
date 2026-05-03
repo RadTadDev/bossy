@@ -76,9 +76,9 @@ namespace Bossy.Schema
             
             var name = CommandMetaProcessor.ArgumentName(attribute, field);
             var desc = CommandMetaProcessor.Description(attribute.Description);
-            
-            // TODO: Actually get validators when they exist
-            return new ArgumentSchema(name, desc, field, attribute, null);
+
+            var validators = field.GetCustomAttributes<ArgumentValidationAttribute>();
+            return new ArgumentSchema(name, desc, field, attribute, validators.ToList());
         }
         
         private static void DetectCollision(string fqn, CommandSchema schema, HashSet<string> visited)

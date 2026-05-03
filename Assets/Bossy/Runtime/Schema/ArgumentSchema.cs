@@ -38,7 +38,7 @@ namespace Bossy.Schema
         /// <summary>
         /// All validator attributes on this argument.
         /// </summary>
-        public readonly IReadOnlyList<ArgumentValidationAttribute> ValidationAttributes;
+        public readonly IReadOnlyList<ArgumentValidationAttribute> Validators;
         
         /// <summary>
         /// Builds a new Argument schema.
@@ -47,14 +47,14 @@ namespace Bossy.Schema
         /// <param name="description">The description of this argument.</param>
         /// <param name="fieldInfo">The reflective field information for this argument.</param>
         /// <param name="argumentAttribute">The argument attribute associated with this argument.</param>
-        /// <param name="validationAttributes">All validator attributes on this argument.</param>
-        public ArgumentSchema(string name, string description, FieldInfo fieldInfo, ArgumentAttribute argumentAttribute, IReadOnlyList<ArgumentValidationAttribute> validationAttributes)
+        /// <param name="validators">All validator attributes on this argument.</param>
+        public ArgumentSchema(string name, string description, FieldInfo fieldInfo, ArgumentAttribute argumentAttribute, IReadOnlyList<ArgumentValidationAttribute> validators)
         {
             Name = name;
             Description = description;
             FieldInfo = fieldInfo;
             ArgumentAttribute = argumentAttribute;
-            ValidationAttributes = validationAttributes;
+            Validators = validators;
         }
 
         /// <summary>

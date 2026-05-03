@@ -8,7 +8,7 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-- [Startup & Configuration](#startup--configuration)
+- [Bootstrapping](#bootstrapping)
 - [Authoring Commands](#authoring-commands)
     - [Command Attribute](#command-attribute)
     - [Arguments](#arguments)
@@ -28,26 +28,67 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
 ## Installation
 
 1. In unity, open the pacakge manager via `Window -> Pacakge Management -> Pacakge Manager`.
-2. "https://github.com/RadTadDev/bossy.git?path=/Assets/Bossy#main"
-> TODO: Add UPM installation instructions / Asset Store link.
+2. Click the `+` icon in the top left and select `Install package from git URL...`
+3. Input the following line: `https://github.com/RadTadDev/bossy.git?path=/Assets/Bossy#main`
 
 ---
 
 ## Quick Start
 
-**1. Configure Bossy at startup.**
+**1. Create the Bossy runtime.**
 
-Create a `BossyConfig` asset and assign it via the startup entry point, or build one in code:
+Create the following script. For more information about proper bootstrapping, see [Bootstrapping](#bootstrapping)
 
 ```csharp
-// TODO: confirm config builder API
-var config = BossyConfig.Create()
-    .WithDiscovery(/* assembly or type list */)
-    .Build();
+using Bossy;
+
+#if UNITY_EDITOR
+using UnityEditor;
+
+[InitializeOnLoad]
+public static class BossyStartup
+{
+    private static BossyConsole _bossy;
+    static BossyStartup()
+    {
+        EditorApplication.delayCall += Start;
+    }
+
+    private static void Start()
+    {
+        EditorApplication.delayCall -= Start;
+        _bossy = BossyBuilder
+            .GetCommands()
+            .Automatically()
+            .Build();
+    }
+}
+
+#else
+
+using UnityEngine;
+
+public class BossyStartup
+{
+    private static BossyConsole _bossy;
+    
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
+    private static void Start()
+    {
+        _bossy = BossyBuilder
+            .GetCommands()
+            .Automatically()
+            .Build();
+    }
+}
+#endif  
 ```
 
-**2. Write a command.**
+**2. Press `/` to open the console.**
 
+**3. Enter the command `help` to get information**
+
+**4. Create your own command by making a C# class like this**
 ```csharp
 using Bossy;
 
@@ -69,7 +110,7 @@ public class GreetCommand : SimpleCommand
 }
 ```
 
-**3. Open the console and run it.**
+**5. Open the console and run it.**
 
 ```
 > greet World
@@ -81,39 +122,49 @@ hello, world!
 
 ---
 
-## Startup & Configuration
+## Bootstrapping
 
-> TODO: Document the ScriptableObject-based startup entry point, assembly discovery configuration, and any host-specific setup (editor window vs. runtime overlay).
+The script above is good for unconditionally including Bossy in the editor, runtime, and builds. However, you may want to be more selective. You can use `#if DEVELOPMENT_BUILD` to only inlcude the system in development builds, and `#if UNITY_EDITOR` to detect whether you are in the editor or not.
+
+You also can have more fine grained control over the configuration. The above example used `BossyBuilder.GetCommands.Automatically()` to search all loaded assemblies for commands. You can also use `.FromTypes()`, `.InAssembly()` and `.InAssemblies()` for more control over how to discover commands. 
+
+Before calling `.Build()`, you can also pass in custom type adapters (see [Type Adapting](#type-adapting)) using the `.WithAdapter()` call.
 
 ---
 
 ## Authoring Commands
 
-All commands inherit from either `SimpleCommand` (synchronous) or `Command` (async). Arguments are declared as private fields with attributes. The parser discovers and populates them automatically before `Execute` is called.
+All commands are classes that inherit from either `SimpleCommand` (for synchronous) or `ICommand` (for async). Arguments are declared as fields with attributes. The parser discovers and populates them automatically before `Execute` is called so you never have to parse manually.
 
-### Command Attribute
+Most commands that do an immediate task should be `SimpleCommand`'s. Any command that wants to read input from a source or do a prolonged action must be an `ICommand`. Note that async `ICommand`'s still run on the main thread, so busy loops and blocking operations should be avoided. Always prefer the `async` variants of methods in such commands.
+
+### Declaring a Command
+
+In addition to inheriting from one of the two bases, you must add the following Command attribute:
 
 ```csharp
 [Command("name", "A short description of what this command does.")]
 public class MyCommand : SimpleCommand { ... }
 ```
 
-| Parameter | Description |
-|---|---|
-| `name` | The name used to invoke the command in the console. Must be unique. |
-| `description` | Shown in help output and the registry. Should be a single concise sentence. |
+| Parameter     | Description                                                                                  |
+|---------------|----------------------------------------------------------------------------------------------|
+| `name`        | The name used to invoke the command in the console. Must be unique compared to its siblings. |
+| `description` | Shown in help output and the registry. Should be a single concise sentence.                  |
 
 Commands can be nested under a parent command using subcommand syntax:
 
 ```csharp
-// TODO: confirm subcommand declaration API
+[Command("name", "A short description of what this command does.", typeof(ParentCommand))]
+public class MyCommand : SimpleCommand { ... }
 ```
+Note that we include the type of the parent command as an argument in the attribute of the subcommand. Subcommands who have different parents will never have naming collisions with each other, so `cmd1 sub` and `cmd2 sub` are both valid sub commands.
 
 ---
 
 ### Arguments
 
-Arguments are private fields decorated with one of four attributes. The parser resolves them in this order: positionals (by declared order), optionals, switches, then the variadic.
+Arguments are fields decorated with one of four attributes: positionals, optionals, switches, and variadic.
 
 ---
 
@@ -121,14 +172,44 @@ Arguments are private fields decorated with one of four attributes. The parser r
 
 A required argument resolved by position.
 
+
+
 ```csharp
-[Positional("The target file path.")]
+[Positional(0, "The target file path.")]
 private string _path;
 ```
 
-- Multiple positionals are filled left to right in declaration order.
-- A positional after a variadic is not permitted.
+| Parameter     | Description                                                                                                                           |
+|---------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| `index`       | Unique index starting from 0 and counting up. This declares the order positionals are expected in.                                    |
+| `description` | Shown in help output and the registry. Should be a single concise sentence.                                                           |
+| `overrideName`| (**Optional**) By default, the positional's name is the name of the declared variable. Use this to override the default name.         | 
 
+- Positionals will be parsed from the command line in the order dictated by the indices.
+- Positionals are greedily taken, so they will be prefered over `Optional` and `Variadic` arguments when ambiguous.
+
+The following command is an example using positionals.
+```csharp
+[Command("mycommand", "My command is for demonstration purposes.")]
+public class MyCommand : SimpleCommand
+{
+    [Positional(0, "The number of times to repeat.")] 
+    private int repeat;
+    
+    [Positional(1, "The phrase to repeat.")]
+    private string phrase;
+    
+    ...
+}
+```
+An example execution:
+
+```csharp
+> mycommand 3 hello
+hello
+hello
+hello
+```
 ---
 
 ### Optional
@@ -140,38 +221,91 @@ A named argument that may be omitted. Uses its default field value if not suppli
 private string _output = "Assets/";
 ```
 
-> TODO: confirm optional invocation syntax (e.g. `--output ./Builds` vs `-output`).
+| Parameter     | Description                                                                                                                      |
+|---------------|----------------------------------------------------------------------------------------------------------------------------------|
+| `index`       | Unique index starting from 0 and counting up. This declares the order optionals are expected in. Distince count from positionals |
+| `description` | Shown in help output and the registry. Should be a single concise sentence.                                                      |
+| `overrideName`| (**Optional**) By default, the optional's name is the name of the declared variable. Use this to override the default name.      | 
+
+- `Optionals` will be considered before `Variadic` arguments.
+
+The following command is an example using positionals.
+```csharp
+[Command("mycommand", "My command is for demonstration purposes.")]
+public class MyCommand : SimpleCommand
+{
+    [Optional(0, "The path to search")]
+    private string root;
+    
+    ...
+}
+```
+An example execution:
+
+```
+> mycommand
+searching in Assets/ ...
+
+ - or -
+ 
+> mycommand Assets/Scripts
+searching in Assets/Scripts ...
+```
 
 ---
 
 ### Switch
 
-A boolean flag toggled by a short character name.
+A dashed parameter and value pair. Boolean switches are implicitly true if included and do not require a value
 
 ```csharp
 [Switch('v', "Enable verbose output.")]
 private bool _verbose;
 ```
+| Parameter      | Description                                                                                                               |
+|----------------|---------------------------------------------------------------------------------------------------------------------------|
+| `shortname`    | A single character short cut. Must be unique within this command.                                                         |
+| `description`  | Shown in help output and the registry. Should be a single concise sentence.                                               |
+| `overrideName` | (**Optional**) By default, the switch's name is the name of the declared variable. Use this to override the default name. | 
+
 
 Invoked with a `-` prefix:
 
 ```
 > mycommand -v
+
+ - or -
+> mycommand --verbose
 ```
 
-Multiple switches can be combined:
+Multiple boolean switches can be combined:
 
 ```
 > mycommand -vr
 ```
 
-> TODO: confirm whether combined switches are supported.
+Non boolean switches require values:
+
+```csharp
+[Switch('i', "Increment value.")]
+private float _increment;
+```
+
+```
+> mycommand -i 5
+
+ - or -
+
+> mycommand --increment 4.3
+```
+
+- Note that in the case of all names, leading underscores are ignored without requireing the override name.
 
 ---
 
 ### Variadic
 
-Captures zero or more remaining arguments as an array. Only one variadic is permitted per command, and it must be the last argument. The array is never null — it is empty if no arguments were supplied.
+Captures zero or more remaining arguments as an array. Only one variadic is permitted per command. The array is never null — it is empty if no arguments were supplied.
 
 ```csharp
 [Variadic("The files to process.")]
@@ -182,17 +316,40 @@ private string[] _files;
 > process file1.cs file2.cs file3.cs
 ```
 
+| Parameter     | Description                                                                                                                 |
+|---------------|-----------------------------------------------------------------------------------------------------------------------------|
+| `description` | Shown in help output and the registry. Should be a single concise sentence.                                                 |
+| `overrideName`| (**Optional**) By default, the variadic's name is the name of the declared variable. Use this to override the default name. | 
+
+
 ---
 
 ### CommandContext
 
 `CommandContext` (exposed as `SimpleContext` in synchronous commands) is the sole API surface available during execution.
 
-| Member | Description |
-|---|---|
-| `ctx.Write(string)` | Writes a line to the console output. |
-| `ctx.WriteError(string)` | Writes a formatted error line. |
-| `ctx.Bossy` | Access to the Bossy instance, including the schema registry. |
+| Member                                       | Description                                                                                                |
+|----------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| `ctx.Write(string)`                          | Writes a line to the console output.                                                                       |
+| `ctx.WriteError(string)`                     | Writes a formatted error line.                                                                             |
+| `ctx.WriteWarning(string)`                   | Writes a formatted warning line.                                                                           |
+| `ctx.NewLine()`                              | Writes a new line.                                                                                         |
+| `ctx.ReadAsync<T>()`                         | Reads a typed object from the input stream.                                                                |
+| `ctx.ReadAllAsync<T>()`                      | Reads typed objects from the input stream as long as its open. See below.                                  |
+| `ctx.CloseOutputStream()`                    | Indicates that no more output is coming. This breaks `ctx.ReadAllAsync<T>()` loops.                        |
+| `ctx.Execute(string, ObservablePipe = null)` | Executes another command. Use the observable pipe to get callbacks for the new command's reads and writes. |
+| `ctx.Delay(TimeSpace)`                       | Delays for some time.                                                                                      |
+| `ctx.Yield()`                                | Yeilds execution contorl. Useful to break tight loops without a delay.                                     |
+| `ctx.Bossy`                                  | Access to the Bossy instance, including the schema registry.                                               |
+| `ctx.CancelationToken`                       | Gets the command's cancellation token.                                                                     |
+
+Note: When using `ctx.ReadAllAsync<T>()`, you should should use it in a loop like so:
+```csharp
+await foreach (T obj in ctx.ReadAllAsync<T>())
+{
+    // Use obj
+}
+```
 
 #### Formatting output
 
@@ -215,22 +372,67 @@ ctx.Write(Format.Align(
 ));
 ```
 
+Some `Format` calls have overloads to take in the context and print immediately.
+
 ---
 
 ### Return Values
 
 `Execute` returns a `CommandStatus`:
 
-| Value | Meaning |
-|---|---|
-| `CommandStatus.Ok` | Command completed successfully. |
-| `CommandStatus.Error` | Command failed. Use `ctx.WriteError` before returning. |
+| Value                 | Meaning                                                                    |
+|-----------------------|----------------------------------------------------------------------------|
+| `CommandStatus.Ok`    | Command completed successfully.                                            |
+| `CommandStatus.Error` | Command failed. Use `ctx.WriteError` before returning to display an error. |
+
+
+### Argument Validation
+
+In addition to having typed arguments, you can also apply validators to further reduce the need to check values at runtime. For example, the range attribute can go on a numeric value like so:
+
+```csharp
+[Range(0, 5)]
+[Positional(0, "The number of times to repeat.")]
+private int repeat;
+```
+
+To make your own validators, inherit from the `ArgumentValidationAttribute` class. Below is an example of the `Range` attribute:
+
+```csharp
+[AttributeUsage(AttributeTargets.Field)]
+    public class RangeAttribute : ArgumentValidationAttribute
+    {
+        public readonly float Min;
+        public readonly float Max;
+        
+        public RangeAttribute(float min, float max)
+        {
+            Min = min;
+            Max = max;
+        }
+
+        public override ArgumentValidationResult Validate(object value)
+        {
+            if (!float.TryParse(value?.ToString(), out var num))
+            {
+                return ArgumentValidationResult.Fail($"Input type '{value?.GetType().GetFriendlyName()}' is not numeric.");
+            }
+
+            if (num >= Min && num <= Max)
+            {
+                return ArgumentValidationResult.Pass();
+            }
+            
+            return ArgumentValidationResult.Fail($"{num} is outside the range [{Min}, {Max}]");
+        }
+    }
+```
 
 ---
 
 ## Async Commands
 
-For commands that need to perform async work, inherit from `Command` and implement `ExecuteAsync`:
+For commands that need to perform async work, inherit from `ICommand` and implement `ExecuteAsync`:
 
 ```csharp
 [Command("fetch", "Fetches data from a remote endpoint.")]
@@ -256,117 +458,36 @@ Async commands run cooperatively on the main thread via `async`/`await`. Long-ru
 
 ---
 
-## Built-in Commands
-
-Bossy ships with a small set of built-in commands:
-
-| Command | Description |
-|---|---|
-| `help <command>` | Displays usage, arguments, and subcommands for a command. |
-| `reg [parent]` | Lists all registered commands, optionally filtered to a parent. |
-| `bossy invalid` | Lists commands that failed schema validation at startup. |
-
-### help
-
-```
-help <command> [subcommands...] [-v] [-r]
-```
-
-| Flag | Description |
-|---|---|
-| `-v` | Show argument types, field names, and validation attributes. |
-| `-r` | Recursively display all subcommands. |
-
----
-
-## Validation
+### Validation
 
 Bossy validates all command schemas when the registry is built at startup. Commands with problems are flagged but remain in the registry at a degraded state — they are not available for execution.
 
 Run `bossy invalid` to inspect any problems:
 
-```
-> bossy invalid
-Command 'clears' has the following problems:
-    Warning: Description is null or empty
-
-==== Summary ====
--clears: 0 error(s) and 1 warning(s)
-Commands with errors are not available for execution.
-```
-
 The only unrecoverable startup error is duplicate command names, which prevents Bossy from initializing entirely.
 
----
+## Type Adapting
 
-## Examples
+In order to allow command line string input to be converted to type arguments, a registry of `ITypeAdapter`'s is kept. Most common types are provided by default, but you can create your own as well.
 
-### A command with all argument types
+To do this, make a class that inherits from `BaseTypeAdapter<T>` where `T` is the type that this adapter converts for. Then, register it at start up as described in [Boostrapping](#bootstrapping).
+
+Here is an example of how the int adapter works:
 
 ```csharp
-[Command("deploy", "Deploys build artifacts to a target.")]
-public class DeployCommand : SimpleCommand
+public class IntAdapter : BaseTypeAdapter<int>
 {
-    [Positional("The build target name.")]
-    private string _target;
-
-    [Optional("Override the output path.")]
-    private string _output = "Builds/";
-
-    [Switch('d', "Perform a dry run without writing files.")]
-    private bool _dryRun;
-
-    [Switch('v', "Enable verbose logging.")]
-    private bool _verbose;
-
-    [Variadic("Additional tags to apply to this deployment.")]
-    private string[] _tags;
-
-    protected override CommandStatus Execute(SimpleContext ctx)
+    protected override TypeAdapterResult TryConvertToType(TokenStream stream, out int output)
     {
-        if (_dryRun)
-        {
-            ctx.Write(Format.Color("[Dry Run] No files will be written.", Format.Yellow));
-        }
+        if (stream.TryConsume(out var token) && int.TryParse(token, out output))
+            return TypeAdapterResult.Pass();
 
-        ctx.Write(Format.Align(
-            new (string, string)[]
-            {
-                ("Target",  _target),
-                ("Output",  _output),
-                ("Tags",    string.Join(", ", _tags)),
-            },
-            t => t.Item1,
-            t => t.Item2,
-            Format.LightBlue
-        ));
-
-        return CommandStatus.Ok;
+        output = 0;
+        return TypeAdapterResult.Fail($"Expected int, got \"{token ?? "nothing"}\"");
     }
 }
 ```
 
-### Reading from the schema registry
+Note that any tokes used must be consumed from the stream. If parsing fails, return a helpful error message.
 
-```csharp
-[Command("describe", "Prints the description of a registered command.")]
-public class DescribeCommand : SimpleCommand
-{
-    [Positional("The command name.")]
-    private string _command;
-
-    protected override CommandStatus Execute(SimpleContext ctx)
-    {
-        var status = ctx.Bossy.SchemaRegistry.TryResolveSchema(_command, out var schema);
-
-        if (status is not SchemaQueryStatus.Found)
-        {
-            ctx.WriteError($"Unknown command: '{_command}'");
-            return CommandStatus.Error;
-        }
-
-        ctx.Write(schema.Description);
-        return CommandStatus.Ok;
-    }
-}
-```
+- For Enum types, you don't need to make a new adapter, just include a call at startup like so `.WithAdapter<EnumAdapter<MyEnum>>()`.

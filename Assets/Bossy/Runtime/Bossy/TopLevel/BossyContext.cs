@@ -12,12 +12,14 @@ namespace Bossy
         public readonly SchemaRegistry SchemaRegistry;
         public readonly TypeAdapterRegistry TypeAdapterRegistry;
         public readonly SettingsManager Settings;
+        public readonly Parser _parser;
         
-        public BossyContext(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, SettingsManager settings)
+        public BossyContext(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, SettingsManager settings, Parser parser)
         {
             SchemaRegistry = schemaRegistry;
             TypeAdapterRegistry = adapterRegistry;
             Settings = settings;
+            _parser = parser;
         }
     }
 }
