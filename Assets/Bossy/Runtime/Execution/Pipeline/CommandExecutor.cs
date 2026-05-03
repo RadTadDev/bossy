@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Utils;
 
-namespace Bossy.Session
+namespace Bossy.Execution
 {
     /// <summary>
     /// Executes a command graph.
@@ -55,7 +56,7 @@ namespace Bossy.Session
 
             var defaultContext = new CommandContext(session, _context, input, output, true, token);
             defaultContext.SetCapabilitySourcer(session.Bridge.GetCapabilities);
-            
+
             foreach (var group in groups)
             {
                 if (!Continue(previousStatus, previousLink))
@@ -84,18 +85,19 @@ namespace Bossy.Session
                 }
                 catch (BossyStreamClosedException)
                 {
-                    output.Write("Command failed after reading from a closed input stream.");
+                    output.Write(Format.Warning("Command failed after reading from a closed input stream."));
                     previousStatus = CommandStatus.Error;
                 }
                 catch (BossyNotAdaptableException e)
                 {
-                    output.Write(e.Message);
+                    output.Write(Format.Error(e.Message));
                     previousStatus = CommandStatus.Error;
                 }
                 catch (Exception e)
                 {
-                    output.Write(e.Message);
+                    output.Write(Format.Error(e.Message));
                     previousStatus = CommandStatus.Error;
+                    Log.Exception(e);
                 }
                 finally
                 {

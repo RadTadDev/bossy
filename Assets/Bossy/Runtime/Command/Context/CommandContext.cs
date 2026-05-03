@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Frontend.Parsing;
+using Bossy.Execution;
 using Bossy.Utils;
 
-namespace Bossy.Session
+namespace Bossy.Command
 {
     /// <summary>
     /// A context object providing utility functionality to commands.
@@ -27,7 +28,7 @@ namespace Bossy.Session
         /// <param name="writer">A writeable sink.</param>
         /// <param name="allowRetry">Whether to allow reads to be retried on bad type input.</param>
         /// <param name="token">The cancellation token associated with this execution.</param>
-        public CommandContext
+        internal CommandContext
         (
             Session session,
             BossyContext context,
@@ -71,6 +72,13 @@ namespace Bossy.Session
             _token.ThrowIfCancellationRequested();
             
             base.WriteError(value, indentCount);
+        }
+
+        public override void NewLine()
+        {
+            _token.ThrowIfCancellationRequested();
+            
+            base.NewLine();
         }
         
         /// <summary>
@@ -197,6 +205,17 @@ namespace Bossy.Session
         public void CloseOutStream()
         {
             Writer.CloseWriter();
+        }
+
+        /// <summary>
+        /// Execute another command.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="pipe">The output pipe to observe.</param>
+        /// <returns></returns>
+        public Task ExecuteAsync(string command, ObservablePipe pipe = null)
+        {
+            return _session.ExecuteAsync(command, _token, null, pipe ?? GetWriter());
         }
     }
 }

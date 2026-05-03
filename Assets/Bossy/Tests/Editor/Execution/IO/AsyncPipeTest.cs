@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Session;
+using Bossy.Execution;
 using NUnit.Framework;
 
 namespace Bossy.Tests.Shell

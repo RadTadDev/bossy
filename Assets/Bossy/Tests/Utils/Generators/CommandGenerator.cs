@@ -6,7 +6,7 @@ using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Schema.Registry;
-using Bossy.Session;
+using Bossy.Execution;
 
 namespace Bossy.Tests.Utils
 {

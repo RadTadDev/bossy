@@ -1,6 +1,6 @@
 using Bossy.Command;
 
-namespace Bossy.Session
+namespace Bossy.Execution
 {
     /// <summary>
     /// Allows writing to a command graph node after its creation.

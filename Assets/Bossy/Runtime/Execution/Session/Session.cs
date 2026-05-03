@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Bossy.Frontend;
 using Bossy.Utils;
 
-namespace Bossy.Session
+namespace Bossy.Execution
 {
     /// <summary>
     /// A session container with state and a single front end.
@@ -79,7 +79,7 @@ namespace Bossy.Session
                 await _commandExecutor.ExecuteAsync(graph, this, linkedSource.Token);
             }
         }
-
+        
         /// <summary>
         /// Creates a command session which simply rungs the command graph and nothing else.
         /// </summary>
@@ -112,6 +112,25 @@ namespace Bossy.Session
         {
             var session = new Session(_context, bridge, _createCommandSession, Space);
             return session;
+        }
+
+        /// <summary>
+        /// Executes a command string.
+        /// </summary>
+        /// <param name="command">Thw command string.</param>
+        /// <param name="token">The cancellation token.</param>
+        /// <param name="input">An input source.</param>
+        /// <param name="output">An output source.</param>
+        public async Task ExecuteAsync(string command, CancellationToken token, IReadable input = null, IWriteable output = null)
+        {
+            var result = _context._parser.Parse(command, _context.Settings.BossyCliSettings.ToOperatorList());
+
+            if (!result.TryGetGraph(out var graph))
+            {
+                return;
+            }
+
+            await _commandExecutor.ExecuteAsync(graph, this, token, input, output);
         }
         
         /// <summary>

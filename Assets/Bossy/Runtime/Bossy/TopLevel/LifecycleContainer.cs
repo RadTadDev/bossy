@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Bossy.Frontend;
-using Bossy.Session;
+using Bossy.Execution;
 using Bossy.Utils;
 
 namespace Bossy
@@ -10,10 +10,10 @@ namespace Bossy
     {
         private bool _alive = true;
         
-        private readonly Session.Session _session;
+        private readonly Session _session;
         private readonly SessionViewer _viewer;
 
-        public LifecycleContainer(Session.Session session, SessionViewer viewer)
+        public LifecycleContainer(Session session, SessionViewer viewer)
         {
             _session = session;
             _viewer = viewer;

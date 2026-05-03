@@ -1,8 +1,9 @@
 using System;
 using Bossy.Command;
 using Bossy.Frontend;
+using Bossy.Execution;
 
-namespace Bossy.Session
+namespace Bossy.Command
 {
     /// <summary>
     /// A simple command context.
@@ -46,6 +47,15 @@ namespace Bossy.Session
         {
             Writer.Write(value);
         }
+
+        /// <summary>
+        /// Skips a line.
+        /// </summary>
+        public virtual void NewLine()
+        {
+            // Write a space because it will be invisible and naturally add a new line.
+            Writer.Write(" ");
+        }
         
         /// <summary>
         /// Sets the capabilities sourcer.
@@ -63,7 +73,7 @@ namespace Bossy.Session
         /// <param name="indentCount">The number of spaces to indent.</param>
         public virtual void WriteWarning(object value, int indentCount = 0)
         {
-            Formatter.Warning(value, this, indentCount);
+            Format.Warning(value, this, indentCount);
         }
 
         /// <summary>
@@ -73,7 +83,7 @@ namespace Bossy.Session
         /// <param name="indentCount">The number of spaces to indent.</param>
         public virtual void WriteError(object value, int indentCount = 0)
         {
-            Formatter.Error(value, this, indentCount);
+            Format.Error(value, this, indentCount);
         }
     }
 }

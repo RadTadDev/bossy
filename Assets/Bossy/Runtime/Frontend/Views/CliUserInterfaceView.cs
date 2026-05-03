@@ -7,7 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Frontend.Parsing;
-using Bossy.Session;
+using Bossy.Execution;
+using Bossy.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -34,6 +35,7 @@ namespace Bossy.Frontend
         private bool _blockInput;
         
         private readonly Parser _parser;
+        private bool _reading;
         private bool _requestingCommand;
         private Signaler _signaler;
 
@@ -74,6 +76,7 @@ namespace Bossy.Frontend
             var root = ContentViewUtility.GetRootFromUxml("BossyCli");
             
             Input = root.Q<TextField>("input-field");
+            Input.parent.focusable = true;
             Input.style.fontSize = 13.5f;
             Input.selectAllOnFocus = false;
             Input.selectAllOnMouseUp = false;
@@ -133,7 +136,7 @@ namespace Bossy.Frontend
         {
             var line = value.ToString();
             
-            line = Formatter.Render(line);
+            line = Format.Render(line);
             
             _outputBuffer.Add(line);
             _view.RefreshItems();
@@ -142,6 +145,10 @@ namespace Bossy.Frontend
 
         public virtual async Task<object> ReadAsync(Type requestedType, CancellationToken token)
         {
+            _reading = true;
+            Input.focusable = true;
+            FocusInput();
+            
             _requestingCommand = requestedType == typeof(CommandGraph);
             
             _readSource = new TaskCompletionSource<object>();
@@ -181,13 +188,16 @@ namespace Bossy.Frontend
                 var parseResult = _parser.Parse(line, operatorList);
                 if (!parseResult.TryGetGraph(out var graph))
                 {
-                    Write(parseResult.Message);
+                    Write(Format.Error(parseResult.Message));
                     return;
                 }
 
                 result = graph;
             }
             
+            Input.parent.Focus();
+            Input.focusable = false;
+            _reading = false;
             _readSource.TrySetResult(result);
         }
 
@@ -198,6 +208,11 @@ namespace Bossy.Frontend
 
         public void OnFocus()
         {
+            if (!_reading)
+            {
+                return;
+            }
+            
             _blockInput = true;
             Input.focusable = true;
             Input.schedule.Execute(() =>

@@ -100,6 +100,15 @@ namespace Bossy.Schema
         }
 
         /// <summary>
+        /// Gets all switches on this command.
+        /// </summary>
+        /// <returns>THe list of switches.</returns>
+        public List<ArgumentSchema> GetSwitches()
+        {
+            return Arguments.Where(a => a.ArgumentAttribute is SwitchAttribute).ToList();
+        }
+        
+        /// <summary>
         /// Gets an ordered list of all positional arguments.
         /// </summary>
         /// <returns>The list of positional arguments.</returns>

@@ -1,17 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Bossy.Command;
 using Bossy.Schema.Registry;
 using Bossy.Schema;
-using Bossy.Session;
+using Bossy.Execution;
+using Bossy.Utils;
 
 namespace Bossy.Frontend.Parsing
 {
     /// <summary>
     /// Parses a string input to a <see cref="CommandGraph"/>.
     /// </summary>
-    internal class Parser
+    public class Parser
     {
         private readonly SchemaRegistry _schemaRegistry;
         private readonly TypeAdapterRegistry _adapterRegistry;
@@ -21,7 +23,7 @@ namespace Bossy.Frontend.Parsing
             _schemaRegistry = schemaRegistry;
             _adapterRegistry = adapterRegistry;
         }
-
+        
         /// <summary>
         /// Parses a string into a command graph.
         /// </summary>
@@ -46,12 +48,17 @@ namespace Bossy.Frontend.Parsing
             {
                 var commandResult = ParseCommand(node.Tokens);
                 if (commandResult.IsError) return commandResult.Error;
-                node.Command = commandResult.Value;
+                node.Command = commandResult.Value.Item1;
+                node.Schema = commandResult.Value.Item2;
             }
             
             // 4. Run argument validators
-            // TODO: Run argument validators
-            
+            foreach (var node in pipeline)
+            {
+                var argResult = ValidateArguments(node);
+                if (argResult.IsError) return argResult.Error;
+            }
+                
             // 5. Build the command graph.
             return new ParseSucceeded(BuildGraph(pipeline, isWindowed));
         }
@@ -121,12 +128,12 @@ namespace Bossy.Frontend.Parsing
             return null;
         }
 
-        private ParseStep<ICommand> ParseCommand(IEnumerable<string> tokens)
+        private ParseStep<(ICommand, CommandSchema)> ParseCommand(IEnumerable<string> tokens)
         {
             var stream = new TokenStream(tokens);
             
             var result = GetSchema(stream);
-            if (result.IsError) return ParseStep<ICommand>.Fail(result.Error);
+            if (result.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(result.Error);
             var schema = result.Value;
             
             // Begin parsing command as per schema
@@ -140,21 +147,21 @@ namespace Bossy.Frontend.Parsing
             
             // 3. Foreach flag starting with - or -- ensure match in schema
             var switchResult = ParseSwitches(argTokens, schema, command);
-            if (switchResult.IsError) return ParseStep<ICommand>.Fail(switchResult.Error);
+            if (switchResult.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(switchResult.Error);
 
             // 4. Parse in positionals - return on error or not enough
             var positionalResult = ParsePositionals(argTokens, schema, command);
-            if (positionalResult.IsError) return ParseStep<ICommand>.Fail(positionalResult.Error);
+            if (positionalResult.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(positionalResult.Error);
             
             // 5. Parse in optionals - return on error
             var optionalResult = ParseOptionals(argTokens, schema, command);
-            if (optionalResult.IsError) return ParseStep<ICommand>.Fail(optionalResult.Error);
+            if (optionalResult.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(optionalResult.Error);
             
             // 6. Parse in variadic - return on error
             var variadicResult = ParseVariadic(argTokens, schema, command);
-            if (variadicResult.IsError) return ParseStep<ICommand>.Fail(variadicResult.Error);
+            if (variadicResult.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(variadicResult.Error);
             
-            return ParseStep<ICommand>.Ok(command);
+            return ParseStep<(ICommand, CommandSchema)>.Ok((command, schema));
         }
 
         private ParseStep ParseSwitches(List<string> argTokens, CommandSchema schema, ICommand command)
@@ -368,6 +375,33 @@ namespace Bossy.Frontend.Parsing
             // Get last successful command
             _schemaRegistry.TryResolveSchema(root, subcommands, out schema);
             return ParseStep<CommandSchema>.Ok(schema);
+        }
+
+        private ParseStep ValidateArguments(ParseNode node)
+        {
+            var bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic;
+            foreach (var arg in node.Schema.Arguments)
+            {
+                foreach (var validator in arg.Validators)
+                {
+                    var field = node.Command.GetType().GetField(arg.FieldInfo.Name, bindingFlags);
+
+                    if (field == null)
+                    {
+                        Log.Info("WHY SI ");
+                    }
+                    
+                    var value = field.GetValue(node.Command);
+                    var result = validator.Validate(value);
+
+                    if (!result.Success)
+                    {
+                        return ParseStep.Fail(new ArgumentValidationError(result.Message, arg.Name));
+                    }
+                }
+            }
+            
+            return ParseStep.Ok();
         }
 
         private static CommandGraph BuildGraph(List<ParseNode> pipeline, bool isWindowed)

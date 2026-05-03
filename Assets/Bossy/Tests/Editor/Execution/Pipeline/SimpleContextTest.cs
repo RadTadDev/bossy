@@ -1,4 +1,4 @@
-using Bossy.Session;
+using Bossy.Command;
 using Bossy.Tests.Utils;
 using NUnit.Framework;
 

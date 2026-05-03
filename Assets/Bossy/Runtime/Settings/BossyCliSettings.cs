@@ -1,4 +1,5 @@
 using System;
+using Bossy.Frontend.Parsing;
 using Bossy.Utils;
 using UnityEngine;
 
@@ -24,5 +25,14 @@ namespace Bossy.Settings
 
         [Setting("The operator for running a command job in a window.")]
         public string WindowOperator = "!";
+
+        /// <summary>
+        /// Gets an operator list of the current settings.
+        /// </summary>
+        /// <returns></returns>
+        public OperatorList ToOperatorList()
+        {
+            return new OperatorList(ThenOperator, AndOperator, OrOperator, PipeOperator, WindowOperator);
+        }
     }
 }

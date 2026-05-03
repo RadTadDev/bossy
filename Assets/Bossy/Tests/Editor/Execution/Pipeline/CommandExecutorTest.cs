@@ -1,12 +1,14 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
-using Bossy.Session;
+using Bossy.Execution;
 using Bossy.Tests.Utils;
 using Bossy.Tests.Utils.Commands;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Bossy.Tests.Shell
 {
@@ -15,7 +17,7 @@ namespace Bossy.Tests.Shell
     /// </summary>
     internal class CommandExecutorTest
     {
-        private Session.Session _session;
+        private Session _session;
         private CommandExecutor _executor;
         
         [OneTimeSetUp]
@@ -24,9 +26,9 @@ namespace Bossy.Tests.Shell
             var registry = new TypeAdapterRegistry();
             registry.RegisterAdapter(typeof(string), new StringAdapter());
             
-            var context = new BossyContext(null, registry, null);
+            var context = new BossyContext(null, registry, null, null);
             var bridge = new Bridge(_ => { }, _ => { });
-            _session = new Session.Session(context, bridge, (_, _) => { }, SessionSpace.Edit);
+            _session = new Session(context, bridge, (_, _) => { }, SessionSpace.Edit);
             _executor = new CommandExecutor(_session, context);
         }
         
@@ -534,7 +536,8 @@ namespace Bossy.Tests.Shell
                 .Create(false)
                 .Execute(new ThrowsCommand())
                 .Build();
-        
+
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Exception, new Regex("ArgumentException:.*"));
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
         
             Assert.That(writer.Log, Is.Not.Empty);

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Bossy.Frontend;
 
-namespace Bossy.Session
+namespace Bossy.Execution
 {
     public class CommandGroup
     {

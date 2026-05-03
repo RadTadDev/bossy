@@ -1,4 +1,4 @@
-namespace Bossy.Session
+namespace Bossy.Execution
 {
     public static class CloseWriterSentinel
     {

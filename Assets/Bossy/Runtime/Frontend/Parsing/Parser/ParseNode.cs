@@ -1,6 +1,7 @@
-using Bossy.Session;
+using Bossy.Execution;
 using System.Collections.Generic;
 using Bossy.Command;
+using Bossy.Schema;
 
 namespace Bossy.Frontend.Parsing
 {
@@ -23,6 +24,11 @@ namespace Bossy.Frontend.Parsing
         /// The command that this node parsed to.
         /// </summary>
         public ICommand Command;
+        
+        /// <summary>
+        /// The schema associated with this command.
+        /// </summary>
+        public CommandSchema Schema;
         
         /// <summary>
         /// Creates a new parse node.
