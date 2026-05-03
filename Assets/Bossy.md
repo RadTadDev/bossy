@@ -28,7 +28,7 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
 ## Installation
 
 1. In unity, open the pacakge manager via `Window -> Pacakge Management -> Pacakge Manager`.
-2. 
+2. "https://github.com/RadTadDev/bossy.git?path=/Assets/Bossy#main"
 > TODO: Add UPM installation instructions / Asset Store link.
 
 ---
