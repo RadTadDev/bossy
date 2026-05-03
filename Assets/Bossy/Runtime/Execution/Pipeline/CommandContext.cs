@@ -72,6 +72,13 @@ namespace Bossy.Session
             
             base.WriteError(value, indentCount);
         }
+
+        public override void NewLine()
+        {
+            _token.ThrowIfCancellationRequested();
+            
+            base.NewLine();
+        }
         
         /// <summary>
         /// Reads a value of the given type.

@@ -133,7 +133,7 @@ namespace Bossy.Frontend
         {
             var line = value.ToString();
             
-            line = Formatter.Render(line);
+            line = Format.Render(line);
             
             _outputBuffer.Add(line);
             _view.RefreshItems();

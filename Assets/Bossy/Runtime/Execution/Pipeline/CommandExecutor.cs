@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Utils;
 
@@ -84,18 +85,19 @@ namespace Bossy.Session
                 }
                 catch (BossyStreamClosedException)
                 {
-                    output.Write("Command failed after reading from a closed input stream.");
+                    output.Write(Format.Warning("Command failed after reading from a closed input stream."));
                     previousStatus = CommandStatus.Error;
                 }
                 catch (BossyNotAdaptableException e)
                 {
-                    output.Write(e.Message);
+                    output.Write(Format.Error(e.Message));
                     previousStatus = CommandStatus.Error;
                 }
                 catch (Exception e)
                 {
-                    output.Write(e.Message);
+                    output.Write(Format.Error(e.Message));
                     previousStatus = CommandStatus.Error;
+                    Log.Exception(e);
                 }
                 finally
                 {

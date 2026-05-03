@@ -15,7 +15,7 @@ namespace Bossy.Runtime.Command.Library
                 return CommandStatus.Error;
             }
 
-            Formatter.Enumerate(history.GetHistory(), ctx);
+            Format.Enumerate(history.GetHistory(), ctx);
             
             return CommandStatus.Ok;
         }

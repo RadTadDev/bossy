@@ -1,0 +1,17 @@
+{
+  "name": "com.radtad.bossy",
+  "version": "0.1.0",
+  "displayName": "Bossy",
+  "description": "A developer console for Unity. Run commands in the editor, in builds, and at runtime.",
+  "unity": "6000.0",
+  "author": {
+    "name": "RadTadDev",
+    "url": "https://github.com/RadTadDev"
+  },
+  "keywords": [
+    "console",
+    "developer-tools",
+    "commands",
+    "debug"
+  ]
+}

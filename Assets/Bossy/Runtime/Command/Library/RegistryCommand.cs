@@ -13,7 +13,7 @@ namespace Bossy.Runtime.Command.Library
         {
             var schemas = ctx.Bossy.SchemaRegistry.GetValidSchemas(_parent);
             
-            Formatter.Align(schemas, s => s.Name, s => s.Description, ctx, Formatter.LightBlue);
+            Format.Align(schemas, s => s.Name, s => s.Description, ctx, Format.LightBlue);
             
             return CommandStatus.Ok;
         }

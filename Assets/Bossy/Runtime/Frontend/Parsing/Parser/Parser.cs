@@ -21,7 +21,7 @@ namespace Bossy.Frontend.Parsing
             _schemaRegistry = schemaRegistry;
             _adapterRegistry = adapterRegistry;
         }
-
+        
         /// <summary>
         /// Parses a string into a command graph.
         /// </summary>

@@ -56,7 +56,7 @@ namespace Bossy.Runtime.Command.Library
             }
             
             ctx.Write(Environment.NewLine);
-            ctx.Write(Formatter.Color("==== Summary ====", Formatter.Green));
+            ctx.Write(Format.Color("==== Summary ====", Format.Green));
             foreach (var kvp in map)
             {
                 ctx.Write($"  -{kvp.Key.Name}: {kvp.Value.Errors.Count} error(s) and {kvp.Value.Warnings.Count} warning(s)");
