@@ -7,8 +7,16 @@ namespace Bossy.Frontend
     /// </summary>
     public interface IContentView
     {
+        /// <summary>
+        /// Creates the UI for this view.
+        /// </summary>
+        /// <returns>The UI root.</returns>
         public VisualElement CreateView();
         
+        /// <summary>
+        /// A signaler to send events.
+        /// </summary>
+        /// <param name="signaler"></param>
         public void SetSignaler(Signaler signaler);
 
         /// <summary>

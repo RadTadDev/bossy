@@ -10,18 +10,19 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
 - [Quick Start](#quick-start)
 - [Bootstrapping](#bootstrapping)
 - [Authoring Commands](#authoring-commands)
-    - [Command Attribute](#command-attribute)
+    - [Declaring a Command Attribute](#declaring-a-command)
     - [Arguments](#arguments)
     - [Positional](#positional)
     - [Optional](#optional)
     - [Switch](#switch)
     - [Variadic](#variadic)
-    - [CommandContext](#commandcontext)
+    - [Command Context](#command-context)
     - [Return Values](#return-values)
+    - [Argument Validation](#argument-validation)
 - [Async Commands](#async-commands)
-- [Built-in Commands](#built-in-commands)
 - [Validation](#validation)
-- [Examples](#examples)
+- [Type Adapting](#type-adapting)
+- [Custom Command UI](#custom-command-ui)
 
 ---
 
@@ -90,7 +91,8 @@ public class BossyStartup
 
 **4. Create your own command by making a C# class like this**
 ```csharp
-using Bossy;
+using Bossy.Command;
+using Bossy.Execution;
 
 [Command("greet", "Prints a greeting.")]
 public class GreetCommand : SimpleCommand
@@ -300,6 +302,7 @@ private float _increment;
 ```
 
 - Note that in the case of all names, leading underscores are ignored without requireing the override name.
+- Switches may appear anywhere except for after variadics.
 
 ---
 
@@ -324,7 +327,7 @@ private string[] _files;
 
 ---
 
-### CommandContext
+### Command Context
 
 `CommandContext` (exposed as `SimpleContext` in synchronous commands) is the sole API surface available during execution.
 
@@ -342,12 +345,39 @@ private string[] _files;
 | `ctx.Yield()`                                | Yeilds execution contorl. Useful to break tight loops without a delay.                                     |
 | `ctx.Bossy`                                  | Access to the Bossy instance, including the schema registry.                                               |
 | `ctx.CancelationToken`                       | Gets the command's cancellation token.                                                                     |
+| `ctx.Capabilities`                           | Gets the front end Capabilities. See below.                                                                |
 
 Note: When using `ctx.ReadAllAsync<T>()`, you should should use it in a loop like so:
 ```csharp
 await foreach (T obj in ctx.ReadAllAsync<T>())
 {
     // Use obj
+}
+```
+
+Note: You can test for specific capabilities via the following:
+```csharp
+if (ctx.Capabilities is IClearable clearable)
+{
+    
+}
+```
+
+If you want to add your own capability to an existing front end, the CLI for example, do the following:
+```csharp
+// Make your capability interface
+public interface IMyNewCapability
+{
+    public void DoSomething();
+}
+
+// Use the partial keyword to add it to the front end declaration
+public partial class CliUserInterfaceView : IMyNewCapabilitiy { }
+
+// And you can now test for it:
+if (ctx.Capabilities is IMyNewCapability cap)
+{
+    cap.DoSomething();
 }
 ```
 
@@ -458,7 +488,7 @@ Async commands run cooperatively on the main thread via `async`/`await`. Long-ru
 
 ---
 
-### Validation
+## Validation
 
 Bossy validates all command schemas when the registry is built at startup. Commands with problems are flagged but remain in the registry at a degraded state — they are not available for execution.
 
@@ -491,3 +521,26 @@ public class IntAdapter : BaseTypeAdapter<int>
 Note that any tokes used must be consumed from the stream. If parsing fails, return a helpful error message.
 
 - For Enum types, you don't need to make a new adapter, just include a call at startup like so `.WithAdapter<EnumAdapter<MyEnum>>()`.
+
+---
+
+## Custom Command UI
+
+Commands can declare custom execution UI. To do this, have your command implement the `IContentView` interface:
+
+```csharp
+[Command("mycommand", "Description.")]
+public class MyCommand : ICommand, IContentView
+{
+    public VisualElement CreateView() { }
+        
+    public void SetSignaler(Signaler signaler) { }
+
+    public void OnFocus() { }
+
+    public void OnDefocus() { }
+}
+```
+You must implement the methods shown above. Most can be no-ops unless needed. `CreateView()` must return the root of the command's UI using the UI Toolkit API. If you prefer you can use the `ContentViewUtility.GetRootFromUxml()` to load a UI document you created using the UI Toolkit Builder.
+
+The signaler is used to send signals that would otherwise be absorbed by your UI. An example is needing to send the toggle command while an input field is focused. You can use the signaler to respect the toggle input instead of typing a `/` in the input bar.
