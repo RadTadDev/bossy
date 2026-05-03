@@ -54,7 +54,7 @@ namespace Bossy.Schema
             Description = description;
             FieldInfo = fieldInfo;
             ArgumentAttribute = argumentAttribute;
-            Validators = validators;
+            Validators = validators ?? new List<ArgumentValidationAttribute>();
         }
 
         /// <summary>
