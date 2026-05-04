@@ -1,5 +1,4 @@
 using System;
-using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Execution;
 

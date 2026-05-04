@@ -21,7 +21,7 @@ namespace Bossy.Runtime.Command.Library
         }
     }
     
-    [Command("clears", "")]
+    [Command("clear", "Clears all history.", typeof(HistoryCommand))]
     public class ClearHistoryCommand : SimpleCommand
     {
         protected override CommandStatus Execute(SimpleContext ctx)

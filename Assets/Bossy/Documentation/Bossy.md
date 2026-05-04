@@ -21,6 +21,7 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
     - [Argument Validation](#argument-validation)
 - [Async Commands](#async-commands)
 - [Validation](#validation)
+- [Piping](#piping)
 - [Type Adapting](#type-adapting)
 - [Custom Command UI](#custom-command-ui)
 
@@ -97,7 +98,7 @@ using Bossy.Execution;
 [Command("greet", "Prints a greeting.")]
 public class GreetCommand : SimpleCommand
 {
-    [Positional("The name to greet.")]
+    [Positional(0, "The name to greet.")]
     private string _name;
 
     [Switch('l', "Print in lowercase.")]
@@ -482,11 +483,17 @@ public class FetchCommand : Command
 
 Async commands run cooperatively on the main thread via `async`/`await`. Long-running operations should respect cancellation:
 
-```csharp
-// TODO: document CancellationToken access via CommandContext if exposed.
+---
+
+## Piping
+Commands can also pipe data like in bash.
+
+```
+> cmd1 | cmd2 | cmd3
 ```
 
----
+The example above connects the output of `cmd1` to the input of `cmd2` and the output of `cmd2` to the input of `cmd3`. All commands can be piped and you don't need to consider piping while creating commands. Simple reads and writes are retargeted to the correct commands from the front end when you execute using pipes.
+
 
 ## Validation
 

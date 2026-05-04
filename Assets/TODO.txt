@@ -13,17 +13,9 @@ TODO:
 - inject type adapter registry into adapter base class so complex adapters can use primitive ones.
 - add prompt builder to context
 - auto complete
+- startup file
 - style facelift and conformance
 - verify namespaces and TODOs and remove dead usings
-
-To Document:
-commands overriding gui
-piping
-help commands and such
-    (how to display parse rules and what not in terminal)
-type adapters
-bootstrap
-command context methods (especially foreach)
 
 Future features:
 - Session restoration 

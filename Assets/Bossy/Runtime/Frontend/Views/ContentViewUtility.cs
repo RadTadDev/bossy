@@ -4,6 +4,9 @@ using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
 {
+    /// <summary>
+    /// Assists in generating content views.
+    /// </summary>
     public static class ContentViewUtility
     {
         /// <summary>

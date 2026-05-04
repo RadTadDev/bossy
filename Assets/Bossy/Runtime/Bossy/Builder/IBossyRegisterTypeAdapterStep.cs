@@ -1,10 +1,14 @@
 using System;
 using Bossy.Frontend.Parsing;
 using Bossy.Schema.Registry;
+using Bossy.Utils;
 using UnityEngine;
 
 namespace Bossy
 {
+    /// <summary>
+    /// Assists in creating a <see cref="TypeAdapterRegistry"/>.
+    /// </summary>
     public interface IBossyRegisterTypeAdapterStep
     {
         /// <summary>
@@ -29,6 +33,9 @@ namespace Bossy
         public BossyConsole Build();
     }
 
+    /// <summary>
+    /// Builds the Bossy <see cref="TypeAdapterRegistry"/>.
+    /// </summary>
     internal class BossyAdapterBuilder : IBossyRegisterTypeAdapterStep
     {
         private readonly SchemaRegistry _schemaRegistry;
@@ -66,7 +73,16 @@ namespace Bossy
         public IBossyRegisterTypeAdapterStep WithAdapter<TAdapter>() where TAdapter : ITypeAdapter, new()
         {
             var instance = Activator.CreateInstance<TAdapter>();
-            // _typeAdapterRegistry.RegisterAdapter(typeof(TType), instance);
+
+            try
+            {
+                var type = instance.GetType().GetGenericArguments()[0];
+                _typeAdapterRegistry.RegisterAdapter(type, instance);
+            }
+            catch (Exception)
+            {
+                Log.Error($"Cannot add type adapter {typeof(TAdapter).FullName} to bossy schema registry. Expected the base class to be BaseTypeAdapter<T> but it was not.");                
+            }
             
             return this;
         }

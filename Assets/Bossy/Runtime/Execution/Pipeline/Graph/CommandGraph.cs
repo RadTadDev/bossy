@@ -4,17 +4,56 @@ using Bossy.Command;
 
 namespace Bossy.Execution
 {
+    /// <summary>
+    /// Begins building a graph.
+    /// </summary>
     public interface IBeginGraphBuilderStep
     {
+        /// <summary>
+        /// Adds a command to run.
+        /// </summary>
+        /// <param name="cmd">The command to run.</param>
+        /// <returns>The builder.</returns>
         public IGeneralGraphBuilderStep Execute(ICommand cmd);
     }
 
+    /// <summary>
+    /// Builds a graph.
+    /// </summary>
     public interface IGeneralGraphBuilderStep
     {
+        /// <summary>
+        /// Adds a node to run next.
+        /// </summary>
+        /// <param name="cmd">The command to run.</param>
+        /// <returns>The builder.</returns>
         public IGeneralGraphBuilderStep Then(ICommand cmd);
+        
+        /// <summary>
+        /// Adds a new node to run if the previous one succeeded.
+        /// </summary>
+        /// <param name="cmd">The command to run.</param>
+        /// <returns>The builder.</returns>
         public IGeneralGraphBuilderStep And(ICommand cmd);
+        
+        /// <summary>
+        /// Adds a new node to run if the previous one failed.
+        /// </summary>
+        /// <param name="cmd">The command to run.</param>
+        /// <returns>The builder.</returns>
         public IGeneralGraphBuilderStep Or(ICommand cmd);
+        
+        /// <summary>
+        /// Adds a new node to be piped to.
+        /// </summary>
+        /// <param name="cmd">The command to pipe to.</param>
+        /// <returns>The builder.</returns>
         public IGeneralGraphBuilderStep AndPipeTo(ICommand cmd);
+        
+        /// <summary>
+        /// Completes the graph.
+        /// </summary>
+        /// <returns>The command graph.</returns>
         public CommandGraph Build();
     }
     
@@ -49,67 +88,35 @@ namespace Bossy.Execution
         {
             return new CommandGraph(windowed);
         }
-
-        /// <summary>
-        /// Adds a command to run.
-        /// </summary>
-        /// <param name="cmd">The command to run.</param>
-        /// <returns>The builder.</returns>
+        
         public IGeneralGraphBuilderStep Execute(ICommand cmd)
         {
             _nodes.Add(new CommandGraphNode(cmd));
             return this;
         }
-
-        /// <summary>
-        /// Adds a node to run next.
-        /// </summary>
-        /// <param name="cmd">The command to run.</param>
-        /// <returns>The builder.</returns>
+        
         public IGeneralGraphBuilderStep Then(ICommand cmd)
         {
             return AddNode(cmd, CommandGraphLink.Then);
         }
-
-        /// <summary>
-        /// Adds a new node to run if the previous one succeeded.
-        /// </summary>
-        /// <param name="cmd">The command to run.</param>
-        /// <returns>The builder.</returns>
+        
         public IGeneralGraphBuilderStep And(ICommand cmd)
         {
             return AddNode(cmd, CommandGraphLink.And);
         }
-
-        /// <summary>
-        /// Adds a new node to run if the previous one failed.
-        /// </summary>
-        /// <param name="cmd">The command to run.</param>
-        /// <returns>The builder.</returns>
+        
         public IGeneralGraphBuilderStep Or(ICommand cmd)
         {
             return AddNode(cmd, CommandGraphLink.Or);
         }
-
-        /// <summary>
-        /// Adds a new node to be piped to.
-        /// </summary>
-        /// <param name="cmd">The command to pipe to.</param>
-        /// <returns>The builder.</returns>
+        
         public IGeneralGraphBuilderStep AndPipeTo(ICommand cmd)
         {
             return AddNode(cmd, CommandGraphLink.Pipe);
         }
-
-        /// <summary>
-        /// Completes the graph.
-        /// </summary>
-        /// <returns>The command graph.</returns>
-        public CommandGraph Build()
-        {
-            return this;
-        }
-
+        
+        public CommandGraph Build() => this;
+        
         /// <summary>
         /// Converts the graph to an array.
         /// </summary>

@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Execution;
+using Bossy.Frontend;
 
 namespace Bossy.Runtime.Command.Library
 {
@@ -14,11 +15,16 @@ namespace Bossy.Runtime.Command.Library
         
         [Switch('r', "Repeat count. -1 means indefinitely.")]
         private int _repeatCount = -1;
+
+        [Switch('o', "Overwrite last line instead of appending.")]
+        private bool _overwrite = true;
         
         [Variadic("The command to repeat.")] 
         private string[] _command;
         
         private CommandContext _ctx;
+
+        private IModifiableOutputBuffer _buffer;
         
         public async Task<CommandStatus> ExecuteAsync(CommandContext ctx)
         {
@@ -26,6 +32,18 @@ namespace Bossy.Runtime.Command.Library
             
             var command = string.Join(" ", _command);
 
+            if (_overwrite)
+            {
+                if (ctx.Capabilities is IModifiableOutputBuffer buffer)
+                {
+                    _buffer = buffer;
+                }
+                else
+                {
+                    ctx.WriteWarning("Current UI does not support overwriting last buffer output. Appending instead.");
+                }
+            }
+            
             while (_repeatCount-- != 0)
             {
                 var pipe = new ObservablePipe(Write);
@@ -38,9 +56,18 @@ namespace Bossy.Runtime.Command.Library
             return CommandStatus.Ok;
         }
 
-        public void Write(object value)
+        private void Write(object value)
         {
-            _ctx.Write($"[Watch] {value}");
+            var line = $"[Watch] {value}";
+            
+            if (_buffer != null)
+            {
+                _buffer.Overwrite(line);
+            }
+            else
+            {
+                _ctx.Write(line);
+            }
         }
     }
 }

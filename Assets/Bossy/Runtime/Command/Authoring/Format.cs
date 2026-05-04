@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using Bossy.Execution;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -187,12 +186,7 @@ namespace Bossy.Command
         /// <param name="value">The value to render.</param>
         /// <returns>The rendered string.</returns>
         public static string Render(object value) => value.ToString().Replace(" ", "\u00A0");
-        
-        /// <summary>
-        /// Strips HTML tags from rich strings.
-        /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
+
         private static string StripMarkup(string text)
         {
             var pattern = new Regex(@"<(\w+)[^>]*>.*?</\1>", RegexOptions.Compiled | RegexOptions.Singleline);

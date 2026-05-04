@@ -94,8 +94,6 @@ namespace Bossy.Command
             var triedAdapting = false;
             TypeAdapterResult adapterResult = default;
 
-            // TODO: IF THIS SURVIVES, REFACTOR IT
-            
             do
             {
                 _token.ThrowIfCancellationRequested();
@@ -106,8 +104,11 @@ namespace Bossy.Command
                 {
                     throw new BossyStreamClosedException();
                 }
-                
-                if (response is T original) return original;
+
+                if (response is T original)
+                {
+                    return original;
+                }
                 
                 if (response is string textual)
                 {
@@ -140,8 +141,7 @@ namespace Bossy.Command
 
             if (triedAdapting)
             {
-                throw new BossyNotAdaptableException($"Could not parse response to type " +
-                                                 $"\"{typeof(T)}\":\n{adapterResult.ErrorMessage}");
+                throw new BossyNotAdaptableException($"Could not parse response to type \"{typeof(T)}\":\n{adapterResult.ErrorMessage}");
             }
             
             throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type {typeof(T)}");

@@ -10,6 +10,9 @@ using UnityEngine;
 
 namespace Bossy
 {
+    /// <summary>
+    /// Top level Bossy lifecycle manager. Handles creating sessions.
+    /// </summary>
     internal class LifecycleManager
     {
         private readonly BossyContext _context;
@@ -21,7 +24,12 @@ namespace Bossy
         
         private Dictionary<Bridge, LifecycleContainer> _containers = new();
 
-        
+        /// <summary>
+        /// Creates a new lifecycle manager.
+        /// </summary>
+        /// <param name="schemaRegistry">The schema registry.</param>
+        /// <param name="adapterRegistry">The adapter registry.</param>
+        /// <param name="settingsSource">The settings source.</param>
         public LifecycleManager(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, ISettingsSource settingsSource)
         {
             _parser = new Parser(schemaRegistry, adapterRegistry);
@@ -41,6 +49,11 @@ namespace Bossy
             ReconnectEditorSessions();
         }
         
+        /// <summary>
+        /// Creates a new Bossy fullstack session.
+        /// </summary>
+        /// <param name="frontendType">The frontend type to attach.</param>
+        /// <param name="space">The session space this session runs in.</param>
         public void CreateBossySession(FrontendType frontendType, SessionSpace space)
         {
             var content = _frontEndFactory.Create(frontendType);
@@ -64,7 +77,7 @@ namespace Bossy
         /// <summary>
         /// Handles closing all sessions attached to a host.
         /// </summary>
-        /// <param name="host"></param>
+        /// <param name="host">The host to close.</param>
         public void HandleHostClosure(IHost host)
         {
             var bridges = host.Controller.GetHostedBridges();
