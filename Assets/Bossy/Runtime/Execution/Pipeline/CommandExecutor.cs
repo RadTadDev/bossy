@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Command;
+using Bossy.Execution.Prelaunch;
 using Bossy.Frontend;
 using Bossy.Utils;
 
@@ -66,16 +68,23 @@ namespace Bossy.Execution
 
                 try
                 {
+                    var failure = group.Nodes.Select(n => RunHooks(n.Command)).FirstOrDefault(r => !r.Execute);
+                    if (failure != null)
+                    {
+                        output.Write($"Command execution cancelled: {failure.Message}");
+                        continue;
+                    }
+                
                     if (group.View != null)
                     {
                         session.Bridge.PushContent(group.View);
                     }
                     
-                    var task = group.Commands.Count == 1
-                        ? group.Commands[0].Command.ExecuteAsync(defaultContext)
-                        : BuildPipeline(group.Commands, session, defaultContext);
+                    var task = group.Nodes.Count == 1
+                        ? group.Nodes[0].Command.ExecuteAsync(defaultContext)
+                        : BuildPipeline(group.Nodes, session, defaultContext);
 
-                    previousLink = group.Commands.Last().Link;
+                    previousLink = group.Nodes.Last().Link;
                     previousStatus = await task;
                 }
                 catch (OperationCanceledException)
@@ -107,6 +116,15 @@ namespace Bossy.Execution
                     }
                 }
             }
+        }
+
+        private static PrelaunchResult RunHooks(ICommand command)
+        {
+            var hooks = command.GetType().GetCustomAttributes<PrelaunchHookAttribute>();
+
+            var failure = hooks.Select(h => h.OnPrelaunch(command)).FirstOrDefault(h => !h.Execute);
+            
+            return failure ?? PrelaunchResult.Allow();
         }
 
         private async Task<CommandStatus> BuildPipeline(IReadOnlyList<CommandGraphNode> group, Session session, CommandContext defaultContext)

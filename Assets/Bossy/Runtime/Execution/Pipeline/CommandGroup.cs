@@ -11,7 +11,7 @@ namespace Bossy.Execution
         /// <summary>
         /// The commands to run.
         /// </summary>
-        public IReadOnlyList<CommandGraphNode> Commands { get; }
+        public IReadOnlyList<CommandGraphNode> Nodes { get; }
         
         /// <summary>
         /// The view if the visible command defines one.
@@ -21,11 +21,11 @@ namespace Bossy.Execution
         /// <summary>
         /// Creates a new command group.
         /// </summary>
-        /// <param name="commands">The commands to run.</param>
+        /// <param name="nodes">The commands to run.</param>
         /// <param name="view">The view if the visible command defines one.</param>
-        public CommandGroup(List<CommandGraphNode> commands, IContentView view)
+        public CommandGroup(List<CommandGraphNode> nodes, IContentView view)
         {
-            Commands = commands;
+            Nodes = nodes;
             View = view;
         }
     }
