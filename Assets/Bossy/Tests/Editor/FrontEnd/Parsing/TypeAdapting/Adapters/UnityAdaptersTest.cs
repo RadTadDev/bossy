@@ -15,7 +15,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.5 2.5");
             var adapter = new Vector2Adapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Vector2)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.x, Is.EqualTo(1.5f).Within(0.0001f));
@@ -26,7 +26,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-1.0 -2.0");
             var adapter = new Vector2Adapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Vector2)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.x, Is.EqualTo(-1.0f).Within(0.0001f));
@@ -37,7 +37,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0");
             var adapter = new Vector2Adapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -45,7 +45,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 abc");
             var adapter = new Vector2Adapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -53,7 +53,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 2.0 3.0");
             var adapter = new Vector2Adapter();
-            adapter.TryConvert(cursor, out _);
+            adapter.TryConvert(cursor, null, out _);
             Assert.That(cursor.TryPeek(out var next), Is.True);
             Assert.That(next, Is.EqualTo("3.0"));
         }
@@ -64,7 +64,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 2.0 3.0");
             var adapter = new Vector3Adapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Vector3)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.x, Is.EqualTo(1.0f).Within(0.0001f));
@@ -76,7 +76,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 2.0");
             var adapter = new Vector3Adapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -84,7 +84,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 abc 3.0");
             var adapter = new Vector3Adapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -92,7 +92,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 2.0 3.0 4.0");
             var adapter = new Vector3Adapter();
-            adapter.TryConvert(cursor, out _);
+            adapter.TryConvert(cursor, null, out _);
             Assert.That(cursor.TryPeek(out var next), Is.True);
             Assert.That(next, Is.EqualTo("4.0"));
         }
@@ -103,7 +103,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 2.0 3.0 4.0");
             var adapter = new Vector4Adapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Vector4)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.x, Is.EqualTo(1.0f).Within(0.0001f));
@@ -116,7 +116,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 2.0 3.0");
             var adapter = new Vector4Adapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -124,7 +124,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 2.0 abc 4.0");
             var adapter = new Vector4Adapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -132,7 +132,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 2.0 3.0 4.0 5.0");
             var adapter = new Vector4Adapter();
-            adapter.TryConvert(cursor, out _);
+            adapter.TryConvert(cursor, null, out _);
             Assert.That(cursor.TryPeek(out var next), Is.True);
             Assert.That(next, Is.EqualTo("5.0"));
         }
@@ -143,7 +143,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("3 7");
             var adapter = new Vector2IntAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Vector2Int)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.x, Is.EqualTo(3));
@@ -154,7 +154,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-3 -7");
             var adapter = new Vector2IntAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Vector2Int)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.x, Is.EqualTo(-3));
@@ -165,7 +165,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.5 2.5");
             var adapter = new Vector2IntAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -173,7 +173,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1");
             var adapter = new Vector2IntAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -183,7 +183,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1 2 3");
             var adapter = new Vector3IntAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Vector3Int)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.x, Is.EqualTo(1));
@@ -195,7 +195,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 2.0 3.0");
             var adapter = new Vector3IntAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -203,7 +203,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1 2");
             var adapter = new Vector3IntAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -211,7 +211,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1 2 3 4");
             var adapter = new Vector3IntAdapter();
-            adapter.TryConvert(cursor, out _);
+            adapter.TryConvert(cursor, null, out _);
             Assert.That(cursor.TryPeek(out var next), Is.True);
             Assert.That(next, Is.EqualTo("4"));
         }
@@ -222,7 +222,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("#FF0000");
             var adapter = new ColorAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Color)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.r, Is.EqualTo(1.0f).Within(0.01f));
@@ -234,7 +234,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("#FF0000FF");
             var adapter = new ColorAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Color)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.a, Is.EqualTo(1.0f).Within(0.01f));
@@ -244,7 +244,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("#ZZZZZZ");
             var adapter = new ColorAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -252,7 +252,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 0.5 0.0");
             var adapter = new ColorAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Color)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.r, Is.EqualTo(1.0f).Within(0.0001f));
@@ -265,7 +265,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 0.5 0.0 0.75");
             var adapter = new ColorAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             var typed = (Color)output;
             Assert.That(result.Success, Is.True);
             Assert.That(typed.a, Is.EqualTo(0.75f).Within(0.0001f));
@@ -275,7 +275,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 0.5");
             var adapter = new ColorAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -283,7 +283,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 abc 0.0");
             var adapter = new ColorAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -291,7 +291,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1.0 0.5 0.0 0.75 99");
             var adapter = new ColorAdapter();
-            adapter.TryConvert(cursor, out _);
+            adapter.TryConvert(cursor, null, out _);
             Assert.That(cursor.TryPeek(out var next), Is.True);
             Assert.That(next, Is.EqualTo("99"));
         }
@@ -300,7 +300,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("");
             var adapter = new ColorAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
     }

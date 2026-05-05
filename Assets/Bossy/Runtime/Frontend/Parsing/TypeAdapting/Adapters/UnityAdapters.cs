@@ -5,7 +5,7 @@ namespace Bossy.Frontend.Parsing
 {
     public class Vector2Adapter : BaseTypeAdapter<Vector2>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Vector2 output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, TypeAdapterRegistry registry, out Vector2 output)
         {
             if (stream.TryConsume(2, out var tokens)
                 && float.TryParse(tokens[0], out var x)
@@ -22,7 +22,7 @@ namespace Bossy.Frontend.Parsing
 
     public class Vector3Adapter : BaseTypeAdapter<Vector3>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Vector3 output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, TypeAdapterRegistry registry, out Vector3 output)
         {
             if (stream.TryConsume(3, out var tokens)
                 && float.TryParse(tokens[0], out var x)
@@ -40,7 +40,7 @@ namespace Bossy.Frontend.Parsing
 
     public class Vector4Adapter : BaseTypeAdapter<Vector4>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Vector4 output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, TypeAdapterRegistry registry, out Vector4 output)
         {
             if (stream.TryConsume(4, out var tokens)
                 && float.TryParse(tokens[0], out var x)
@@ -59,7 +59,7 @@ namespace Bossy.Frontend.Parsing
 
     public class Vector2IntAdapter : BaseTypeAdapter<Vector2Int>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Vector2Int output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, TypeAdapterRegistry registry, out Vector2Int output)
         {
             if (stream.TryConsume(2, out var tokens)
                 && int.TryParse(tokens[0], out var x)
@@ -76,7 +76,7 @@ namespace Bossy.Frontend.Parsing
 
     public class Vector3IntAdapter : BaseTypeAdapter<Vector3Int>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Vector3Int output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, TypeAdapterRegistry registry, out Vector3Int output)
         {
             if (stream.TryConsume(3, out var tokens)
                 && int.TryParse(tokens[0], out var x)
@@ -94,7 +94,7 @@ namespace Bossy.Frontend.Parsing
 
     public class ColorAdapter : BaseTypeAdapter<Color>
     {
-        protected override TypeAdapterResult TryConvertToType(TokenStream stream, out Color output)
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, TypeAdapterRegistry registry, out Color output)
         {
             if (!stream.TryPeek(out var first))
             {

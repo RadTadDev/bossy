@@ -14,7 +14,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("");
             var adapter = new BoolAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.True);
         }
@@ -23,7 +23,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("true");
             var adapter = new BoolAdapter();
-            adapter.TryConvert(cursor, out var output);
+            adapter.TryConvert(cursor, null, out var output);
             Assert.That(output, Is.True);
         }
 
@@ -31,7 +31,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("false");
             var adapter = new BoolAdapter();
-            adapter.TryConvert(cursor, out var output);
+            adapter.TryConvert(cursor, null, out var output);
             Assert.That(output, Is.False);
         }
 
@@ -39,7 +39,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("--other");
             var adapter = new BoolAdapter();
-            adapter.TryConvert(cursor, out var output);
+            adapter.TryConvert(cursor, null, out var output);
             Assert.That(output, Is.True);
             Assert.That(cursor.TryPeek(out var remaining), Is.True);
             Assert.That(remaining, Is.EqualTo("--other"));
@@ -49,7 +49,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("hello");
             var adapter = new BoolAdapter();
-            adapter.TryConvert(cursor, out var output);
+            adapter.TryConvert(cursor, null, out var output);
             Assert.That(output, Is.True);
             Assert.That(cursor.TryPeek(out var remaining), Is.True);
             Assert.That(remaining, Is.EqualTo("hello"));
@@ -61,7 +61,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("255");
             var adapter = new ByteAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo((byte)255));
         }
@@ -70,7 +70,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("256");
             var adapter = new ByteAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -78,7 +78,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-1");
             var adapter = new ByteAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -88,7 +88,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-128");
             var adapter = new SByteAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo((sbyte)-128));
         }
@@ -97,7 +97,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("128");
             var adapter = new SByteAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -107,7 +107,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-32768");
             var adapter = new ShortAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo((short)-32768));
         }
@@ -116,7 +116,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("32768");
             var adapter = new ShortAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -126,7 +126,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("65535");
             var adapter = new UShortAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo((ushort)65535));
         }
@@ -135,7 +135,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-1");
             var adapter = new UShortAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -145,7 +145,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("42");
             var adapter = new IntAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo(42));
         }
@@ -154,7 +154,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-100");
             var adapter = new IntAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo(-100));
         }
@@ -163,7 +163,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("abc");
             var adapter = new IntAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
             Assert.That(result.ErrorMessage, Does.Contain("abc"));
         }
@@ -172,7 +172,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("");
             var adapter = new IntAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
             Assert.That(result.ErrorMessage, Does.Contain("nothing"));
         }
@@ -181,7 +181,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("1 2 3");
             var adapter = new IntAdapter();
-            adapter.TryConvert(cursor, out _);
+            adapter.TryConvert(cursor, null, out _);
             Assert.That(cursor.TryPeek(out var next), Is.True);
             Assert.That(next, Is.EqualTo("2"));
         }
@@ -192,7 +192,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("4294967295");
             var adapter = new UIntAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo(uint.MaxValue));
         }
@@ -201,7 +201,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-1");
             var adapter = new UIntAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -211,7 +211,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-9223372036854775808");
             var adapter = new LongAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo(long.MinValue));
         }
@@ -220,7 +220,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("abc");
             var adapter = new LongAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -230,7 +230,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("18446744073709551615");
             var adapter = new ULongAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo(ulong.MaxValue));
         }
@@ -239,7 +239,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-1");
             var adapter = new ULongAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -249,7 +249,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("3.14");
             var adapter = new FloatAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo(3.14f).Within(0.0001f));
         }
@@ -258,7 +258,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("-1.5");
             var adapter = new FloatAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo(-1.5f).Within(0.0001f));
         }
@@ -267,7 +267,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("abc");
             var adapter = new FloatAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -277,7 +277,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("3.141592653589793");
             var adapter = new DoubleAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo(3.141592653589793).Within(0.000000000000001));
         }
@@ -286,7 +286,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("abc");
             var adapter = new DoubleAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -296,7 +296,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("A");
             var adapter = new CharAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo('A'));
         }
@@ -305,7 +305,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("AB");
             var adapter = new CharAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -313,7 +313,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("");
             var adapter = new CharAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -323,7 +323,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("hello");
             var adapter = new StringAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo("hello"));
         }
@@ -332,7 +332,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("\"hello world\"");
             var adapter = new StringAdapter();
-            var result = adapter.TryConvert(cursor, out var output);
+            var result = adapter.TryConvert(cursor, null, out var output);
             Assert.That(result.Success, Is.True);
             Assert.That(output, Is.EqualTo("hello world"));
         }
@@ -341,7 +341,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("");
             var adapter = new StringAdapter();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             Assert.That(result.Success, Is.False);
         }
 
@@ -349,7 +349,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("foo bar");
             var adapter = new StringAdapter();
-            adapter.TryConvert(cursor, out _);
+            adapter.TryConvert(cursor, null, out _);
             Assert.That(cursor.TryPeek(out var next), Is.True);
             Assert.That(next, Is.EqualTo("bar"));
         }
@@ -365,7 +365,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("Dog");
             var adapter = new EnumAdapter<Animal>();
-            adapter.TryConvert(cursor, out var output);
+            adapter.TryConvert(cursor, null, out var output);
             Assert.That(output, Is.EqualTo(Animal.Dog));
             Assert.That(cursor.TryPeek(out _), Is.False);
         }
@@ -374,7 +374,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("dog");
             var adapter = new EnumAdapter<Animal>();
-            adapter.TryConvert(cursor, out var output);
+            adapter.TryConvert(cursor, null, out var output);
             Assert.That(output, Is.EqualTo(Animal.Dog));
             Assert.That(cursor.TryPeek(out _), Is.False);
         }
@@ -383,7 +383,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("10");
             var adapter = new EnumAdapter<Animal>();
-            adapter.TryConvert(cursor, out var output);
+            adapter.TryConvert(cursor, null, out var output);
             Assert.That(output, Is.EqualTo(Animal.Dog));
             Assert.That(cursor.TryPeek(out _), Is.False);
         }
@@ -392,7 +392,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("5");
             var adapter = new EnumAdapter<Animal>();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             
             Assert.That(result.Success, Is.False);
             Assert.That(cursor.TryPeek(out _), Is.False);
@@ -402,7 +402,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
         {
             var cursor = new TokenStream("Bad");
             var adapter = new EnumAdapter<Animal>();
-            var result = adapter.TryConvert(cursor, out _);
+            var result = adapter.TryConvert(cursor, null, out _);
             
             Assert.That(result.Success, Is.False);
             Assert.That(cursor.TryPeek(out _), Is.False);

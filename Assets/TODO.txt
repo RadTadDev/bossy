@@ -7,15 +7,13 @@ Roslyn Analyzers
 - Ensure only one argument attribute per field
 
 TODO: 
-- unity object binding
-- inject type adapter registry into adapter base class so complex adapters can use primitive ones.
-- add prompt builder to context
+- auto complete
 - fix settings
 - settings command
-- auto complete
 - startup file
 - style facelift and conformance
 - verify namespaces and TODOs and remove dead usings
+- link.xml file to prevent stripping in some cases
 
 Future features:
 - Session restoration 

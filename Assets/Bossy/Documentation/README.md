@@ -19,12 +19,13 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
     - [Command Context](#command-context)
     - [Return Values](#return-values)
     - [Argument Validation](#argument-validation)
+    - [Binding](#binding)
+    - [Prelaunch Hooks](#prelaunch-hooks)
 - [Async Commands](#async-commands)
 - [Validation](#validation)
 - [Piping](#piping)
 - [Type Adapting](#type-adapting)
 - [Custom Command UI](#custom-command-ui)
-
 ---
 
 ## Installation
@@ -332,21 +333,23 @@ private string[] _files;
 
 `CommandContext` (exposed as `SimpleContext` in synchronous commands) is the sole API surface available during execution.
 
-| Member                                       | Description                                                                                                |
-|----------------------------------------------|------------------------------------------------------------------------------------------------------------|
-| `ctx.Write(string)`                          | Writes a line to the console output.                                                                       |
-| `ctx.WriteError(string)`                     | Writes a formatted error line.                                                                             |
-| `ctx.WriteWarning(string)`                   | Writes a formatted warning line.                                                                           |
-| `ctx.NewLine()`                              | Writes a new line.                                                                                         |
-| `ctx.ReadAsync<T>()`                         | Reads a typed object from the input stream.                                                                |
-| `ctx.ReadAllAsync<T>()`                      | Reads typed objects from the input stream as long as its open. See below.                                  |
-| `ctx.CloseOutputStream()`                    | Indicates that no more output is coming. This breaks `ctx.ReadAllAsync<T>()` loops.                        |
-| `ctx.Execute(string, ObservablePipe = null)` | Executes another command. Use the observable pipe to get callbacks for the new command's reads and writes. |
-| `ctx.Delay(TimeSpace)`                       | Delays for some time.                                                                                      |
-| `ctx.Yield()`                                | Yeilds execution contorl. Useful to break tight loops without a delay.                                     |
-| `ctx.Bossy`                                  | Access to the Bossy instance, including the schema registry.                                               |
-| `ctx.CancelationToken`                       | Gets the command's cancellation token.                                                                     |
-| `ctx.Capabilities`                           | Gets the front end Capabilities. See below.                                                                |
+| Member                                                      | Description                                                                                                |
+|-------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
+| `ctx.Write(string)`                                         | Writes a line to the console output.                                                                       |
+| `ctx.WriteError(string)`                                    | Writes a formatted error line.                                                                             |
+| `ctx.WriteWarning(string)`                                  | Writes a formatted warning line.                                                                           |
+| `ctx.NewLine()`                                             | Writes a new line.                                                                                         |
+| `ctx.ReadAsync<T>()`                                        | Reads a typed object from the input stream.                                                                |
+| `ctx.ReadAllAsync<T>()`                                     | Reads typed objects from the input stream as long as its open. See below.                                  |
+| `ctx.CloseOutputStream()`                                   | Indicates that no more output is coming. This breaks `ctx.ReadAllAsync<T>()` loops.                        |
+| `ctx.Execute(string, ObservablePipe = null)`                | Executes another command. Use the observable pipe to get callbacks for the new command's reads and writes. |
+| `ctx.Delay(TimeSpace)`                                      | Delays for some time.                                                                                      |
+| `ctx.Yield()`                                               | Yields execution contorl. Useful to break tight loops without a delay.                                     |
+| `ctx.Prompt(string)`                                        | Prompts the user by outputting a string then doing a read.                                                 |
+| `ctx.PromptWithOptions(IEnumerable options, string = null)` | Prompts the user by outputting a string then reading for one of several listed options.                    |
+| `ctx.Bossy`                                                 | Access to the Bossy instance, including the schema registry.                                               |
+| `ctx.CancelationToken`                                      | Gets the command's cancellation token.                                                                     |
+| `ctx.Capabilities`                                          | Gets the front end Capabilities. See below.                                                                |
 
 Note: When using `ctx.ReadAllAsync<T>()`, you should should use it in a loop like so:
 ```csharp
@@ -416,6 +419,7 @@ Some `Format` calls have overloads to take in the context and print immediately.
 | `CommandStatus.Ok`    | Command completed successfully.                                            |
 | `CommandStatus.Error` | Command failed. Use `ctx.WriteError` before returning to display an error. |
 
+---
 
 ### Argument Validation
 
@@ -458,6 +462,48 @@ To make your own validators, inherit from the `ArgumentValidationAttribute` clas
         }
     }
 ```
+---
+
+### Binding
+In many scenarios you may need to access objects that are already created rather than making new ones on the command line. For this you can use the binding system. 
+
+To ask for an argument via binding, simply add the `[Bind]` attribute to a field in your command like so:
+
+```csharp
+[Bind]
+private NetworkManager _network;
+```
+
+In order to tell Bossy how to find the `NetworkManager`, make sure to use the `.WithBindings(IBossyBinder)` call when building bossy (see [Bootstrapping](#bootstrapping)).
+
+The `IBossyBinder` object is a live registry of items. You should make one by implementing `IBossyBinder`. It only asks you to implement the `bool TryGet(Type requestedType, out object instance)` method, but you may find it useful to include your own `Register<T>()` method or connect this to your existing dependency injection (DI) container.
+
+Since the object is live, any instances that you register _after_ creating Bossy will be reflected and queryable by the system.
+
+---
+
+### Prelaunch Hooks
+
+You may also want to include arbitrary logic before allowing a command to run. You can use the `PrelaunchHookAttribute` for this. Below is an example of the built-in confirm hook.
+
+```csharp
+[AttributeUsage(AttributeTargets.Class)]
+public class ConfirmAttribute : PrelaunchHookAttribute
+{
+    public override async Task<PrelaunchResult> OnPrelaunch(ICommand command, CommandContext ctx)
+    {
+        ctx.Write("Are you sure you want to run this command?");
+        
+        var response = await ctx.ReadAsync<Confirmation>();
+
+        return response is Confirmation.Confirm ? PrelaunchResult.Allow() : PrelaunchResult.Deny("Confirmation not given.");
+    }
+}
+```
+
+Note that these are aysnc and you have the context passed in so you can read and write the front end. You may use these hooks to do arbitrary logic before a command runs and simply return PrelaunchResult.Allow() in all cases if that suits your needs.
+
+Make sure not to forget the AttributeUsage attribute at the top or people may accidentally place this attribute on invalid items like fields.
 
 ---
 

@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
-using Bossy.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -33,6 +32,7 @@ namespace Bossy.Frontend
         private TaskCompletionSource<object> _readSource;
 
         private readonly Dictionary<string, string> _aliases = new();
+        private readonly Dictionary<Type, CliDisplayAdapter> _displayAdapters = new();
         
         private readonly List<string> _outputBuffer = new() { string.Empty };
         
@@ -85,6 +85,9 @@ namespace Bossy.Frontend
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeReload;
             EditorApplication.quitting += OnBeforeReload;
 #endif
+            
+            // Register adapters
+            _displayAdapters[typeof(OptionsPrompt)] = new OptionsPromptDisplayAdapter();
         }
 
         public virtual VisualElement CreateView()
@@ -146,7 +149,7 @@ namespace Bossy.Frontend
         
         public void Write(object value)
         {
-            var line = value.ToString();
+            var line = DisplayObject(value);
             
             line = Format.Render(line);
             
@@ -155,6 +158,17 @@ namespace Bossy.Frontend
             _view.ScrollToItem(_outputBuffer.Count - 1);
         }
 
+        private string DisplayObject(object value)
+        {
+            // The Gui can do this too, but even better with control widgets and such
+            if (_displayAdapters.TryGetValue(value.GetType(), out var adapter))
+            {
+                return adapter.Display(value);
+            }
+
+            return value.ToString();
+        }
+        
         public virtual async Task<object> ReadAsync(Type requestedType, CancellationToken token)
         {
             _reading = true;

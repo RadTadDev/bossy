@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Frontend.Parsing;
@@ -134,17 +135,17 @@ namespace Bossy.Command
 
                 if (_allowRetry)
                 {
-                    Writer.Write($"\"{response}\" could not be converted to type \"{typeof(T)}.");
+                    Writer.Write($"\"{response}\" could not be converted to type \"{typeof(T).GetFriendlyName()}. Please enter a valid response:");
                 }
                 
             } while (_allowRetry);
 
             if (triedAdapting)
             {
-                throw new BossyNotAdaptableException($"Could not parse response to type \"{typeof(T)}\":\n{adapterResult.ErrorMessage}");
+                throw new BossyNotAdaptableException($"Could not parse response to type \"{typeof(T).GetFriendlyName()}\":\n{adapterResult.ErrorMessage}");
             }
             
-            throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type {typeof(T)}");
+            throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type {typeof(T).GetFriendlyName()}");
         }
         
         /// <summary>
@@ -204,6 +205,8 @@ namespace Bossy.Command
         /// </summary>
         public void CloseOutStream()
         {
+            _token.ThrowIfCancellationRequested();
+            
             Writer.CloseWriter();
         }
 
@@ -215,7 +218,49 @@ namespace Bossy.Command
         /// <returns></returns>
         public Task ExecuteAsync(string command, ObservablePipe pipe = null)
         {
+            _token.ThrowIfCancellationRequested();
+            
             return _session.ExecuteAsync(command, _token, null, pipe ?? GetWriter());
+        }
+
+        /// <summary>
+        /// Displays the prompt string and waits for input.
+        /// </summary>
+        /// <param name="prompt">The prompt string.</param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>The reading task.</returns>
+        public Task<T> Prompt<T>(string prompt)
+        {
+            _token.ThrowIfCancellationRequested();
+            
+            Write(prompt);
+            return ReadAsync<T>();
+        }
+
+        /// <summary>
+        /// Prompts with options.
+        /// </summary>
+        /// <param name="options">The options.</param>
+        /// <param name="prompt">A custom prompt message.</param>
+        /// <typeparam name="T">The type of the options.</typeparam>
+        /// <returns>The selected choice.</returns>
+        public async Task<T> PromptWithOptions<T>(IEnumerable<T> options, string prompt = null)
+        {
+            var list = options.ToList();
+            
+            while (true)
+            {
+                Write(prompt ?? "Chose one of the following options:");
+                
+                Write(OptionsPrompt.Create(list));
+                
+                var choice = await ReadAsync<T>();
+                
+                if (list.Contains(choice))
+                {
+                    return choice;
+                }
+            }
         }
     }
 }

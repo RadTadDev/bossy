@@ -9,8 +9,9 @@ namespace Bossy.Frontend.Parsing
         /// Attempts to convert one type to another.
         /// </summary>
         /// <param name="stream">The current token cursor.</param>
+        /// <param name="registry"></param>
         /// <param name="output">The output.</param>
         /// <returns>The result.</returns>
-        public TypeAdapterResult TryConvert(TokenStream stream, out object output);
+        public TypeAdapterResult TryConvert(TokenStream stream, TypeAdapterRegistry registry, out object output);
     }
 }

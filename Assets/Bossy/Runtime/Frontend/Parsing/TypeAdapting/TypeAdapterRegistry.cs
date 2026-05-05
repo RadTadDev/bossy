@@ -50,7 +50,7 @@ namespace Bossy.Frontend.Parsing
                 return TypeAdapterResult.Fail($"No registered adapter handles type \"{type.GetFriendlyName()}\"");
             }
 
-            var result = adapter.TryConvert(stream, out output);
+            var result = adapter.TryConvert(stream, this, out output);
 
             return result.Success ? result : TypeAdapterResult.Fail(result.ErrorMessage);
         }

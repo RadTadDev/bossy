@@ -68,15 +68,25 @@ namespace Bossy.Execution
                 try
                 {
                     // 1. Ensure all prelaunch hooks pass
-                    var failure = group.Nodes.Select(n => RunHooks(n.Command)).FirstOrDefault(r => !r.Execute);
+                    PrelaunchResult failure = null;
+                    foreach (var node in group.Nodes)
+                    {
+                        var result = await RunHooks(node.Command, defaultContext);
+                        if (!result.Execute)
+                        {
+                            failure = result;
+                            break;
+                        }
+                    }
+
                     if (failure != null)
                     {
                         output.Write($"Command execution cancelled: {failure.Message}");
-                        
+    
                         // Note: Use error here rather than canceled so other commands react appropriately
                         previousStatus = CommandStatus.Error;
                         previousLink = group.Nodes.Last().Link;
-                        
+    
                         continue;
                     }
                 
@@ -138,13 +148,17 @@ namespace Bossy.Execution
             }
         }
 
-        private static PrelaunchResult RunHooks(ICommand command)
+        private static async Task<PrelaunchResult> RunHooks(ICommand command, CommandContext context)
         {
             var hooks = command.GetType().GetCustomAttributes<PrelaunchHookAttribute>();
 
-            var failure = hooks.Select(h => h.OnPrelaunch(command)).FirstOrDefault(h => !h.Execute);
-            
-            return failure ?? PrelaunchResult.Allow();
+            foreach (var hook in hooks)
+            {
+                var result = await hook.OnPrelaunch(command, context);
+                if (!result.Execute) return result;
+            }
+
+            return PrelaunchResult.Allow();
         }
 
         private InstallBindingResult InstallBindings(ICommand command)

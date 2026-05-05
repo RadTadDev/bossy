@@ -1,4 +1,5 @@
 using System;
+using Bossy.Command;
 using Bossy.Frontend.Parsing;
 using Bossy.Schema.Registry;
 using Bossy.Utils;
@@ -54,6 +55,7 @@ namespace Bossy
         {
             _schemaRegistry = schemaRegistry;
             
+            // Primitives
             _typeAdapterRegistry.RegisterAdapter(new BoolAdapter());
             _typeAdapterRegistry.RegisterAdapter(new ByteAdapter());
             _typeAdapterRegistry.RegisterAdapter(new SByteAdapter());
@@ -68,15 +70,19 @@ namespace Bossy
             _typeAdapterRegistry.RegisterAdapter(new CharAdapter());
             _typeAdapterRegistry.RegisterAdapter(new StringAdapter());
 
+            // Unity primitives
             _typeAdapterRegistry.RegisterAdapter(new Vector2Adapter());
             _typeAdapterRegistry.RegisterAdapter(new Vector3Adapter());
             _typeAdapterRegistry.RegisterAdapter(new Vector4Adapter());
             _typeAdapterRegistry.RegisterAdapter(new Vector2IntAdapter());
             _typeAdapterRegistry.RegisterAdapter(new Vector3IntAdapter());
             _typeAdapterRegistry.RegisterAdapter(new ColorAdapter());
-        
+            
             // Enum types
             _typeAdapterRegistry.RegisterAdapter(new EnumAdapter<KeyCode>());
+            
+            // Custom
+            _typeAdapterRegistry.RegisterAdapter(new ConfirmationAdapter());
         }
         
         public IBossyRegisterStep WithAdapter<TAdapter>() where TAdapter : ITypeAdapter, new()

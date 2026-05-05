@@ -10,11 +10,12 @@ namespace Bossy.Frontend.Parsing
         /// Consumes tokens and converts from string to a type.
         /// </summary>
         /// <param name="stream">The token stream.</param>
+        /// <param name="registry"></param>
         /// <param name="output">The output type.</param>
         /// <returns>The result.</returns>
-        public TypeAdapterResult TryConvert(TokenStream stream, out object output)
+        public TypeAdapterResult TryConvert(TokenStream stream, TypeAdapterRegistry registry, out object output)
         {
-            var result = TryConvertToType(stream, out var converted);
+            var result = TryConvertToType(stream, registry, out var converted);
 
             output = result.Success ? converted : null;
 
@@ -25,8 +26,9 @@ namespace Bossy.Frontend.Parsing
         /// Consumes tokens and converts from string to a type.
         /// </summary>
         /// <param name="stream">The token stream.</param>
+        /// <param name="registry">The type adapter registry.</param>
         /// <param name="output">The output type.</param>
         /// <returns>The result.</returns>
-        protected abstract TypeAdapterResult TryConvertToType(TokenStream stream, out T output);
+        protected abstract TypeAdapterResult TryConvertToType(TokenStream stream, TypeAdapterRegistry registry, out T output);
     }
 }

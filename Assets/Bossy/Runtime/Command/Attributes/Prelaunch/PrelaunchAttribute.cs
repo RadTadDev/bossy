@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Bossy.Command
 {
@@ -12,7 +13,8 @@ namespace Bossy.Command
         /// Runs before a command launches.
         /// </summary>
         /// <param name="command">The command about to execute.</param>
+        /// <param name="ctx">The context of the command about to run.</param>
         /// <returns>True if the command should execute, otherwise false.</returns>
-        public abstract PrelaunchResult OnPrelaunch(ICommand command);
+        public abstract Task<PrelaunchResult> OnPrelaunch(ICommand command, CommandContext ctx);
     }
 }
