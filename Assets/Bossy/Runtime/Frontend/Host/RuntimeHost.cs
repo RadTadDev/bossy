@@ -38,7 +38,7 @@ namespace Bossy.Frontend
             _controller = new RuntimeHostController(_document, settings, space);
         }
 
-        public void Open()
+        public void Reveal()
         {
             _document.rootVisualElement.style.display = DisplayStyle.Flex;
             _controller.Show();

@@ -39,7 +39,7 @@ namespace Bossy.Frontend
             else
             {
                 _hostHasFocus = true;
-                _mainHosts[space].Open();
+                _mainHosts[space].Reveal();
             }
         }
         
@@ -66,6 +66,10 @@ namespace Bossy.Frontend
             if (space is SessionSpace.Runtime)
             {
                 space = SessionSpace.RuntimeCommand;
+            }
+            else
+            {
+                space = SessionSpace.EditCommand;
             }
             
             return MakeAndFocusHost(space, viewer, true);

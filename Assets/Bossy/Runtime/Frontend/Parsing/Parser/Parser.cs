@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Bossy.Command;
 using Bossy.Schema.Registry;
 using Bossy.Schema;
 using Bossy.Execution;
-using Bossy.Utils;
 
 namespace Bossy.Frontend.Parsing
 {
@@ -29,13 +29,17 @@ namespace Bossy.Frontend.Parsing
         /// </summary>
         /// <param name="input">The input to parse.</param>
         /// <param name="operators">The operators to use.</param>
+        /// <param name="aliases">An optional list of aliases to expand before parsing.</param>
         /// <returns>True is parsing was successful, otherwise false.</returns>
-        public ParseResult Parse(string input, OperatorList operators)
+        public ParseResult Parse(string input, OperatorList operators, Dictionary<string, string> aliases = null)
         {
             if (string.IsNullOrWhiteSpace(input)) return new EmptyInputError();
             
             // 1. Expand macros
-            // TODO: Likely inject the session Macro/Alias manager on construction
+            if (ShouldExpandAliases(input, aliases))
+            {
+                input = ExpandAliases(input, aliases);
+            }
             
             // 2. Split into nodes
             var tokens = Tokenizer.Tokenize(input, operators.ToEnumerable());
@@ -61,6 +65,28 @@ namespace Bossy.Frontend.Parsing
                 
             // 5. Build the command graph.
             return new ParseSucceeded(BuildGraph(pipeline, isWindowed));
+        }
+
+        private bool ShouldExpandAliases(string input, Dictionary<string, string> aliases)
+        {
+            if (aliases == null) return false;
+
+            // Don't expand if this command is the alias remove command
+            input = input.Trim();
+
+            if (!input.StartsWith("alias")) return true;
+            
+            input = input["alias".Length..].Trim();
+
+            return !input.StartsWith("remove");
+        }
+        
+        private static string ExpandAliases(string input, Dictionary<string, string> aliases)
+        {
+            return string.Join(" ", Regex.Matches(input, @"""[^""]*""|(\S+)")
+                .Select(m => m.Value.StartsWith("\"")
+                    ? m.Value
+                    : aliases.TryGetValue(m.Value, out var alias) ? alias : m.Value));
         }
 
         private ParseStep<List<ParseNode>> MakePipeline(List<string> tokens, OperatorList operators, out bool isWindowed)
@@ -293,7 +319,7 @@ namespace Bossy.Frontend.Parsing
             var type = variadic.Type.GetElementType()!;
 
             var args = new List<object>();
-            
+
             // 2. Loop over all remaining tokens to put into variadic args
             while (argTokens.Count > 0)
             {
@@ -385,13 +411,7 @@ namespace Bossy.Frontend.Parsing
                 foreach (var validator in arg.Validators)
                 {
                     var field = node.Command.GetType().GetField(arg.FieldInfo.Name, bindingFlags);
-
-                    if (field == null)
-                    {
-                        Log.Info("WHY SI ");
-                    }
-                    
-                    var value = field.GetValue(node.Command);
+                    var value = field!.GetValue(node.Command);
                     var result = validator.Validate(value);
 
                     if (!result.Success)

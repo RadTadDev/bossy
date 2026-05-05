@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 
 using UnityEditor;
+using UnityEngine;
 
 namespace Bossy.Frontend
 {
@@ -18,7 +19,15 @@ namespace Bossy.Frontend
 
         private static void OnBeforeReload()
         {
-            
+            var windows = Resources.FindObjectsOfTypeAll<EditorHost>();
+
+            foreach (var window in windows)
+            {
+                if (window.Space is SessionSpace.EditCommand)
+                {
+                    window.Close();
+                }
+            }
         }
     }
 }

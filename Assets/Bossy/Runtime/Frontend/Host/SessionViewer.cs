@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
-using Bossy.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
 {
+    /// <summary>
+    /// A viewer that helps to render sessions.
+    /// </summary>
     internal class SessionViewer : IDisposable
     {
+        /// <summary>
+        /// The bridge to the session backend.
+        /// </summary>
         public readonly Bridge Bridge;
         
         private VisualElement _root;
@@ -15,6 +20,11 @@ namespace Bossy.Frontend
         
         private readonly Stack<ViewState> _contentStack = new();
         
+        /// <summary>
+        /// Creates a new viewer.
+        /// </summary>
+        /// <param name="bridge">The bridge to the session backend.</param>
+        /// <param name="userInterface">The user interface to render.</param>
         public SessionViewer(Bridge bridge, IUserInterfaceView userInterface)
         {
             Bridge = bridge;
@@ -26,12 +36,19 @@ namespace Bossy.Frontend
             Bridge.SetUIView(_userInterface);
         }
 
+        /// <summary>
+        /// Sets the root visual element this viewer docks to and initializes the UI.
+        /// </summary>
+        /// <param name="root"></param>
         public void SetRootAndInitializeView(VisualElement root)
         {
             _root = root;
             PushContent(_userInterface);
         }
 
+        /// <summary>
+        /// Focuses this viewer.
+        /// </summary>
         public void Focus()
         {
             if (_contentStack.TryPeek(out var current))
@@ -40,6 +57,9 @@ namespace Bossy.Frontend
             }
         }
 
+        /// <summary>
+        /// Defocuses this viewer.
+        /// </summary>
         public void Defocus()
         {
             if (_contentStack.TryPeek(out var current))
@@ -102,7 +122,10 @@ namespace Bossy.Frontend
         
         public void Dispose()
         {
-            // TODO release managed resources here
+            while (_contentStack.TryPop(out var popped))
+            {
+                popped.Content.OnDefocus();
+            }
         }
 
         private struct ViewState

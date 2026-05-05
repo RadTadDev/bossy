@@ -3,11 +3,12 @@
 using System;
 using Bossy.Settings;
 using UnityEditor;
-using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
 {
+    /// <summary>
+    /// Hosts graphics in an editor window.
+    /// </summary>
     internal class EditorHost : EditorWindow, IHost
     {
         public IHostController Controller => _controller;
@@ -28,7 +29,7 @@ namespace Bossy.Frontend
             _controller = new EditorHostController(settings, createNewSession, rootVisualElement);
         }
 
-        public void Open()
+        public void Reveal()
         {
             Focus();
             _controller.Show();

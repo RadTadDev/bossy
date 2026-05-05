@@ -18,13 +18,22 @@ using UnityEditor;
 
 namespace Bossy.Frontend
 {
-    internal class CliUserInterfaceView : IUserInterfaceView, IHistorical, IClearable
+    /// <summary>
+    /// A default command line interface to Bossy.
+    /// </summary>
+    internal class CliUserInterfaceView : IUserInterfaceView,
+        IHistorical,
+        IClearable,
+        IModifiableOutputBuffer,
+        IAliasCapability
     {
         private readonly BossyCliSettings _cliSettings;
         private readonly BossyInputSettings _inputSettings;
 
         private TaskCompletionSource<object> _readSource;
 
+        private readonly Dictionary<string, string> _aliases = new();
+        
         private readonly List<string> _outputBuffer = new() { string.Empty };
         
         protected TextField Input;
@@ -40,12 +49,17 @@ namespace Bossy.Frontend
         private Signaler _signaler;
 
         private static bool _historyLoaded;
-        private static bool _historyWritten;
         private string _historyFilePath = Path.Combine(Application.persistentDataPath, "bossy_cli_history.txt");
         private static List<string> _historyBuffer;
 
         private int _historyIndex;
         
+        /// <summary>
+        /// Creates a Cli interface.
+        /// </summary>
+        /// <param name="parser">The parser.</param>
+        /// <param name="cliSettings">The Cli settings.</param>
+        /// <param name="inputSettings">The input settings.</param>
         public CliUserInterfaceView(Parser parser, BossyCliSettings cliSettings, BossyInputSettings inputSettings)
         {
             _parser = parser;
@@ -66,8 +80,10 @@ namespace Bossy.Frontend
             
             _historyIndex = _historyBuffer.Count;
             
+            Application.quitting += OnBeforeReload;
 #if UNITY_EDITOR
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeReload;
+            EditorApplication.quitting += OnBeforeReload;
 #endif
         }
 
@@ -101,10 +117,6 @@ namespace Bossy.Frontend
                 else if (_inputSettings.HistoryForward.IsAsserted(evt))
                 {
                     HistoryForward();
-                }
-                else
-                {
-                    FocusInput();
                 }
             },TrickleDown.TrickleDown);
             
@@ -162,7 +174,7 @@ namespace Bossy.Frontend
         private void Submit()
         {
             var line = Input.value;
-            
+
             Write($"> {line}");
             
             object result = line;
@@ -185,7 +197,7 @@ namespace Bossy.Frontend
                     _cliSettings.WindowOperator
                 );
                 
-                var parseResult = _parser.Parse(line, operatorList);
+                var parseResult = _parser.Parse(line, operatorList, _aliases);
                 if (!parseResult.TryGetGraph(out var graph))
                 {
                     Write(Format.Error(parseResult.Message));
@@ -245,19 +257,21 @@ namespace Bossy.Frontend
 
         private void FocusInput()
         {
-            Input?.schedule.Execute(() => Input?.Focus());
+            Input?.schedule.Execute(() =>
+            {
+                Input.Focus();
+                Input.cursorIndex = _cachedInput.Length;
+                Input.selectIndex = _cachedInput.Length;
+            });
         }
 
         private void OnBeforeReload()
         {
-            if (!_historyWritten)
-            {
-                _historyWritten = true;
+            File.Delete(_historyFilePath);
 
-                if (_historyBuffer.Count > 0)
-                {
-                    File.WriteAllLines(_historyFilePath, _historyBuffer);
-                }
+            if (_historyBuffer.Count > 0)
+            {
+                File.WriteAllLines(_historyFilePath, _historyBuffer);
             }
         }
 
@@ -269,6 +283,12 @@ namespace Bossy.Frontend
             
             Input.value = _historyBuffer[_historyIndex];
             _cachedInput = Input.value;
+
+            Input.schedule.Execute(() =>
+            {
+                Input.cursorIndex = _cachedInput.Length;
+                Input.selectIndex = _cachedInput.Length;
+            });
         }
 
         private void HistoryForward()
@@ -279,6 +299,8 @@ namespace Bossy.Frontend
             
             Input.value = _historyBuffer[_historyIndex];
             _cachedInput = Input.value;
+            Input.cursorIndex = _cachedInput.Length;
+            Input.selectIndex = _cachedInput.Length;
         }
 
         private void AppendHistory(string line)
@@ -311,6 +333,40 @@ namespace Bossy.Frontend
             _outputBuffer.Clear();
             _outputBuffer.Add(string.Empty);
             _view.RefreshItems();
+        }
+
+        public void Overwrite(object value)
+        {
+            if (_outputBuffer.Count == 0)
+            {
+                Write(value);
+            }
+            else
+            {
+                var line = value.ToString();
+            
+                line = Format.Render(line);
+            
+                _outputBuffer[^1] = line;
+                _view.RefreshItems();
+                _view.ScrollToItem(_outputBuffer.Count - 1);
+            }
+        }
+
+        public Dictionary<string, string> GetAliases() => _aliases;
+
+        public bool AssignAlias(string alias, string value)
+        {
+            alias = alias.Trim();
+
+            if (alias.Any(c => !char.IsLetter(c))) return false;
+            _aliases[alias] = value;
+            return true;
+        }
+
+        public bool DeleteAlias(string alias)
+        {
+            return _aliases.Remove(alias);
         }
     }
 }

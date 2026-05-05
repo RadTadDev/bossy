@@ -13,6 +13,12 @@ namespace Bossy.Frontend
 
         private VisualElement _contentRect;
         
+        /// <summary>
+        /// Creates a new editor host controller.
+        /// </summary>
+        /// <param name="settings">Input settings.</param>
+        /// <param name="createNewSession">A new session creation hook.</param>
+        /// <param name="root">The root visual element of the host.</param>
         public EditorHostController(BossyInputSettings settings, Action<FrontendType, SessionSpace> createNewSession, VisualElement root)
         {
             var tree = Resources.Load<VisualTreeAsset>("BossyEditorHost");
