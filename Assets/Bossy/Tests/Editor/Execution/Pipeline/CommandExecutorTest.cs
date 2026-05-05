@@ -26,7 +26,7 @@ namespace Bossy.Tests.Shell
             var registry = new TypeAdapterRegistry();
             registry.RegisterAdapter(typeof(string), new StringAdapter());
             
-            var context = new BossyContext(null, registry, null, null);
+            var context = new BossyContext(null, registry, null, null, null);
             var bridge = new Bridge(_ => { }, _ => { });
             _session = new Session(context, bridge, (_, _) => { }, SessionSpace.Edit);
             _executor = new CommandExecutor(_session, context);

@@ -10,6 +10,11 @@ namespace Bossy
     public class BossyContext
     {
         /// <summary>
+        /// A binder for resolving objects.
+        /// </summary>
+        public readonly IBossyBinder Binder;
+
+        /// <summary>
         /// The Bossy schema registry.
         /// </summary>
         public readonly SchemaRegistry SchemaRegistry;
@@ -27,8 +32,8 @@ namespace Bossy
         /// <summary>
         /// The Bossy parser.
         /// </summary>
-        public readonly Parser _parser;
-        
+        public readonly Parser Parser;
+
         /// <summary>
         /// Creates a new Bossy context.
         /// </summary>
@@ -36,12 +41,14 @@ namespace Bossy
         /// <param name="adapterRegistry">The adapter registry.</param>
         /// <param name="settings">The settings.</param>
         /// <param name="parser">The parser.</param>
-        public BossyContext(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, SettingsManager settings, Parser parser)
+        /// <param name="binder">The object binder.</param>
+        public BossyContext(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, SettingsManager settings, Parser parser, IBossyBinder binder)
         {
+            Binder = binder;
             SchemaRegistry = schemaRegistry;
             TypeAdapterRegistry = adapterRegistry;
             Settings = settings;
-            _parser = parser;
+            Parser = parser;
         }
     }
 }

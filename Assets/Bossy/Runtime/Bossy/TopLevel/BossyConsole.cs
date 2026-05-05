@@ -16,18 +16,19 @@ namespace Bossy
         [UsedImplicitly] private readonly LifecycleManager _lifecycleManager;
         
         private static readonly string SettingsPath = Application.persistentDataPath + "/bossy/settings.json";
-        
+
         /// <summary>
         /// Creates a new Bossy top level object.
         /// </summary>
         /// <param name="schemaRegistry">The schema registry to attach.</param>
         /// <param name="typeAdapterRegistry">The type adapter registry to attach.</param>
-        internal BossyConsole(SchemaRegistry schemaRegistry, TypeAdapterRegistry typeAdapterRegistry)
+        /// <param name="binder">The binder </param>
+        internal BossyConsole(SchemaRegistry schemaRegistry, TypeAdapterRegistry typeAdapterRegistry, IBossyBinder binder)
         {
             // TODO: Make this annoying default a setting. This is disabled because it globally overrides ctrl + backspace input 
             DebugManager.instance.enableRuntimeUI = false;
             
-            _lifecycleManager = new LifecycleManager(schemaRegistry, typeAdapterRegistry, new FileSource(SettingsPath));
+            _lifecycleManager = new LifecycleManager(schemaRegistry, typeAdapterRegistry, new FileSource(SettingsPath), binder);
         }
     }
 }

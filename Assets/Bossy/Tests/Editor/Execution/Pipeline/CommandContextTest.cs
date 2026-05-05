@@ -25,7 +25,7 @@ namespace Bossy.Tests.Shell
         {
             _adapterRegistry = new TypeAdapterRegistry();
             _adapterRegistry.RegisterAdapter(typeof(int), new IntAdapter()); 
-            _context = new BossyContext(null, _adapterRegistry, null, null);
+            _context = new BossyContext(null, _adapterRegistry, null, null, null);
             
             _session = new Session(_context, new Bridge(_ => { }, _ => { }), (_, _) => { }, SessionSpace.Edit);
         }

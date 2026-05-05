@@ -9,14 +9,14 @@ namespace Bossy
     /// <summary>
     /// Assists in creating a <see cref="TypeAdapterRegistry"/>.
     /// </summary>
-    public interface IBossyRegisterTypeAdapterStep
+    public interface IBossyRegisterStep
     {
         /// <summary>
         /// Adds a type adapter. If this type has a default adapter, the new one will override it.
         /// </summary>
         /// <typeparam name="TAdapter">The type of the adapter.</typeparam>
         /// <returns>The builder.</returns>
-        public IBossyRegisterTypeAdapterStep WithAdapter<TAdapter>() where TAdapter : ITypeAdapter, new();
+        public IBossyRegisterStep WithAdapter<TAdapter>() where TAdapter : ITypeAdapter, new();
         
         /// <summary>
         /// Adds a type adapter. If this type has a default adapter, the new one will override it.
@@ -24,7 +24,15 @@ namespace Bossy
         /// <param name="adapterType"></param>
         /// <typeparam name="T">The type handled by the adapter.</typeparam>
         /// <returns>The builder.</returns>
-        public IBossyRegisterTypeAdapterStep WithAdapter<T>(BaseTypeAdapter<T> adapterType);
+        public IBossyRegisterStep WithAdapter<T>(BaseTypeAdapter<T> adapterType);
+
+        /// <summary>
+        /// Adds a binder to Bossy. This binder will be used to resolve instances of objects
+        /// commands ask for via the Bind attribute.
+        /// </summary>
+        /// <param name="binder">The binder.</param>
+        /// <returns>The builder.</returns>
+        public IBossyRegisterStep WithBindings(IBossyBinder binder);
         
         /// <summary>
         /// Completes the process of building the console.
@@ -36,8 +44,9 @@ namespace Bossy
     /// <summary>
     /// Builds the Bossy <see cref="TypeAdapterRegistry"/>.
     /// </summary>
-    internal class BossyAdapterBuilder : IBossyRegisterTypeAdapterStep
+    internal class BossyAdapterBuilder : IBossyRegisterStep
     {
+        private IBossyBinder _binder;
         private readonly SchemaRegistry _schemaRegistry;
         private readonly TypeAdapterRegistry _typeAdapterRegistry = new();
         
@@ -70,7 +79,7 @@ namespace Bossy
             _typeAdapterRegistry.RegisterAdapter(new EnumAdapter<KeyCode>());
         }
         
-        public IBossyRegisterTypeAdapterStep WithAdapter<TAdapter>() where TAdapter : ITypeAdapter, new()
+        public IBossyRegisterStep WithAdapter<TAdapter>() where TAdapter : ITypeAdapter, new()
         {
             var instance = Activator.CreateInstance<TAdapter>();
 
@@ -87,16 +96,23 @@ namespace Bossy
             return this;
         }
         
-        public IBossyRegisterTypeAdapterStep WithAdapter<T>(BaseTypeAdapter<T> adapter)
+        public IBossyRegisterStep WithAdapter<T>(BaseTypeAdapter<T> adapter)
         {
             _typeAdapterRegistry.RegisterAdapter(adapter);
             
             return this;
         }
-        
+
+        public IBossyRegisterStep WithBindings(IBossyBinder binder)
+        {
+            _binder = binder;
+
+            return this;
+        }
+
         public BossyConsole Build()
         {
-            return new BossyConsole(_schemaRegistry, _typeAdapterRegistry);
+            return new BossyConsole(_schemaRegistry, _typeAdapterRegistry, _binder);
         }
     }
 }

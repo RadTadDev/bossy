@@ -1,4 +1,5 @@
 using Bossy;
+using JetBrains.Annotations;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -6,7 +7,9 @@ using UnityEditor;
 [InitializeOnLoad]
 public static class BossyStartup
 {
+    [UsedImplicitly]
     private static BossyConsole _bossy;
+    
     static BossyStartup()
     {
         EditorApplication.delayCall += Start;
@@ -15,10 +18,7 @@ public static class BossyStartup
     private static void Start()
     {
         EditorApplication.delayCall -= Start;
-        _bossy = BossyBuilder
-            .GetCommands()
-            .Automatically()
-            .Build();
+        _bossy = CommonStartup.Make();
     }
 }
 
@@ -28,15 +28,30 @@ using UnityEngine;
 
 public class BossyStartup
 {
+    [UsedImplicitly]
     private static BossyConsole _bossy;
     
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterAssembliesLoaded)]
     private static void Start()
     {
-        _bossy = BossyBuilder
-            .GetCommands()
-            .Automatically()
-            .Build();
+        _bossy = CommonStartup.Make();
     }
 }
 #endif  
+
+public static class CommonStartup
+{
+    public static BossyConsole Make()
+    {
+        var binder = new MyBinder();
+        
+        binder.RegisterSingleton("Hello binding world!");
+        binder.RegisterSingleton(42);
+        
+        return BossyBuilder
+            .GetCommands()
+            .Automatically()
+            .WithBindings(binder)
+            .Build();
+    }
+}

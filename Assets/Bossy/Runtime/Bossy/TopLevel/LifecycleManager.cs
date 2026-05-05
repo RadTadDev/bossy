@@ -30,7 +30,8 @@ namespace Bossy
         /// <param name="schemaRegistry">The schema registry.</param>
         /// <param name="adapterRegistry">The adapter registry.</param>
         /// <param name="settingsSource">The settings source.</param>
-        public LifecycleManager(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, ISettingsSource settingsSource)
+        /// <param name="binder">A item binder.</param>
+        public LifecycleManager(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, ISettingsSource settingsSource, IBossyBinder binder)
         {
             _parser = new Parser(schemaRegistry, adapterRegistry);
             var settings = new SettingsManager(settingsSource);
@@ -44,7 +45,7 @@ namespace Bossy
             _hostManager = new HostManager(this, settings.BossyInputSettings, CreateBossySession);
             _runtimeManager = new BossyRuntimeManager();
 
-            _context = new BossyContext(schemaRegistry, adapterRegistry, settings, _parser);
+            _context = new BossyContext(schemaRegistry, adapterRegistry, settings, _parser, binder);
             
             ReconnectEditorSessions();
         }

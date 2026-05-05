@@ -123,7 +123,7 @@ namespace Bossy.Execution
         /// <param name="output">An output source.</param>
         public async Task ExecuteAsync(string command, CancellationToken token, IReadable input = null, IWriteable output = null)
         {
-            var result = _context._parser.Parse(command, _context.Settings.BossyCliSettings.ToOperatorList());
+            var result = _context.Parser.Parse(command, _context.Settings.BossyCliSettings.ToOperatorList());
 
             if (!result.TryGetGraph(out var graph))
             {

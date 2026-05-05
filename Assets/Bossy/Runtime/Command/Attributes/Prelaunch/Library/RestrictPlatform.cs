@@ -1,7 +1,6 @@
-using Bossy.Command;
 using UnityEditor;
 
-namespace Bossy.Execution.Prelaunch.Library
+namespace Bossy.Command
 {
     public class RestrictPlatform : PrelaunchHookAttribute
     {

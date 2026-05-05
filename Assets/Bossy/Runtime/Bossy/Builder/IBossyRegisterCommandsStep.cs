@@ -18,38 +18,38 @@ namespace Bossy
         /// Searches all loaded assemblies for valid commands.
         /// </summary>
         /// <returns>The <see cref="TypeAdapter"/> builder.</returns>
-        public IBossyRegisterTypeAdapterStep Automatically();
+        public IBossyRegisterStep Automatically();
         
         /// <summary>
         /// Searches the provided loaded assembly for valid commands.
         /// </summary>
         /// <returns>The <see cref="TypeAdapter"/> builder.</returns>
-        public IBossyRegisterTypeAdapterStep InAssembly(Assembly assembly);
+        public IBossyRegisterStep InAssembly(Assembly assembly);
         
         /// <summary>
         /// Searches the provided loaded assembly name for valid commands.
         /// </summary>
         /// <returns>The <see cref="TypeAdapter"/> builder.</returns>
-        public IBossyRegisterTypeAdapterStep InAssembly(string fullyQualifiedName);
+        public IBossyRegisterStep InAssembly(string fullyQualifiedName);
         
         /// <summary>
         /// Searches the provided loaded assemblies for valid commands.
         /// Searches all loaded assemblies for valid commands.
         /// </summary>
         /// <returns>The <see cref="TypeAdapter"/> builder.</returns>
-        public IBossyRegisterTypeAdapterStep InAssemblies(IEnumerable<Assembly> assemblies);
+        public IBossyRegisterStep InAssemblies(IEnumerable<Assembly> assemblies);
         
         /// <summary>
         /// Searches the provided loaded assembly names for valid commands.
         /// </summary>
         /// <returns>The <see cref="TypeAdapter"/> builder.</returns>
-        public IBossyRegisterTypeAdapterStep InAssemblies(IEnumerable<string> fullyQualifiedNames);
+        public IBossyRegisterStep InAssemblies(IEnumerable<string> fullyQualifiedNames);
         
         /// <summary>
         /// Loads only the valid types within the provided list.
         /// </summary>
         /// <returns>The <see cref="TypeAdapter"/> builder.</returns>
-        public IBossyRegisterTypeAdapterStep FromTypes(IEnumerable<Type> commandTypes);
+        public IBossyRegisterStep FromTypes(IEnumerable<Type> commandTypes);
     }
     
     /// <summary>
@@ -57,26 +57,26 @@ namespace Bossy
     /// </summary>
     internal class BossyRegisterCommandsBuilder : IBossyRegisterCommandsStep
     {
-        public IBossyRegisterTypeAdapterStep Automatically()
+        public IBossyRegisterStep Automatically()
         {
             var finder = new ReflectiveCommandDiscoverer(AppDomain.CurrentDomain.GetAssemblies().ToList());
             return NextStep(finder.GetAllCommandTypes());
         }
 
-        public IBossyRegisterTypeAdapterStep InAssembly(Assembly assembly)
+        public IBossyRegisterStep InAssembly(Assembly assembly)
         {
             var finder = new ReflectiveCommandDiscoverer(new List<Assembly> { BossyAssembly, assembly });
             return NextStep(finder.GetAllCommandTypes());
         }
 
-        public IBossyRegisterTypeAdapterStep InAssembly(string fullyQualifiedName)
+        public IBossyRegisterStep InAssembly(string fullyQualifiedName)
         {
             var clientAssembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.FullName == fullyQualifiedName);
             var finder = new ReflectiveCommandDiscoverer(new List<Assembly> { BossyAssembly, clientAssembly });
             return NextStep(finder.GetAllCommandTypes());
         }
 
-        public IBossyRegisterTypeAdapterStep InAssemblies(IEnumerable<Assembly> assemblies)
+        public IBossyRegisterStep InAssemblies(IEnumerable<Assembly> assemblies)
         {
             var list = assemblies.Distinct().ToList();
             list.Add(BossyAssembly);
@@ -84,7 +84,7 @@ namespace Bossy
             return NextStep(finder.GetAllCommandTypes());
         }
 
-        public IBossyRegisterTypeAdapterStep InAssemblies(IEnumerable<string> fullyQualifiedNames)
+        public IBossyRegisterStep InAssemblies(IEnumerable<string> fullyQualifiedNames)
         {
             var list = new List<Assembly>();
             foreach (var name in fullyQualifiedNames)
@@ -101,7 +101,7 @@ namespace Bossy
             return NextStep(finder.GetAllCommandTypes());
         }
 
-        public IBossyRegisterTypeAdapterStep FromTypes(IEnumerable<Type> commandTypes)
+        public IBossyRegisterStep FromTypes(IEnumerable<Type> commandTypes)
         {
             var list = new List<Type>();
             foreach (var commandType in commandTypes)
@@ -121,7 +121,7 @@ namespace Bossy
             return NextStep(list);
         }
 
-        private IBossyRegisterTypeAdapterStep NextStep(IEnumerable<Type> commandTypes)
+        private IBossyRegisterStep NextStep(IEnumerable<Type> commandTypes)
         {
             var graph = CommandDependencyGraphBuilder.BuildGraph(commandTypes.ToList());
             var schemas = SchemaFactory.BuildCommandSchemas(graph);
