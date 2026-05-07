@@ -15,4 +15,16 @@ namespace Bossy
         /// <returns>True if the item was returned, otherwise false.</returns>
         public bool TryGet(Type requestedType, out object obj);
     }
+    
+    /// <summary>
+    /// A null binder that supplies no options.
+    /// </summary>
+    internal class NullBinder : IBossyBinder
+    {
+        public bool TryGet(Type requestedType, out object obj)
+        {
+            obj = null;
+            return false;
+        }
+    }
 }

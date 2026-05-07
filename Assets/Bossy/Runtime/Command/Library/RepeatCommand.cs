@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using Bossy.Command;
-using Bossy.Execution;
 
 namespace Bossy.Runtime.Command.Library
 {

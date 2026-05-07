@@ -118,7 +118,7 @@ namespace Bossy
 
         public BossyConsole Build()
         {
-            return new BossyConsole(_schemaRegistry, _typeAdapterRegistry, _binder);
+            return new BossyConsole(_schemaRegistry, _typeAdapterRegistry, _binder ?? new NullBinder());
         }
     }
 }

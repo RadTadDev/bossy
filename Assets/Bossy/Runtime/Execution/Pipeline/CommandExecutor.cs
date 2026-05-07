@@ -172,7 +172,8 @@ namespace Bossy.Execution
             {
                 if (!_context.Binder.TryGet(field.FieldType, out var instance))
                 {
-                    return InstallBindingResult.Error($"Could not resolve binding for type \"{field.FieldType.GetFriendlyName()}\"");
+                    return InstallBindingResult.Error($"Could not resolve binding for type \"{field.FieldType.GetFriendlyName()}\". Make sure to " +
+                                                      $"include an {nameof(IBossyBinder)} when you create the console and register an instance of this type.");
                 }
                 field.SetValue(command, instance);
             }

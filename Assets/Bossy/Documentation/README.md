@@ -514,6 +514,7 @@ For commands that need to perform async work, inherit from `ICommand` and implem
 ```csharp
 [Command("fetch", "Fetches data from a remote endpoint.")]
 public class FetchCommand : Command
+    
 {
     [Positional("The URL to fetch.")]
     private string _url;

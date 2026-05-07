@@ -1,7 +1,10 @@
 using Bossy.Command;
-using Bossy.Execution;
+
+#if UNITY_EDITOR
 using UnityEditor;
+#else
 using UnityEngine;
+#endif
 
 namespace Bossy.Runtime.Command.Library
 {
