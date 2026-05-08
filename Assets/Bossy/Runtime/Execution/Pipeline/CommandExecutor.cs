@@ -144,6 +144,8 @@ namespace Bossy.Execution
                     {
                         session.Bridge.PopContent();
                     }
+                    
+                    session.Bridge.UserInterface.ResetCapabilities();
                 }
             }
         }

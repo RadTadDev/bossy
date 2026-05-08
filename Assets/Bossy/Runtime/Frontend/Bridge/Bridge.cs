@@ -16,14 +16,17 @@ namespace Bossy.Frontend
         public event Action<IContentView> OnPushContent;
         
         /// <summary>
+        /// The user interface for this session.
+        /// </summary>
+        public IUserInterfaceView UserInterface;
+        
+        /// <summary>
         /// Invoked when the backend has requested that content be popped.
         /// </summary>
         public event Action OnPopContent;
         
         private readonly Action<Bridge> _requestSessionClose;
         private readonly Action<Bridge> _requestCommandCancel;
-
-        private IUserInterfaceView _ui;
         
         /// <summary>
         /// Creates a new bridge.
@@ -42,7 +45,7 @@ namespace Bossy.Frontend
         /// <param name="view">The UI.</param>
         public void SetUIView(IUserInterfaceView view)
         {
-            _ui = view;
+            UserInterface = view;
         }
 
         public void Write(object value)
@@ -52,16 +55,16 @@ namespace Bossy.Frontend
                 return;
             }
             
-            _ui.Write(value);
+            UserInterface.Write(value);
         } 
 
-        public Task<object> ReadAsync(Type requestedType, CancellationToken token) => _ui.ReadAsync(requestedType, token);
+        public Task<object> ReadAsync(Type requestedType, CancellationToken token) => UserInterface.ReadAsync(requestedType, token);
 
         /// <summary>
         /// Gets the front end capabilities.
         /// </summary>
         /// <returns>The capabilities.</returns>
-        public IFrontEndCapabilities GetCapabilities() => _ui;
+        public IFrontEndCapabilities GetCapabilities() => UserInterface;
         
         /// <summary>
         /// Request for the current session to be closed.
@@ -74,7 +77,7 @@ namespace Bossy.Frontend
         public void RequestCancelCommand()
         {
             _requestCommandCancel?.Invoke(this);
-            _ui.OnCommandCanceled();
+            UserInterface.OnCommandCanceled();
         } 
 
         /// <summary>

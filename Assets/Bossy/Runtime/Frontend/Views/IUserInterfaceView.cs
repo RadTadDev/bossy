@@ -11,5 +11,10 @@ namespace Bossy.Frontend
         /// Called when a command has been canceled.
         /// </summary>
         public void OnCommandCanceled();
+
+        /// <summary>
+        /// Resets any dynamic capabilities once the command using them is popped.
+        /// </summary>
+        public void ResetCapabilities();
     }
 }

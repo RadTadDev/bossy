@@ -10,7 +10,6 @@ using Bossy.Frontend.Parsing;
 using Bossy.Execution;
 using Bossy.Frontend.Autocomplete;
 using Bossy.Schema.Registry;
-using Bossy.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -27,7 +26,8 @@ namespace Bossy.Frontend
         IHistorical,
         IClearable,
         IModifiableOutputBuffer,
-        IAliasCapability
+        IAliasCapability,
+        IModifiablePromptHeader
     {
         private readonly BossyCliSettings _cliSettings;
         private readonly BossyInputSettings _inputSettings;
@@ -45,6 +45,9 @@ namespace Bossy.Frontend
         private string _cachedInput = string.Empty;
 
         private bool _blockInput;
+
+        private Label _promptHeaderElement;
+        private string _promptHeader = string.Empty;
         
         private readonly Parser _parser;
         private bool _reading;
@@ -107,6 +110,8 @@ namespace Bossy.Frontend
         public virtual VisualElement CreateView()
         {
             var root = ContentViewUtility.GetRootFromUxml("BossyCli");
+
+            _promptHeaderElement = (Label)root.Q("prompt-label");
             
             Input = root.Q<TextField>("input-field");
             Input.parent.focusable = true;
@@ -212,7 +217,7 @@ namespace Bossy.Frontend
         {
             var line = Input.value;
 
-            Write($"> {line}");
+            Write($"{_promptHeader}> {line}");
             
             object result = line;
 
@@ -468,6 +473,23 @@ namespace Bossy.Frontend
             _autocomplete.Cancel();
             _autocompleteContainer?.Clear();
             _suggestionIndex = 0;
+        }
+
+        public void SetPromptHeader(string header)
+        {
+            _promptHeader = header;
+            _promptHeaderElement.text = $"{_promptHeader}>";
+        }
+
+        public void ResetHeader()
+        {
+            _promptHeader = string.Empty;
+            _promptHeaderElement.text = ">";
+        }
+        
+        public void ResetCapabilities()
+        {
+            ResetHeader();
         }
     }
 }

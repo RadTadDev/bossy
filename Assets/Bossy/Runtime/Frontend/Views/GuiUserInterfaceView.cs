@@ -41,5 +41,10 @@ namespace Bossy.Frontend
         {
             throw new NotImplementedException();
         }
+
+        public void ResetCapabilities()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
