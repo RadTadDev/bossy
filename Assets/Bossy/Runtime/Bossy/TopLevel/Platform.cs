@@ -23,6 +23,11 @@ namespace Bossy
         /// <summary>
         /// In a build or the editor during play mode.
         /// </summary>
-        Runtime
+        Runtime,
+        
+        /// <summary>
+        /// In the editor and in play mode.
+        /// </summary>
+        EditorRuntime
     }
 }

@@ -8,6 +8,7 @@ Roslyn Analyzers
 
 TODO: 
 - auto complete
+- permissions system via hook
 - fix settings
 - settings command
 - startup file

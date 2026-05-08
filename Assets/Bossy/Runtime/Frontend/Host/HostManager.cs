@@ -94,7 +94,7 @@ namespace Bossy.Frontend
             _mainHosts[host.Space] = host;
         }
 
-        public void NotifyFocusLost(IHost host, bool hostAlreadyHidden)
+        public void NotifyFocusLost(IHost host, bool hostAlreadyHidden = false)
         {
             // TODO: Possible bug: If editor window is focused, then another editor window is clicked, 
             // it is apparently possible to received the OnFocus event for the new one before the LostFocus event

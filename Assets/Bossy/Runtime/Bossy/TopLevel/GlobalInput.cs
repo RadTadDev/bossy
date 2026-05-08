@@ -49,7 +49,7 @@ namespace Bossy
         [Shortcut(ToggleId, KeyCode.Slash)]
         private static void ToggleMainWindow()
         {
-            var space = Application.isPlaying ? SessionSpace.Runtime : SessionSpace.Edit;
+            var space = Application.isPlaying && Application.isFocused ? SessionSpace.Runtime : SessionSpace.Edit;
             _toggleBus?.Invoke(space);
         }
 

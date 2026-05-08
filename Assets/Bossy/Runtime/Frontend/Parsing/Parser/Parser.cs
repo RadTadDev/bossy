@@ -209,6 +209,13 @@ namespace Bossy.Frontend.Parsing
                 // 2. Get matching argument in schema
                 if (token.StartsWith("--"))
                 {
+                    // This allows explicit variadic consumption
+                    if (token == "--")
+                    {
+                        argTokens.RemoveAt(idx);
+                        return ParseStep.Ok();
+                    }
+                    
                     if (!schema.TryFindSwitch(token[2..], out argSchema))
                     {
                         return ParseStep.Fail(new InvalidSwitchError(token));
@@ -224,13 +231,13 @@ namespace Bossy.Frontend.Parsing
                 
                 // 3. Remove name from tokens and create greedy substream
                 argTokens.RemoveAt(idx);
-                token = argTokens.Count > 0 ? argTokens[idx] : "(null)";
                 var substream = new TokenStream(argTokens.GetRange(idx, argTokens.Count - idx));
                 
                 // 4. Parse and remove consumed tokens 
                 var adaptResult = _adapterRegistry.TryConvert(argSchema.Type, substream, out var value);
                 if (!adaptResult.Success)
                 {
+                    token = argTokens.Count > idx ? argTokens[idx] : "(null)";
                     return ParseStep.Fail(new TypeAdaptError(argSchema.Type, token, adaptResult.ErrorMessage));
                 }
                 

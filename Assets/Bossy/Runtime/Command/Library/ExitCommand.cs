@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace Bossy.Runtime.Command.Library
 {
+    [RestrictPlatform(Platform.Runtime)]
     [Command("exit", "Exits the game.")]
     public class ExitCommand : SimpleCommand
     {

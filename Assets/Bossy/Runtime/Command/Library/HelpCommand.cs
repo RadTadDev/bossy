@@ -12,9 +12,6 @@ public class HelpCommand : SimpleCommand
     [Variadic("The command path to look up.")]
     private string[] _command;
 
-    [Switch('v', "Show argument types and validation attributes.")]
-    private bool _verbose;
-
     [Switch('r', "Also display all subcommands recursively.")]
     private bool _recursive;
 
@@ -87,23 +84,14 @@ public class HelpCommand : SimpleCommand
         {
             sb.Append(indent).AppendLine(Format.Color("  Arguments:", Format.Yellow));
 
-            if (_verbose)
-            {
-                foreach (var arg in schema.Arguments)
-                {
-                    AppendArgumentVerbose(sb, arg, indent + "    ");
-                }
-            }
-            else
-            {
-                sb.Append(Format.Align(
-                    schema.Arguments,
-                    arg => indent + "    " + Format.Color(arg.Name, Format.LightBlue)
-                               + Format.Color($" <{arg.Type.GetFriendlyName()}>", Format.Gray)
-                               + Format.Color($" {GetKindLabel(arg.ArgumentAttribute)}", Format.Gray),
-                    arg => arg.Description
-                ));
-            }
+           
+            sb.Append(Format.Align(
+                schema.Arguments,
+                arg => indent + "    " + Format.Color(arg.Name, Format.LightBlue)
+                           + Format.Color($" <{arg.Type.GetFriendlyName()}>", Format.Gray)
+                           + Format.Color($" {GetKindLabel(arg.ArgumentAttribute)}", Format.Gray),
+                arg => arg.Description
+            ));
         }
 
         // Subcommands
@@ -152,33 +140,6 @@ public class HelpCommand : SimpleCommand
         }
 
         return string.Join(" ", parts);
-    }
-
-    private void AppendArgumentVerbose(StringBuilder sb, ArgumentSchema arg, string indent)
-    {
-        sb.Append(indent).Append(Format.Color(arg.Name, Format.LightBlue));
-        sb.Append(Format.Color($" <{arg.Type.GetFriendlyName()}>", Format.Gray));
-        sb.Append(Format.Color($" {GetKindLabel(arg.ArgumentAttribute)}", Format.Gray));
-
-        if (!string.IsNullOrEmpty(arg.Description))
-        {
-            sb.Append("  ").Append(arg.Description);
-        }
-
-        sb.AppendLine();
-
-        sb.Append(indent).Append("  ")
-          .AppendLine(Format.Color($"Field: {arg.FieldInfo.DeclaringType?.Name}.{arg.FieldInfo.Name}", Format.Gray));
-
-        if (arg.Validators.Count > 0)
-        {
-            sb.Append(indent).Append("  ").AppendLine(Format.Color("Validators:", Format.Gray));
-            foreach (var validator in arg.Validators)
-            {
-                sb.Append(indent).Append("    ")
-                  .AppendLine(Format.Color($"[{validator.GetType().Name}]", Format.Gray));
-            }
-        }
     }
 
     private static string GetKindLabel(ArgumentAttribute attr)

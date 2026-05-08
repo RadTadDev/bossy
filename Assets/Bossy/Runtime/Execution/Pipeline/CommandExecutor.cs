@@ -81,7 +81,7 @@ namespace Bossy.Execution
 
                     if (failure != null)
                     {
-                        output.Write($"Command execution cancelled: {failure.Message}");
+                        output.Write($"{Format.Color("Command cancelled", Format.Yellow)}: {failure.Message}");
     
                         // Note: Use error here rather than canceled so other commands react appropriately
                         previousStatus = CommandStatus.Error;
@@ -145,7 +145,7 @@ namespace Bossy.Execution
                         session.Bridge.PopContent();
                     }
                     
-                    session.Bridge.UserInterface.ResetCapabilities();
+                    session.Bridge.UserInterface?.ResetCapabilities();
                 }
             }
         }

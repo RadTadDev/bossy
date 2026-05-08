@@ -67,7 +67,7 @@ namespace Bossy
             _containers[bridge] = container;
             var host = _hostManager.AssignHost(viewer, space);
 
-            void ReleaseAction() => _hostManager.NotifyFocusLost(host, false);
+            void ReleaseAction() => _hostManager.NotifyFocusLost(host);
             
             var signaler = new Signaler(ReleaseAction, bridge);
             content.SetSignaler(signaler);
@@ -140,7 +140,7 @@ namespace Bossy
                 _containers[bridge] = container;
                 _hostManager.ReconnectEditor(viewer, host);
             
-                void ReleaseAction() => _hostManager.NotifyFocusLost(host, false);
+                void ReleaseAction() => _hostManager.NotifyFocusLost(host);
             
                 var signaler = new Signaler(ReleaseAction, bridge);
                 content.SetSignaler(signaler);
@@ -162,7 +162,7 @@ namespace Bossy
             _containers[bridge] = container;
             var host = _hostManager.AssignCommandHost(viewer, session.Space);
 
-            void ReleaseAction() => _hostManager.NotifyFocusLost(host, false);
+            void ReleaseAction() => _hostManager.NotifyFocusLost(host);
             
             var signaler = new Signaler(ReleaseAction, bridge);
             content.SetSignaler(signaler);

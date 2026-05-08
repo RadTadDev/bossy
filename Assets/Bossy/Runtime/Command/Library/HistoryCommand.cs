@@ -20,6 +20,7 @@ namespace Bossy.Runtime.Command.Library
         }
     }
     
+    [Confirm]
     [Command("clear", "Clears all history.", typeof(HistoryCommand))]
     public class ClearHistoryCommand : SimpleCommand
     {

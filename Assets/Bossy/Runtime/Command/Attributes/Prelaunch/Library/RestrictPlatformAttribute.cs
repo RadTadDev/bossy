@@ -20,8 +20,9 @@ namespace Bossy.Command
             if (_platform is Platform.Build) goto Failure;
             if (!EditorApplication.isPlaying && _platform is Platform.Runtime) goto Failure;
             if (EditorApplication.isPlaying && _platform is Platform.EditMode) goto Failure;
+            if (!EditorApplication.isPlaying && _platform is Platform.EditorRuntime) goto Failure;
 #else
-            if (Platform is Platform.Editor or Platform.EditMode) goto Failure;
+            if (_platform is Platform.Editor or Platform.EditMode or Platform.EditorRuntime) goto Failure;
 #endif
 
             return Task.FromResult(PrelaunchResult.Allow());

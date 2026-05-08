@@ -5,6 +5,6 @@
             <ui:Label name="prompt-label" text="&gt;" style="margin-right: 4px; background-color: rgba(0, 0, 0, 0); color: rgb(255, 255, 255);"/>
             <ui:TextField name="input-field" style="flex-grow: 1;"/>
         </ui:VisualElement>
-        <ui:VisualElement name="auto-complete" style="flex-grow: 1; position: absolute; top: auto; left: 0; right: 0; bottom: 53px; background-color: rgb(0, 0, 0);"/>
+        <ui:VisualElement name="auto-complete" style="flex-grow: 1; position: absolute; top: auto; left: 27px; right: 8px; bottom: 32px; background-color: rgb(0, 0, 0);"/>
     </ui:VisualElement>
 </ui:UXML>

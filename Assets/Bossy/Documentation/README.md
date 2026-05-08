@@ -304,7 +304,11 @@ private float _increment;
 ```
 
 - Note that in the case of all names, leading underscores are ignored without requireing the override name.
-- Switches may appear anywhere except for after variadics.
+- Switches may appear anywhere except for between subcommands. Preference will be given to switches over variadic. To explicitly send tokens that match a switch to a variadic arg, inluclude `--` in your command like so:
+```csharp
+cmd -- my variadic list --consumed
+```
+will send all arguments, including `--consumed` to the variadic argument.
 
 ---
 

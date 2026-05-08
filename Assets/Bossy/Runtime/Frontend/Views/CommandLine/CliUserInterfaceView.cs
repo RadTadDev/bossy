@@ -100,8 +100,6 @@ namespace Bossy.Frontend
 #endif
 
             _autocomplete = new AutocompleteEngine(registry);
-            _autocomplete.ErrorTextReady += OnSuggestedError;
-            _autocomplete.SuggestionsReady += OnSuggestions;
             
             // Register adapters
             _displayAdapters[typeof(OptionsPrompt)] = new OptionsPromptDisplayAdapter();
@@ -147,7 +145,7 @@ namespace Bossy.Frontend
                 }
             },TrickleDown.TrickleDown);
 
-            Input.RegisterValueChangedCallback(UpdateAutocomplete);
+            Input.RegisterValueChangedCallback(OnValueUpdated);
             
             FocusInput();
             
@@ -425,9 +423,9 @@ namespace Bossy.Frontend
             return _aliases.Remove(alias);
         }
 
-        private void UpdateAutocomplete(ChangeEvent<string> evt)
+        private void OnValueUpdated(ChangeEvent<string> evt)
         {
-            if (!_requestingCommand || !_reading || _cyclingSuggestions) return;
+            if (!_requestingCommand || !_reading || _cyclingSuggestions || _blockInput) return;
 
             if (string.IsNullOrWhiteSpace(evt.newValue))
             {
@@ -435,21 +433,27 @@ namespace Bossy.Frontend
                 return;
             }
             
-            _autocomplete.Update(evt.newValue, Input.cursorIndex);
+            var suggestions = _autocomplete.Suggest(evt.newValue, Input.cursorIndex);
+
+            ShowSuggestions(suggestions);
         }
         
-        private void OnSuggestedError(string line)
-        {
-            Input.value = line;
-        }
-
-        private void OnSuggestions(List<string> suggestions)
+        private void ShowSuggestions(IEnumerable<Suggestion> suggestions)
         {
             ClearAutocomplete();
             
             foreach (var s in suggestions)
             {
-                _autocompleteContainer?.Add(new Label(s));
+                var label = new Label(s.DisplayTest)
+                {
+                    userData = s.FullText,
+                    style =
+                    {
+                        fontSize = 13.5f
+                    }
+                };
+                
+                _autocompleteContainer?.Add(label);
             }
         }
 
@@ -463,14 +467,13 @@ namespace Bossy.Frontend
             var line = (Label)_autocompleteContainer[_suggestionIndex];
             line.style.backgroundColor = Color.cyan;
             
-            SetInput(line.text, true);
+            SetInput((string)line.userData, true);
 
             _suggestionIndex = (_suggestionIndex + 1) % _autocompleteContainer.childCount;
         }
 
         private void ClearAutocomplete()
         {
-            _autocomplete.Cancel();
             _autocompleteContainer?.Clear();
             _suggestionIndex = 0;
         }
