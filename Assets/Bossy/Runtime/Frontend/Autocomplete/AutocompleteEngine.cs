@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Command;
 using Bossy.Frontend.Parsing;
 using Bossy.Schema;
 using Bossy.Schema.Registry;
+using Bossy.Utils;
 using UnityEngine;
 
 namespace Bossy.Frontend.Autocomplete
@@ -66,7 +66,7 @@ namespace Bossy.Frontend.Autocomplete
             Cancel();
             
             line = line.ToLower()[..cursorPosition];
-            Task.Run(() => Suggest(line));
+            _ = Suggest(line);
         }
 
         private Task Suggest(string line)
@@ -92,9 +92,10 @@ namespace Bossy.Frontend.Autocomplete
                 return Task.CompletedTask;
             }
 
+            return Task.CompletedTask;
+
             // We have another token, search for best schema matches. First try what the user actually typed
-            CommandSchema schema = null;
-            if (_registry.TryResolveSchema(cmdName, out schema) is not SchemaQueryStatus.Found)
+            if (_registry.TryResolveSchema(cmdName, out var schema) is not SchemaQueryStatus.Found)
             {
                 // Then fallback on the best suggestion we have
                 if (_registry.TryResolveSchema(cmdMatches.First(), out schema) is not SchemaQueryStatus.Found)
@@ -103,7 +104,7 @@ namespace Bossy.Frontend.Autocomplete
                     return Task.CompletedTask;
                 }
             }
-            
+
             // We now have a schema, lets pool the possible options and remove from them as we find
             bool onVariadic = false;
             var positionals = schema.GetOrderedPositionalArguments();
@@ -130,6 +131,8 @@ namespace Bossy.Frontend.Autocomplete
                     // HandleNamedItem(next, options);
                 }
             }
+            
+            return Task.CompletedTask;
         }
 
         private List<string> BestMatches(string token, List<string> options)
@@ -145,13 +148,22 @@ namespace Bossy.Frontend.Autocomplete
                 best.Add((score, option));
                 best = best.OrderByDescending(t => t.score).Take(MaxSuggestions).ToList();
             }
-
+            
             return best.Select(x => x.option).ToList();
         }
 
         private float Score(string input, string candidate)
         {
-            return Mathf.Max(TrigramScore(input, candidate), LevenshteinScore(input, candidate));
+            var pre = PrefixScore(input, candidate);
+            var tri = TrigramScore(input, candidate);
+            var lev = LevenshteinScore(input, candidate);
+            
+            return Mathf.Max(pre, Mathf.Max(tri, lev));
+        }
+
+        private float PrefixScore(string input, string candidate)
+        {
+            return candidate.StartsWith(input) ? 1 : 0;
         }
         
         /*
@@ -163,12 +175,6 @@ namespace Bossy.Frontend.Autocomplete
          */
         private float TrigramScore(string input, string candidate)
         {
-            // Prefix boost
-            if (candidate.StartsWith(input))
-            {
-                return 1;
-            }
-
             var inputGrams = GetTrigrams(input);
             var candidateGrams = GetTrigrams(candidate);
 
@@ -183,7 +189,7 @@ namespace Bossy.Frontend.Autocomplete
          *
          * We also artificially return 1 (max) when the candidate starts with the input.
          */
-        private int LevenshteinScore(string a, string b)
+        private float LevenshteinScore(string a, string b)
         {
             int[,] d = new int[a.Length + 1, b.Length + 1];
     
@@ -199,8 +205,8 @@ namespace Bossy.Frontend.Autocomplete
                 }
             }
 
-            var score = d[a.Length, b.Length];
-            return 1 - (score / Mathf.Max(a.Length, b.Length));
+            float score = d[a.Length, b.Length];
+            return 1.0f - (score / Mathf.Max(a.Length, b.Length));
         }
 
         private HashSet<string> GetTrigrams(string word)
@@ -210,7 +216,7 @@ namespace Bossy.Frontend.Autocomplete
             
             while (lower < word.Length - 2)
             {
-                var upper = Mathf.Min(lower + 3, word.Length - 2);
+                var upper = Mathf.Min(lower + 3, word.Length);
 
                 result.Add(word[lower..upper]);
                 
@@ -223,6 +229,8 @@ namespace Bossy.Frontend.Autocomplete
         private string HandleSwitch(string input, List<ArgumentSchema> args, out List<string> suggestions)
         {
             // if (input.StartsWith("--") || args.)
+            suggestions = new List<string>();
+            return "";
         }
         
         public void Dispose()

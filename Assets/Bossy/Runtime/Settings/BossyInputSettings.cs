@@ -22,5 +22,8 @@ namespace Bossy.Settings
 
         [Setting("The key used to go forward in history on the CLI.")]
         public readonly KeyCombination HistoryForward = new(KeyCode.DownArrow);
+        
+        [Setting("The key used to cycle through suggestions.")]
+        public readonly KeyCombination CycleSuggestions = new(KeyCode.Tab);
     }
 }

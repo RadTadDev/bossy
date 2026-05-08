@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
+using Bossy.Frontend.Autocomplete;
+using Bossy.Schema.Registry;
+using Bossy.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -50,17 +53,24 @@ namespace Bossy.Frontend
 
         private static bool _historyLoaded;
         private string _historyFilePath = Path.Combine(Application.persistentDataPath, "bossy_cli_history.txt");
-        private static List<string> _historyBuffer;
 
+        private int _suggestionIndex;
+        private bool _cyclingSuggestions;
+        private AutocompleteEngine _autocomplete;
+        private VisualElement _autocompleteContainer;
+        
+        private static List<string> _historyBuffer;
         private int _historyIndex;
+        
         
         /// <summary>
         /// Creates a Cli interface.
         /// </summary>
         /// <param name="parser">The parser.</param>
+        /// <param name="registry">The schema registry.</param>
         /// <param name="cliSettings">The Cli settings.</param>
         /// <param name="inputSettings">The input settings.</param>
-        public CliUserInterfaceView(Parser parser, BossyCliSettings cliSettings, BossyInputSettings inputSettings)
+        public CliUserInterfaceView(Parser parser, SchemaRegistry registry, BossyCliSettings cliSettings, BossyInputSettings inputSettings)
         {
             _parser = parser;
             _cliSettings = cliSettings;
@@ -85,6 +95,10 @@ namespace Bossy.Frontend
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeReload;
             EditorApplication.quitting += OnBeforeReload;
 #endif
+
+            _autocomplete = new AutocompleteEngine(registry);
+            _autocomplete.ErrorTextReady += OnSuggestedError;
+            _autocomplete.SuggestionsReady += OnSuggestions;
             
             // Register adapters
             _displayAdapters[typeof(OptionsPrompt)] = new OptionsPromptDisplayAdapter();
@@ -121,7 +135,14 @@ namespace Bossy.Frontend
                 {
                     HistoryForward();
                 }
+                else if (_inputSettings.CycleSuggestions.IsAsserted(evt))
+                {
+                    CycleSuggestions();
+                    evt.StopImmediatePropagation();
+                }
             },TrickleDown.TrickleDown);
+
+            Input.RegisterValueChangedCallback(UpdateAutocomplete);
             
             FocusInput();
             
@@ -143,6 +164,8 @@ namespace Bossy.Frontend
             };
             _view.virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight;
             _view.bindItem = (ele, i) => ((Label)ele).text = _outputBuffer[i];
+
+            _autocompleteContainer = root.Q("auto-complete");
             
             return root;
         }
@@ -198,6 +221,7 @@ namespace Bossy.Frontend
             
             Input.value = string.Empty;
             FocusInput();
+            ClearAutocomplete();
         
             if (_requestingCommand)
             {
@@ -236,7 +260,7 @@ namespace Bossy.Frontend
         {
             if (!_reading)
             {
-                return;
+                return; 
             }
             
             _blockInput = true;
@@ -257,6 +281,24 @@ namespace Bossy.Frontend
             });
         }
 
+        private void SetInput(string value, bool cyclingSuggestions = false)
+        {
+            if (cyclingSuggestions)
+            {
+                _cyclingSuggestions = true;
+            }
+            
+            _cachedInput = value;
+            Input.value = value;
+            
+            Input.schedule.Execute(() =>
+            {
+                Input.cursorIndex = _cachedInput.Length;
+                Input.selectIndex = _cachedInput.Length;
+                _cyclingSuggestions = false;
+            });
+        }
+        
         public void OnDefocus()
         {
             _cachedInput = Input.value;
@@ -292,29 +334,23 @@ namespace Bossy.Frontend
         private void HistoryBack()
         {
             if (_historyIndex == 0 || _historyBuffer.Count == 0) return;
+
+            ClearAutocomplete();
             
             _historyIndex--;
             
-            Input.value = _historyBuffer[_historyIndex];
-            _cachedInput = Input.value;
-
-            Input.schedule.Execute(() =>
-            {
-                Input.cursorIndex = _cachedInput.Length;
-                Input.selectIndex = _cachedInput.Length;
-            });
+            SetInput(_historyBuffer[_historyIndex]);
         }
 
         private void HistoryForward()
         {
             if (_historyIndex >= _historyBuffer.Count - 1 || _historyBuffer.Count == 0) return;
             
+            ClearAutocomplete();
+            
             _historyIndex++;
             
-            Input.value = _historyBuffer[_historyIndex];
-            _cachedInput = Input.value;
-            Input.cursorIndex = _cachedInput.Length;
-            Input.selectIndex = _cachedInput.Length;
+            SetInput(_historyBuffer[_historyIndex]);
         }
 
         private void AppendHistory(string line)
@@ -344,6 +380,7 @@ namespace Bossy.Frontend
 
         public void Clear()
         {
+            ClearAutocomplete();
             _outputBuffer.Clear();
             _outputBuffer.Add(string.Empty);
             _view.RefreshItems();
@@ -381,6 +418,56 @@ namespace Bossy.Frontend
         public bool DeleteAlias(string alias)
         {
             return _aliases.Remove(alias);
+        }
+
+        private void UpdateAutocomplete(ChangeEvent<string> evt)
+        {
+            if (!_requestingCommand || !_reading || _cyclingSuggestions) return;
+
+            if (string.IsNullOrWhiteSpace(evt.newValue))
+            {
+                ClearAutocomplete();
+                return;
+            }
+            
+            _autocomplete.Update(evt.newValue, Input.cursorIndex);
+        }
+        
+        private void OnSuggestedError(string line)
+        {
+            Input.value = line;
+        }
+
+        private void OnSuggestions(List<string> suggestions)
+        {
+            ClearAutocomplete();
+            
+            foreach (var s in suggestions)
+            {
+                _autocompleteContainer?.Add(new Label(s));
+            }
+        }
+
+        private void CycleSuggestions()
+        {
+            if (_autocompleteContainer.childCount == 0) return;
+            
+            var prev = (Label)_autocompleteContainer[(_suggestionIndex - 1 + _autocompleteContainer.childCount) % _autocompleteContainer.childCount];
+            prev.style.backgroundColor = StyleKeyword.Null;
+
+            var line = (Label)_autocompleteContainer[_suggestionIndex];
+            line.style.backgroundColor = Color.cyan;
+            
+            SetInput(line.text, true);
+
+            _suggestionIndex = (_suggestionIndex + 1) % _autocompleteContainer.childCount;
+        }
+
+        private void ClearAutocomplete()
+        {
+            _autocomplete.Cancel();
+            _autocompleteContainer?.Clear();
+            _suggestionIndex = 0;
         }
     }
 }

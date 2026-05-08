@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Frontend.Parsing;
+using Bossy.Schema.Registry;
 using Bossy.Settings;
 using UnityEngine.UIElements;
 
@@ -16,9 +17,11 @@ namespace Bossy.Frontend
         /// Creates a new command display view.
         /// </summary>
         /// <param name="parser">The parser.</param>
+        /// <param name="registry">The schema registry.</param>
         /// <param name="cliSettings">The CLI settings.</param>
-        /// <param name="inputSettings">The input setttings.</param>
-        public CommandDisplay(Parser parser, BossyCliSettings cliSettings, BossyInputSettings inputSettings) : base(parser, cliSettings, inputSettings) { }
+        /// <param name="inputSettings">The input settings.</param>
+        public CommandDisplay(Parser parser, SchemaRegistry registry, BossyCliSettings cliSettings, BossyInputSettings inputSettings)
+            : base(parser, registry, cliSettings, inputSettings) { }
 
         public override VisualElement CreateView()
         {
