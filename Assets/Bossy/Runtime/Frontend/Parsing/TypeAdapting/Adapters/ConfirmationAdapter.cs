@@ -14,20 +14,20 @@ namespace Bossy.Frontend.Parsing
             {
                 if (Enum.TryParse(token, ignoreCase: true, out output) && Enum.IsDefined(typeof(Confirmation), output))
                 {
-                    return TypeAdapterResult.Pass();
+                    return TypeAdapterResult.Pass(1);
                 }
 
                 if (token.ToLower() is not ("yes" or "y" or "no" or "n"))
                 {
-                    return TypeAdapterResult.Fail($"\"{token}\" is not a valid {typeof(Confirmation).GetFriendlyName()}. Valid values: {valid}");
+                    return TypeAdapterResult.Fail($"\"{token}\" is not a valid {typeof(Confirmation).GetFriendlyName()}. Valid values: {valid}", 1);
                 }
                 
                 output = token.StartsWith("y") ? Confirmation.Confirm : Confirmation.Deny;
-                return TypeAdapterResult.Pass();
+                return TypeAdapterResult.Pass(1);
             }
 
             output = default;
-            return TypeAdapterResult.Fail("Missing token!");
+            return TypeAdapterResult.Fail("Missing token!", 1);
         }
     }
 }

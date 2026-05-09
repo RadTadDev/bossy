@@ -47,12 +47,12 @@ namespace Bossy.Frontend.Parsing
 
             if (!_adapters.TryGetValue(type, out var adapter))
             {
-                return TypeAdapterResult.Fail($"No registered adapter handles type \"{type.GetFriendlyName()}\"");
+                return TypeAdapterResult.Fail($"No registered adapter handles type \"{type.GetFriendlyName()}\"", 0);
             }
 
             var result = adapter.TryConvert(stream, this, out output);
 
-            return result.Success ? result : TypeAdapterResult.Fail(result.ErrorMessage);
+            return result;
         }
 
         /// <summary>

@@ -41,7 +41,7 @@ namespace Bossy
             _globalInput.OnToggleMainHost += OnToggleHostInput;
             
             _context = new BossyContext(schemaRegistry, adapterRegistry, settings, _parser, binder);
-            _frontEndFactory = new FrontEndFactory(_context, settings.BossyInputSettings, settings.BossyCliSettings);
+            _frontEndFactory = new FrontEndFactory(_context);
 
             _hostManager = new HostManager(this, settings.BossyInputSettings, CreateBossySession);
             _runtimeManager = new BossyRuntimeManager();
@@ -133,7 +133,7 @@ namespace Bossy
                 var session = new Session(_context, bridge, CreateCommandSession, SessionSpace.Edit);
                 
                 // TODO: Remember correct view via session serializing system (which does not exist yet)
-                var content = new CliUserInterfaceView(_parser, _context.SchemaRegistry, _context.Settings.BossyCliSettings, _context.Settings.BossyInputSettings);
+                var content = new CliUserInterfaceView(_context);
                 var viewer = new SessionViewer(bridge, content);
                 var container = new LifecycleContainer(session, viewer);
             

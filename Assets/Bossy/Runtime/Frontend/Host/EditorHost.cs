@@ -3,11 +3,8 @@
 using System;
 using System.Linq;
 using Bossy.Settings;
-using Bossy.Utils;
 using UnityEditor;
-using UnityEditor.Search.Providers;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Bossy.Frontend
 {

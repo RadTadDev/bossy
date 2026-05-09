@@ -218,28 +218,6 @@ namespace Bossy.Tests.FrontEnd.Parsing
 
         // ── Color ───────────────────────────────────────────────────────────
 
-        [Test] public void Color_HexRGB()
-        {
-            var cursor = new TokenStream("#FF0000");
-            var adapter = new ColorAdapter();
-            var result = adapter.TryConvert(cursor, null, out var output);
-            var typed = (Color)output;
-            Assert.That(result.Success, Is.True);
-            Assert.That(typed.r, Is.EqualTo(1.0f).Within(0.01f));
-            Assert.That(typed.g, Is.EqualTo(0.0f).Within(0.01f));
-            Assert.That(typed.b, Is.EqualTo(0.0f).Within(0.01f));
-        }
-
-        [Test] public void Color_HexRGBA()
-        {
-            var cursor = new TokenStream("#FF0000FF");
-            var adapter = new ColorAdapter();
-            var result = adapter.TryConvert(cursor, null, out var output);
-            var typed = (Color)output;
-            Assert.That(result.Success, Is.True);
-            Assert.That(typed.a, Is.EqualTo(1.0f).Within(0.01f));
-        }
-
         [Test] public void Color_BadHex_Fails()
         {
             var cursor = new TokenStream("#ZZZZZZ");

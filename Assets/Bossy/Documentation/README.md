@@ -26,6 +26,7 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
 - [Piping](#piping)
 - [Type Adapting](#type-adapting)
 - [Custom Command UI](#custom-command-ui)
+- [Limitations and Known Bugs](#limitations-and-known-bugs)
 ---
 
 ## Installation
@@ -602,3 +603,6 @@ public class MyCommand : ICommand, IContentView
 You must implement the methods shown above. Most can be no-ops unless needed. `CreateView()` must return the root of the command's UI using the UI Toolkit API. If you prefer you can use the `ContentViewUtility.GetRootFromUxml()` to load a UI document you created using the UI Toolkit Builder.
 
 The signaler is used to send signals that would otherwise be absorbed by your UI. An example is needing to send the toggle command while an input field is focused. You can use the signaler to respect the toggle input instead of typing a `/` in the input bar.
+
+## Limitations and Known Bugs
+- Due to a known UI Toolkit bug, on rare occasions the system font may become invisible. An editor restart will fix this

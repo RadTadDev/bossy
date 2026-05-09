@@ -1,5 +1,4 @@
 using System;
-using Bossy.Settings;
 
 namespace Bossy.Frontend
 {
@@ -9,20 +8,14 @@ namespace Bossy.Frontend
     internal class FrontEndFactory
     {
         private readonly BossyContext _context;
-        private readonly BossyCliSettings _cliSettings;
-        private readonly BossyInputSettings _inputSettings;
         
         /// <summary>
         /// Creates a new factory.
         /// </summary>
-        /// <param name="context">The parser.</param>
-        /// <param name="inputSettings">The input settings.</param>
-        /// <param name="cliSettings">The Cli settings.</param>
-        public FrontEndFactory(BossyContext context, BossyInputSettings inputSettings, BossyCliSettings cliSettings)
+        /// <param name="context">The Bossy context.</param>
+        public FrontEndFactory(BossyContext context)
         {
             _context = context;
-            _cliSettings = cliSettings;
-            _inputSettings = inputSettings;
         }
 
         /// <summary>
@@ -35,9 +28,9 @@ namespace Bossy.Frontend
         {
             return frontendType switch
             {
-                FrontendType.CommandLine => new CliUserInterfaceView(_context.Parser, _context.SchemaRegistry, _cliSettings, _inputSettings),
+                FrontendType.CommandLine => new CliUserInterfaceView(_context),
+                FrontendType.CommandDisplay => new CommandDisplay(_context),
                 FrontendType.Graphical => new GuiUserInterfaceView(),
-                FrontendType.CommandDisplay => new CommandDisplay(_context.Parser, _context.SchemaRegistry, _cliSettings, _inputSettings),
                 _ => throw new ArgumentOutOfRangeException(nameof(frontendType), frontendType, null)
             };
         }

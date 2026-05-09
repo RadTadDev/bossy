@@ -29,55 +29,47 @@ namespace Bossy.Frontend
         IAliasCapability,
         IModifiablePromptHeader
     {
-        private readonly BossyCliSettings _cliSettings;
-        private readonly BossyInputSettings _inputSettings;
-
-        private TaskCompletionSource<object> _readSource;
+        private Signaler _signaler;
+        private readonly BossyContext _context;
 
         private readonly Dictionary<string, string> _aliases = new();
         private readonly Dictionary<Type, CliDisplayAdapter> _displayAdapters = new();
-        
-        private readonly List<string> _outputBuffer = new() { string.Empty };
-        
-        protected TextField Input;
+
+        // Output
         private ListView _view;
+        private TaskCompletionSource<object> _readSource;
+        private readonly List<string> _outputBuffer = new() { string.Empty };
 
+        // Input
+        protected TextField Input;
         private string _cachedInput = string.Empty;
-
         private bool _blockInput;
-
-        private Label _promptHeaderElement;
-        private string _promptHeader = string.Empty;
-        
-        private readonly Parser _parser;
         private bool _reading;
         private bool _requestingCommand;
-        private Signaler _signaler;
 
+        // History
+        private static List<string> _historyBuffer;
+        private int _historyIndex;
         private static bool _historyLoaded;
         private string _historyFilePath = Path.Combine(Application.persistentDataPath, "bossy_cli_history.txt");
 
+        // Autocomplete
         private int _suggestionIndex;
         private bool _cyclingSuggestions;
         private AutocompleteEngine _autocomplete;
         private VisualElement _autocompleteContainer;
-        
-        private static List<string> _historyBuffer;
-        private int _historyIndex;
-        
+
+        // Prompt header
+        private Label _promptHeaderElement;
+        private string _promptHeader = string.Empty;
         
         /// <summary>
         /// Creates a Cli interface.
         /// </summary>
-        /// <param name="parser">The parser.</param>
-        /// <param name="registry">The schema registry.</param>
-        /// <param name="cliSettings">The Cli settings.</param>
-        /// <param name="inputSettings">The input settings.</param>
-        public CliUserInterfaceView(Parser parser, SchemaRegistry registry, BossyCliSettings cliSettings, BossyInputSettings inputSettings)
+        /// <param name="context">The Bossy context.</param>
+        public CliUserInterfaceView(BossyContext context)
         {
-            _parser = parser;
-            _cliSettings = cliSettings;
-            _inputSettings = inputSettings;
+            _context = context;
 
             if (!_historyLoaded)
             {
@@ -99,7 +91,7 @@ namespace Bossy.Frontend
             EditorApplication.quitting += OnBeforeReload;
 #endif
 
-            _autocomplete = new AutocompleteEngine(registry);
+            _autocomplete = new AutocompleteEngine(_context.SchemaRegistry, _context.TypeAdapterRegistry);
             
             // Register adapters
             _displayAdapters[typeof(OptionsPrompt)] = new OptionsPromptDisplayAdapter();
@@ -120,25 +112,25 @@ namespace Bossy.Frontend
             {
                 if (_blockInput) return;
                 
-                if (_inputSettings.ToggleMainHost.IsAsserted(evt))
+                if (_context.Settings.BossyInputSettings.ToggleMainHost.IsAsserted(evt))
                 {
                     _signaler.ReleaseFocus();
-                    Input.focusController.IgnoreEvent(evt);
+                    Input.focusController?.IgnoreEvent(evt);
                     evt.StopPropagation();
                 }
-                else if (_inputSettings.SubmitCommand.IsAsserted(evt))
+                else if (_context.Settings.BossyInputSettings.SubmitCommand.IsAsserted(evt))
                 {
                     Submit();
                 }
-                else if (_inputSettings.HistoryBack.IsAsserted(evt))
+                else if (_context.Settings.BossyInputSettings.HistoryBack.IsAsserted(evt))
                 {
                     HistoryBack();
                 }
-                else if (_inputSettings.HistoryForward.IsAsserted(evt))
+                else if (_context.Settings.BossyInputSettings.HistoryForward.IsAsserted(evt))
                 {
                     HistoryForward();
                 }
-                else if (_inputSettings.CycleSuggestions.IsAsserted(evt))
+                else if (_context.Settings.BossyInputSettings.CycleSuggestions.IsAsserted(evt))
                 {
                     CycleSuggestions();
                     evt.StopImmediatePropagation();
@@ -231,14 +223,14 @@ namespace Bossy.Frontend
                 // Remake this each time to re-apply settings that could change
                 var operatorList = new OperatorList
                 (
-                    _cliSettings.ThenOperator,
-                    _cliSettings.AndOperator,
-                    _cliSettings.OrOperator,
-                    _cliSettings.PipeOperator,
-                    _cliSettings.WindowOperator
+                    _context.Settings.BossyCliSettings.ThenOperator,
+                    _context.Settings.BossyCliSettings.AndOperator,
+                    _context.Settings.BossyCliSettings.OrOperator,
+                    _context.Settings.BossyCliSettings.PipeOperator,
+                    _context.Settings.BossyCliSettings.WindowOperator
                 );
                 
-                var parseResult = _parser.Parse(line, operatorList, _aliases);
+                var parseResult = _context.Parser.Parse(line, operatorList, _aliases);
                 if (!parseResult.TryGetGraph(out var graph))
                 {
                     Write(Format.Error(parseResult.Message));
@@ -441,15 +433,54 @@ namespace Bossy.Frontend
         private void ShowSuggestions(IEnumerable<Suggestion> suggestions)
         {
             ClearAutocomplete();
+
+            var all = suggestions as Suggestion[] ?? suggestions.ToArray();
             
-            foreach (var s in suggestions)
+            var first = all.FirstOrDefault();
+
+            if (first == null)
             {
-                var label = new Label(s.DisplayTest)
+                return;
+            }
+            
+            // If the first suggestion is a hint or error, thats all we care about
+            if (first.IsHint)
+            {
+                var label = new Label(first.DisplayText)
                 {
-                    userData = s.FullText,
+                    userData = first,
                     style =
                     {
-                        fontSize = 13.5f
+                        fontSize = 13.5f,
+                        color = Format.LightBlue,
+                    }
+                };
+                _autocompleteContainer?.Add(label);
+                return;
+            }
+            if (first.IsError)
+            {
+                var label = new Label(first.DisplayText)
+                {
+                    userData = first,
+                    style =
+                    {
+                        fontSize = 13.5f,
+                        color = Format.Red,
+                    }
+                };
+                _autocompleteContainer?.Add(label);
+                return;
+            }
+            
+            foreach (var s in all)
+            {
+                var label = new Label(s.DisplayText)
+                {
+                    userData = s,
+                    style =
+                    {
+                        fontSize = 13.5f,
                     }
                 };
                 
@@ -459,15 +490,27 @@ namespace Bossy.Frontend
 
         private void CycleSuggestions()
         {
-            if (_autocompleteContainer.childCount == 0) return;
+            if (_autocompleteContainer.childCount == 0)
+            {
+                return;
+            }
+
+            // Hints and errors are not applyable
+            var suggestion = (Suggestion)_autocompleteContainer[0].userData;
+            if (suggestion.IsError || suggestion.IsHint)
+            {
+                return;
+            }
             
             var prev = (Label)_autocompleteContainer[(_suggestionIndex - 1 + _autocompleteContainer.childCount) % _autocompleteContainer.childCount];
             prev.style.backgroundColor = StyleKeyword.Null;
+            prev.style.color = Color.white;
 
             var line = (Label)_autocompleteContainer[_suggestionIndex];
             line.style.backgroundColor = Color.cyan;
+            line.style.color = Color.black;
             
-            SetInput((string)line.userData, true);
+            SetInput(((Suggestion)line.userData).FullText, true);
 
             _suggestionIndex = (_suggestionIndex + 1) % _autocompleteContainer.childCount;
         }
