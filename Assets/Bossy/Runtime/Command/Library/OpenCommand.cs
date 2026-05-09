@@ -11,7 +11,7 @@ namespace Bossy.Runtime.Command.Library
     public class OpenCommand : SimpleCommand
     {
         [Suggest(nameof(Suggest))]
-        [Switch('f', "The script file name to open.")]
+        [Positional(0, "The script file name to open.")]
         private string _fileName;
         
         protected override CommandStatus Execute(SimpleContext ctx)

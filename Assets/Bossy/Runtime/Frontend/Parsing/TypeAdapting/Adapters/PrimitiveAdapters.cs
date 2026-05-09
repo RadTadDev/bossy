@@ -7,21 +7,39 @@ namespace Bossy.Frontend.Parsing
     {
         protected override TypeAdapterResult TryConvertToType(TokenStream stream, TypeAdapterRegistry registry, out bool output)
         {
+            // Assume that if the general method is called, we can use implicit booleans
+            return HandleAdaptation(stream, registry, out output, false);
+        }
+        
+        public TypeAdapterResult HandleAdaptation(TokenStream stream, TypeAdapterRegistry registry, out bool output, bool requireExplicitBool)
+        {
             // Implicit 'true' on no token
             if (!stream.TryPeek(out var token))
             {
-                output = true;
-                return TypeAdapterResult.Pass(0);
+                // Only return if we are allowed
+                if (!requireExplicitBool)
+                {
+                    output = true;
+                    return TypeAdapterResult.Pass(0);
+                }
             }
 
-            // Only consume a token if it is a boolean
+            // If the token is a boolean, always consume it
             if (bool.TryParse(token, out output))
             {
                 stream.TryConsume(out _);
                 return TypeAdapterResult.Pass(1);
             }
+            
+            // If we required an explicit bool but did not get one, fail
+            if (requireExplicitBool)
+            {
+                // Consume here for downstream error checking consistency
+                stream.TryConsume(out _);
+                return TypeAdapterResult.Fail("An explicit boolean value is required in this case", 1);
+            }
 
-            // Don't consume a random token
+            // Implicit booleans are allowed, return success
             output = true;
             return TypeAdapterResult.Pass(0);
         }

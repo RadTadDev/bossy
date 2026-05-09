@@ -15,17 +15,17 @@ TODO:
 - style facelift and conformance
 - verify namespaces and TODOs and remove dead usings
 - link.xml file to prevent stripping in some cases
+- GUI
 
-Future features:
+TO DOCUMENT:
+- Suggestion functions
+
+FUTURE FEATURES:
 - Session restoration 
     Allowing editor windows to survive domain reload requires hosts being able to serialize their state
     Likely best as an optional interface
     Will require a stable unique key for each window
 
-- Permissions
-
-- GUI
-      
 DEV NOTES: 
     - Currently, the graphics host only knows a window has closed when querying it to see if its toggleable.
       This is done because editor windows especially can close from outside sources. I dont think its unclean, just be aware.

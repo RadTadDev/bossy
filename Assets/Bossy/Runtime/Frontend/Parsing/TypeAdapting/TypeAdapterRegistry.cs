@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Bossy.Utils;
+using Unity.GraphToolkit.Editor;
 
 namespace Bossy.Frontend.Parsing
 {
@@ -16,9 +17,10 @@ namespace Bossy.Frontend.Parsing
         /// </summary>
         /// <param name="input">The string to convert.</param>
         /// <param name="output">The converted output.</param>
+        /// <param name="requireExplicitBool">Whether to force boolean values to have an explicit token.</param>
         /// <typeparam name="T">The type to convert to.</typeparam>
         /// <returns>The result.</returns>
-        public TypeAdapterResult TryConvert<T>(string input, out T output)
+        public TypeAdapterResult TryConvert<T>(string input, out T output, bool requireExplicitBool = false)
         {
             var stream = new TokenStream(input);
             
@@ -40,8 +42,9 @@ namespace Bossy.Frontend.Parsing
         /// <param name="type">The type to convert to.</param>
         /// <param name="stream">The token stream.</param>
         /// <param name="output">The converted output.</param>
+        /// <param name="requireExplicitBool">Whether to force boolean values to have an explicit token.</param>
         /// <returns>The result.</returns>
-        public TypeAdapterResult TryConvert(Type type, TokenStream stream, out object output)
+        public TypeAdapterResult TryConvert(Type type, TokenStream stream, out object output, bool requireExplicitBool = false)
         {
             output = null;
 
@@ -50,8 +53,19 @@ namespace Bossy.Frontend.Parsing
                 return TypeAdapterResult.Fail($"No registered adapter handles type \"{type.GetFriendlyName()}\"", 0);
             }
 
-            var result = adapter.TryConvert(stream, this, out output);
+            if (type != typeof(bool))
+            {
+                return adapter.TryConvert(stream, this, out output);
+            }
+            
+            // Booleans are a special case since they are sometimes explicit and other times not
+            var result = ((BoolAdapter)adapter).HandleAdaptation(stream, this, out var boolean, requireExplicitBool);
 
+            if (result.Success)
+            {
+                output = boolean;
+            }
+                
             return result;
         }
 

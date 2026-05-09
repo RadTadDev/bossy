@@ -2,14 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Bossy.Settings;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
 using Bossy.Frontend.Autocomplete;
-using Bossy.Schema.Registry;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -91,7 +89,7 @@ namespace Bossy.Frontend
             EditorApplication.quitting += OnBeforeReload;
 #endif
 
-            _autocomplete = new AutocompleteEngine(_context.SchemaRegistry, _context.TypeAdapterRegistry);
+            _autocomplete = new AutocompleteEngine(_context);
             
             // Register adapters
             _displayAdapters[typeof(OptionsPrompt)] = new OptionsPromptDisplayAdapter();
@@ -134,6 +132,11 @@ namespace Bossy.Frontend
                 {
                     CycleSuggestions();
                     evt.StopImmediatePropagation();
+                }
+                else
+                {
+                    // Reset the history index on any normal character press
+                    _historyIndex = _historyBuffer.Count;
                 }
             },TrickleDown.TrickleDown);
 
@@ -507,8 +510,7 @@ namespace Bossy.Frontend
             prev.style.color = Color.white;
 
             var line = (Label)_autocompleteContainer[_suggestionIndex];
-            line.style.backgroundColor = Color.cyan;
-            line.style.color = Color.black;
+            line.style.backgroundColor = Format.DarkBlue;
             
             SetInput(((Suggestion)line.userData).FullText, true);
 

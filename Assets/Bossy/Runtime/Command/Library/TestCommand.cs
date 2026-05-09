@@ -21,17 +21,18 @@ namespace Bossy.Runtime.Command.Library
         
         [Suggest(nameof(Suggest))]
         [Positional(0, "My test positional")] 
-        private string _firstPos;
+        private Vector2 _firstPos;
         
-        [Suggest(nameof(Suggest))]
+        [Suggest(nameof(Another))]
         [Positional(1, "My other test positional")] 
         private string _secondPos;
 
+        [Suggest(nameof(Optional))]
         [Optional(0, "My test optional")] 
-        private string _optional;
+        private float _optional;
         
         [Variadic("My test variadic")]
-        private string[] _variadic;
+        private bool[] _variadic;
         
         protected override CommandStatus Execute(SimpleContext ctx)
         {
@@ -41,7 +42,43 @@ namespace Bossy.Runtime.Command.Library
 
         private static string[] Suggest()
         {
-            return new[] { "Hello", "beautiful", "world" };
+            return new[] { "1 2", "10 4", "3 5" };
+        }
+
+        private static string[] Another()
+        {
+            return new[] { "Big", "Small" };
+        }
+        
+        private static string[] Optional()
+        {
+            return new[] { "4.2", "2" };
+        }
+    }
+    
+    [Command("sub", "Subcommand of the test command.", typeof(TestCommand))]
+    public class TestSubcommand : SimpleCommand
+    {
+        [Positional(0, "First sub positional")]
+        private Vector3 _subPos1;
+        
+        protected override CommandStatus Execute(SimpleContext ctx)
+        {
+            ctx.Write("Executed the subcommand correctly");
+            return CommandStatus.Ok;
+        }
+    }
+    
+    [Command("otherSub", "Other subcommand of the test command.", typeof(TestCommand))]
+    public class OtherTestSubcommand : SimpleCommand
+    {
+        [Switch('w', "Test switch")]
+        private string _word;
+        
+        protected override CommandStatus Execute(SimpleContext ctx)
+        {
+            ctx.Write("Executed the subcommand correctly");
+            return CommandStatus.Ok;
         }
     }
 }

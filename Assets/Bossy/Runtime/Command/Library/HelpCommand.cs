@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Bossy;
 using Bossy.Command;
+using Bossy.Frontend.Autocomplete;
 using Bossy.Schema;
 using Bossy.Schema.Registry;
 using Bossy.Utils;
@@ -9,6 +11,7 @@ using Bossy.Utils;
 [Command("help", "Displays information about a command and its arguments.")]
 public class HelpCommand : SimpleCommand
 {
+    [Suggest(nameof(Suggest))]
     [Variadic("The command path to look up.")]
     private string[] _command;
 
@@ -152,5 +155,10 @@ public class HelpCommand : SimpleCommand
             VariadicAttribute   => "[variadic]",
             _                   => "[argument]",
         };
+    }
+
+    private static string[] Suggest(SuggestionContext ctx)
+    {
+        return ctx.Schema.ChildSchemas.Select(s => s.Name).ToArray();
     }
 }

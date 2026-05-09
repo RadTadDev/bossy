@@ -114,7 +114,7 @@ namespace Bossy.Command
                 if (response is string textual)
                 {
                     triedAdapting = true;
-                    adapterResult = Bossy.TypeAdapterRegistry.TryConvert(textual, out T typed);
+                    adapterResult = Bossy.TypeAdapterRegistry.TryConvert(textual, out T typed, true);
             
                     if (adapterResult.Success)
                     {

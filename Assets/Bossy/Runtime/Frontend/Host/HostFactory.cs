@@ -39,7 +39,7 @@ namespace Bossy.Frontend
 #if UNITY_EDITOR
             if (space is SessionSpace.Edit or SessionSpace.EditCommand)
             {
-                host = EditorWindow.CreateWindow<EditorHost>();
+                host = EditorWindow.CreateWindow<EditorHost>("Bossy");
             }
 #endif
             // Always fallback on runtime host
