@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Execution;
@@ -29,6 +30,11 @@ namespace Bossy.Runtime.Command.Library
         public async Task<CommandStatus> ExecuteAsync(CommandContext ctx)
         {
             _ctx = ctx;
+
+            if (_command.Length == 0)
+            {
+                return CommandStatus.Error;
+            }
             
             var command = string.Join(" ", _command);
 

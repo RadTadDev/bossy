@@ -1,3 +1,24 @@
+TODO: 
+- permissions system via hook
+- fix settings
+- settings command
+- startup file
+- style facelift and conformance
+- verify namespaces and TODOs and remove dead usings
+- link.xml file to prevent stripping in some cases
+- GUI
+
+FUTURE FEATURES:
+- Session restoration 
+    Allowing editor windows to survive domain reload requires hosts being able to serialize their state
+    Likely best as an optional interface
+    Will require a stable unique key for each window
+
+DEV NOTES: 
+    - Currently, the graphics host only knows a window has closed when querying it to see if its toggleable.
+      This is done because editor windows especially can close from outside sources. I dont think its unclean, just be aware.
+    - Not including headless host in design, this is never going to be useful or implemented
+
 Roslyn Analyzers
 - Ensure positional indexes are unique and ordered
 - Ensure optional indexes are unique and ordered
@@ -5,29 +26,3 @@ Roslyn Analyzers
 - Ensure variadic attributes are only on array types
 - Ensure only one variadic per command class
 - Ensure only one argument attribute per field
-
-TODO: 
-- auto complete
-- fix settings
-- settings command
-- startup file
-- style facelift and conformance
-- verify namespaces and TODOs and remove dead usings
-- link.xml file to prevent stripping in some cases
-
-Future features:
-- Session restoration 
-    Allowing editor windows to survive domain reload requires hosts being able to serialize their state
-    Likely best as an optional interface
-    Will require a stable unique key for each window
-
-- Permissions
-
-- GUI
-      
-DEV NOTES: 
-    - Currently, the graphics host only knows a window has closed when querying it to see if its toggleable.
-      This is done because editor windows especially can close from outside sources. I dont think its unclean, just be aware.
-    - Not including headless host in design, this is never going to be useful or implemented
-
-

@@ -26,6 +26,8 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
 - [Piping](#piping)
 - [Type Adapting](#type-adapting)
 - [Custom Command UI](#custom-command-ui)
+- [Auto Complete](#auto-complete)
+- [Limitations and Known Bugs](#limitations-and-known-bugs)
 ---
 
 ## Installation
@@ -304,7 +306,11 @@ private float _increment;
 ```
 
 - Note that in the case of all names, leading underscores are ignored without requireing the override name.
-- Switches may appear anywhere except for after variadics.
+- Switches may appear anywhere except for between subcommands. Preference will be given to switches over variadic. To explicitly send tokens that match a switch to a variadic arg, inluclude `--` in your command like so:
+```csharp
+cmd -- my variadic list --consumed
+```
+will send all arguments, including `--consumed` to the variadic argument.
 
 ---
 
@@ -514,6 +520,7 @@ For commands that need to perform async work, inherit from `ICommand` and implem
 ```csharp
 [Command("fetch", "Fetches data from a remote endpoint.")]
 public class FetchCommand : Command
+    
 {
     [Positional("The URL to fetch.")]
     private string _url;
@@ -597,3 +604,92 @@ public class MyCommand : ICommand, IContentView
 You must implement the methods shown above. Most can be no-ops unless needed. `CreateView()` must return the root of the command's UI using the UI Toolkit API. If you prefer you can use the `ContentViewUtility.GetRootFromUxml()` to load a UI document you created using the UI Toolkit Builder.
 
 The signaler is used to send signals that would otherwise be absorbed by your UI. An example is needing to send the toggle command while an input field is focused. You can use the signaler to respect the toggle input instead of typing a `/` in the input bar.
+
+---
+
+## Auto Complete
+
+The autocomplete system will suggest values and give hints and errors based on what you have typed into the terminal. If whats being suggested is a value, you can cycle between options using the `tab` key. If the autocomplete is not showing, you can also bring it up using the `tab` key. If a hint or error is showing, you will not have the option to apply this to your input line, but you should note information.
+
+Note that the autocomplete system uses several heuristics to guess at your intentions. These may not be perfect and it is possible to enter values not being suggested. Furthermore, if a hint is telling you something is invalid, that's a guess and can sometimes be ignored, but if it's an error telling you that, the command will not pass parsing. Finally, the system will note that a command is `Ready to execute` when all avaiable ordered arguments are consumed but you may submit before this or include switches after this and still run a valid command.
+
+The autocomplete system is fully automated based on your command definitions. However, sometimes you may prefer to suggest values that you know are relevant. Consider the way the `open` command works:
+
+```csharp
+[Command("open", "Opens a file to edit in the external editor.")]
+public class OpenCommand : SimpleCommand
+{
+    [Suggest(nameof(Suggest))]
+    [Positional(0, "The script file name to open.")]
+    private string _fileName;
+    
+    protected override CommandStatus Execute(SimpleContext ctx)
+    {
+        // Not important...
+    }
+
+    private static IEnumerable<string> Suggest()
+    {
+        return AssetDatabase.FindAssets("t:Script", new [] { "Assets" })
+            .Select(AssetDatabase.GUIDToAssetPath)
+            .Select(Path.GetFileName);
+    }
+}
+```
+
+From this example you can see that you have the ability to register suggestion functions to your arguments. Simply add the `Suggest` attribute to your argument and pass in the name of the function. If your function resides on a different object, you may also pass in the type of that object like so:
+```csharp
+[Suggest(nameof(MySuggesters.MyFunction), typeof(MySuggesters))]
+```
+where `MySuggesters.MyFunction` is a public static method on `MySuggesters`.
+
+All suggestion functions must be <b>static</b> and return a collection of strings from which `IEnumerable<string>` is assignable (`List<string>`, `string[]`, and others are valid).
+
+This method is fine for simple cases where the suggestion does not depend on the state of the input or need additional resources. However, you have the option to take in a context object for more complex cases. The single argument allowed must be of type `SuggestionContext`. Consider the following example from the `help` command:
+
+```csharp
+[Command("help", "Displays information about a command and its arguments.")]
+public class HelpCommand : SimpleCommand
+{
+    [Suggest(nameof(Suggest))]
+    [Variadic("The command path to look up.")]
+    private string[] _command;
+
+    [Switch('r', "Also display all subcommands recursively.")]
+    private bool _recursive;
+
+    protected override CommandStatus Execute(SimpleContext ctx)
+    {
+        // Not important...    
+    }
+
+    private static string[] Suggest(SuggestionContext ctx)
+    {
+        var commandPath = ctx.AutocompleteContext.TokensSoFar.Skip(1).Where(t => t != "-r" && t != "--recursive").ToList();
+
+        var parent = commandPath.FirstOrDefault();
+        var rest = commandPath.Skip(1);
+
+        if (parent == null)
+        {
+            return ctx.BossyContext.SchemaRegistry.GetValidSchemas().Select(s => s.Name).ToArray();
+        }
+        
+        if (ctx.BossyContext.SchemaRegistry.TryResolveSchema(parent, rest, out var schema) is SchemaQueryStatus.Found)
+        {
+            return schema.ChildSchemas.Select(s => s.Name).ToArray();
+        }
+        
+        return Array.Empty<string>();
+    }
+}
+```
+
+The `SuggestionContext` gives you access to the Bossy internal context as well as the tokens parsed so far, and the internal autocomplete context. Note that generally speaking, you should only read these objects, as writing to them will happen every time this suggestion function is called.
+
+In the example above, you can see that its simple enough to check which tokens have been consumed so far, and discard the command name, as well as expected switch values and return a different set of options depending on the context. Note that a lot of the complexity in this case comes from the fact that the input is a variadic set.
+
+---
+
+## Limitations and Known Bugs
+- Due to a known UI Toolkit bug, on rare occasions the system font may become invisible. An editor restart will fix this

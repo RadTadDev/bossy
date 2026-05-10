@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Bossy.Command;
 using Bossy.Schema;
-using Bossy.Execution;
 
 namespace Bossy.Runtime.Command.Library
 {

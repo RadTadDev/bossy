@@ -17,6 +17,11 @@ namespace Bossy.Frontend.Parsing
         public int Cursor => _cursor;
         
         /// <summary>
+        /// The number of tokens remaining to be consumed.
+        /// </summary>
+        public int Remaining => _tokens.Count - _cursor;
+        
+        /// <summary>
         /// Creates a new token stream.
         /// </summary>
         /// <param name="line">The input to tokenize.</param>

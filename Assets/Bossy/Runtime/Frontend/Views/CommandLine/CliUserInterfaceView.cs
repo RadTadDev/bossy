@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Bossy.Settings;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
+using Bossy.Frontend.Autocomplete;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -24,47 +24,50 @@ namespace Bossy.Frontend
         IHistorical,
         IClearable,
         IModifiableOutputBuffer,
-        IAliasCapability
+        IAliasCapability,
+        IModifiablePromptHeader
     {
-        private readonly BossyCliSettings _cliSettings;
-        private readonly BossyInputSettings _inputSettings;
-
-        private TaskCompletionSource<object> _readSource;
+        private Signaler _signaler;
+        private readonly BossyContext _context;
 
         private readonly Dictionary<string, string> _aliases = new();
         private readonly Dictionary<Type, CliDisplayAdapter> _displayAdapters = new();
-        
-        private readonly List<string> _outputBuffer = new() { string.Empty };
-        
-        protected TextField Input;
+
+        // Output
         private ListView _view;
+        private TaskCompletionSource<object> _readSource;
+        private readonly List<string> _outputBuffer = new() { string.Empty };
 
+        // Input
+        protected TextField Input;
         private string _cachedInput = string.Empty;
-
         private bool _blockInput;
-        
-        private readonly Parser _parser;
         private bool _reading;
         private bool _requestingCommand;
-        private Signaler _signaler;
 
+        // History
+        private static List<string> _historyBuffer;
+        private int _historyIndex;
         private static bool _historyLoaded;
         private string _historyFilePath = Path.Combine(Application.persistentDataPath, "bossy_cli_history.txt");
-        private static List<string> _historyBuffer;
 
-        private int _historyIndex;
+        // Autocomplete
+        private int _suggestionIndex;
+        private bool _cyclingSuggestions;
+        private AutocompleteEngine _autocomplete;
+        private VisualElement _autocompleteContainer;
+
+        // Prompt header
+        private Label _promptHeaderElement;
+        private string _promptHeader = string.Empty;
         
         /// <summary>
         /// Creates a Cli interface.
         /// </summary>
-        /// <param name="parser">The parser.</param>
-        /// <param name="cliSettings">The Cli settings.</param>
-        /// <param name="inputSettings">The input settings.</param>
-        public CliUserInterfaceView(Parser parser, BossyCliSettings cliSettings, BossyInputSettings inputSettings)
+        /// <param name="context">The Bossy context.</param>
+        public CliUserInterfaceView(BossyContext context)
         {
-            _parser = parser;
-            _cliSettings = cliSettings;
-            _inputSettings = inputSettings;
+            _context = context;
 
             if (!_historyLoaded)
             {
@@ -85,6 +88,8 @@ namespace Bossy.Frontend
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeReload;
             EditorApplication.quitting += OnBeforeReload;
 #endif
+
+            _autocomplete = new AutocompleteEngine(_context);
             
             // Register adapters
             _displayAdapters[typeof(OptionsPrompt)] = new OptionsPromptDisplayAdapter();
@@ -93,35 +98,56 @@ namespace Bossy.Frontend
         public virtual VisualElement CreateView()
         {
             var root = ContentViewUtility.GetRootFromUxml("BossyCli");
+
+            _promptHeaderElement = (Label)root.Q("prompt-label");
             
             Input = root.Q<TextField>("input-field");
+            
+            // This is necessary for removing padding
+            Input.Q<VisualElement>("unity-text-input").style.paddingTop = 0;
+            Input.Q<VisualElement>("unity-text-input").style.paddingBottom = 0;
+            Input.Q<VisualElement>("unity-text-input").style.paddingLeft = 0;
+            Input.Q<VisualElement>("unity-text-input").style.paddingRight = 0;
+            
             Input.parent.focusable = true;
-            Input.style.fontSize = 13.5f;
+            Input.style.fontSize = 14f;
             Input.selectAllOnFocus = false;
             Input.selectAllOnMouseUp = false;
             Input.RegisterCallback<KeyDownEvent>(evt =>
             {
                 if (_blockInput) return;
                 
-                if (_inputSettings.ToggleMainHost.IsAsserted(evt))
+                if (_context.Settings.BossyInputSettings.ToggleMainHost.IsAsserted(evt))
                 {
                     _signaler.ReleaseFocus();
-                    Input.focusController.IgnoreEvent(evt);
+                    Input.focusController?.IgnoreEvent(evt);
                     evt.StopPropagation();
                 }
-                else if (_inputSettings.SubmitCommand.IsAsserted(evt))
+                else if (_context.Settings.BossyInputSettings.SubmitCommand.IsAsserted(evt))
                 {
                     Submit();
                 }
-                else if (_inputSettings.HistoryBack.IsAsserted(evt))
+                else if (_context.Settings.BossyInputSettings.HistoryBack.IsAsserted(evt))
                 {
                     HistoryBack();
                 }
-                else if (_inputSettings.HistoryForward.IsAsserted(evt))
+                else if (_context.Settings.BossyInputSettings.HistoryForward.IsAsserted(evt))
                 {
                     HistoryForward();
                 }
+                else if (_context.Settings.BossyInputSettings.CycleSuggestions.IsAsserted(evt))
+                {
+                    CycleSuggestions();
+                    evt.StopImmediatePropagation();
+                }
+                else
+                {
+                    // Reset the history index on any normal character press
+                    _historyIndex = _historyBuffer.Count;
+                }
             },TrickleDown.TrickleDown);
+
+            Input.RegisterValueChangedCallback(OnValueUpdated);
             
             FocusInput();
             
@@ -143,6 +169,8 @@ namespace Bossy.Frontend
             };
             _view.virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight;
             _view.bindItem = (ele, i) => ((Label)ele).text = _outputBuffer[i];
+
+            _autocompleteContainer = root.Q("auto-complete");
             
             return root;
         }
@@ -189,7 +217,7 @@ namespace Bossy.Frontend
         {
             var line = Input.value;
 
-            Write($"> {line}");
+            Write($"{_promptHeader}> {line}");
             
             object result = line;
 
@@ -198,20 +226,21 @@ namespace Bossy.Frontend
             
             Input.value = string.Empty;
             FocusInput();
+            ClearAutocomplete();
         
             if (_requestingCommand)
             {
                 // Remake this each time to re-apply settings that could change
                 var operatorList = new OperatorList
                 (
-                    _cliSettings.ThenOperator,
-                    _cliSettings.AndOperator,
-                    _cliSettings.OrOperator,
-                    _cliSettings.PipeOperator,
-                    _cliSettings.WindowOperator
+                    _context.Settings.BossyCliSettings.ThenOperator,
+                    _context.Settings.BossyCliSettings.AndOperator,
+                    _context.Settings.BossyCliSettings.OrOperator,
+                    _context.Settings.BossyCliSettings.PipeOperator,
+                    _context.Settings.BossyCliSettings.WindowOperator
                 );
                 
-                var parseResult = _parser.Parse(line, operatorList, _aliases);
+                var parseResult = _context.Parser.Parse(line, operatorList, _aliases);
                 if (!parseResult.TryGetGraph(out var graph))
                 {
                     Write(Format.Error(parseResult.Message));
@@ -236,7 +265,7 @@ namespace Bossy.Frontend
         {
             if (!_reading)
             {
-                return;
+                return; 
             }
             
             _blockInput = true;
@@ -257,6 +286,24 @@ namespace Bossy.Frontend
             });
         }
 
+        private void SetInput(string value, bool cyclingSuggestions = false)
+        {
+            if (cyclingSuggestions)
+            {
+                _cyclingSuggestions = true;
+            }
+            
+            _cachedInput = value;
+            Input.value = value;
+            
+            Input.schedule.Execute(() =>
+            {
+                Input.cursorIndex = _cachedInput.Length;
+                Input.selectIndex = _cachedInput.Length;
+                _cyclingSuggestions = false;
+            });
+        }
+        
         public void OnDefocus()
         {
             _cachedInput = Input.value;
@@ -292,29 +339,23 @@ namespace Bossy.Frontend
         private void HistoryBack()
         {
             if (_historyIndex == 0 || _historyBuffer.Count == 0) return;
+
+            ClearAutocomplete();
             
             _historyIndex--;
             
-            Input.value = _historyBuffer[_historyIndex];
-            _cachedInput = Input.value;
-
-            Input.schedule.Execute(() =>
-            {
-                Input.cursorIndex = _cachedInput.Length;
-                Input.selectIndex = _cachedInput.Length;
-            });
+            SetInput(_historyBuffer[_historyIndex]);
         }
 
         private void HistoryForward()
         {
             if (_historyIndex >= _historyBuffer.Count - 1 || _historyBuffer.Count == 0) return;
             
+            ClearAutocomplete();
+            
             _historyIndex++;
             
-            Input.value = _historyBuffer[_historyIndex];
-            _cachedInput = Input.value;
-            Input.cursorIndex = _cachedInput.Length;
-            Input.selectIndex = _cachedInput.Length;
+            SetInput(_historyBuffer[_historyIndex]);
         }
 
         private void AppendHistory(string line)
@@ -344,6 +385,7 @@ namespace Bossy.Frontend
 
         public void Clear()
         {
+            ClearAutocomplete();
             _outputBuffer.Clear();
             _outputBuffer.Add(string.Empty);
             _view.RefreshItems();
@@ -381,6 +423,132 @@ namespace Bossy.Frontend
         public bool DeleteAlias(string alias)
         {
             return _aliases.Remove(alias);
+        }
+
+        private void OnValueUpdated(ChangeEvent<string> evt)
+        {
+            if (!_requestingCommand || !_reading || _cyclingSuggestions || _blockInput) return;
+
+            if (string.IsNullOrWhiteSpace(evt.newValue))
+            {
+                ClearAutocomplete();
+                return;
+            }
+            
+            var suggestions = _autocomplete.Suggest(evt.newValue, Input.cursorIndex);
+
+            ShowSuggestions(suggestions);
+        }
+        
+        private void ShowSuggestions(IEnumerable<Suggestion> suggestions)
+        {
+            ClearAutocomplete();
+
+            var all = suggestions as Suggestion[] ?? suggestions.ToArray();
+            
+            var first = all.FirstOrDefault();
+
+            if (first == null)
+            {
+                return;
+            }
+            
+            // If the first suggestion is a hint or error, thats all we care about
+            if (first.IsHint)
+            {
+                var label = new Label(first.DisplayText)
+                {
+                    userData = first,
+                    style =
+                    {
+                        fontSize = 13.5f,
+                        color = Format.LightBlue,
+                    }
+                };
+                _autocompleteContainer?.Add(label);
+                return;
+            }
+            if (first.IsError)
+            {
+                var label = new Label(first.DisplayText)
+                {
+                    userData = first,
+                    style =
+                    {
+                        fontSize = 13.5f,
+                        color = Format.Red,
+                    }
+                };
+                _autocompleteContainer?.Add(label);
+                return;
+            }
+            
+            foreach (var s in all)
+            {
+                var label = new Label(s.DisplayText)
+                {
+                    userData = s,
+                    style =
+                    {
+                        fontSize = 13.5f,
+                        color = Format.White
+                    }
+                };
+                
+                _autocompleteContainer?.Add(label);
+            }
+        }
+
+        private void CycleSuggestions()
+        {
+            // If autocomplete is not open, try opening it
+            if (_autocompleteContainer.childCount == 0)
+            {
+                var suggestions = _autocomplete.Suggest(Input.value, Input.cursorIndex);
+                ShowSuggestions(suggestions);
+                return;
+            }
+
+            // Hints and errors are not applyable
+            var suggestion = (Suggestion)_autocompleteContainer[0].userData;
+            if (suggestion.IsError || suggestion.IsHint)
+            {
+                return;
+            }
+            
+            var prev = (Label)_autocompleteContainer[(_suggestionIndex - 1 + _autocompleteContainer.childCount) % _autocompleteContainer.childCount];
+            prev.style.backgroundColor = StyleKeyword.Null;
+            prev.style.color = Color.white;
+
+            var line = (Label)_autocompleteContainer[_suggestionIndex];
+            line.style.backgroundColor = Format.DarkBlue;
+            
+            SetInput(((Suggestion)line.userData).FullText, true);
+
+            _suggestionIndex = (_suggestionIndex + 1) % _autocompleteContainer.childCount;
+        }
+
+        private void ClearAutocomplete()
+        {
+            _autocompleteContainer?.Clear();
+            _suggestionIndex = 0;
+        }
+
+        public void SetPromptHeader(string header)
+        {
+            _promptHeader = header;
+            _promptHeaderElement.text = $"{_promptHeader}>";
+        }
+
+        public void ResetHeader()
+        {
+            _promptHeader = string.Empty;
+            _promptHeaderElement.text = ">";
+        }
+        
+        public void ResetCapabilities()
+        {
+            ResetHeader();
         }
     }
 }

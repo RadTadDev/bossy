@@ -3,19 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Bossy.Command;
+using Bossy.Frontend.Autocomplete;
 using Bossy.Schema;
 using Bossy.Schema.Registry;
-using Bossy.Execution;
 using Bossy.Utils;
 
 [Command("help", "Displays information about a command and its arguments.")]
 public class HelpCommand : SimpleCommand
 {
+    [Suggest(nameof(Suggest))]
     [Variadic("The command path to look up.")]
     private string[] _command;
-
-    [Switch('v', "Show argument types and validation attributes.")]
-    private bool _verbose;
 
     [Switch('r', "Also display all subcommands recursively.")]
     private bool _recursive;
@@ -89,23 +87,14 @@ public class HelpCommand : SimpleCommand
         {
             sb.Append(indent).AppendLine(Format.Color("  Arguments:", Format.Yellow));
 
-            if (_verbose)
-            {
-                foreach (var arg in schema.Arguments)
-                {
-                    AppendArgumentVerbose(sb, arg, indent + "    ");
-                }
-            }
-            else
-            {
-                sb.Append(Format.Align(
-                    schema.Arguments,
-                    arg => indent + "    " + Format.Color(arg.Name, Format.LightBlue)
-                               + Format.Color($" <{arg.Type.GetFriendlyName()}>", Format.Gray)
-                               + Format.Color($" {GetKindLabel(arg.ArgumentAttribute)}", Format.Gray),
-                    arg => arg.Description
-                ));
-            }
+           
+            sb.Append(Format.Align(
+                schema.Arguments,
+                arg => indent + "    " + Format.Color(arg.Name, Format.LightBlue)
+                           + Format.Color($" <{arg.Type.GetFriendlyName()}>", Format.Gray)
+                           + Format.Color($" {GetKindLabel(arg.ArgumentAttribute)}", Format.Gray),
+                arg => arg.Description
+            ));
         }
 
         // Subcommands
@@ -156,33 +145,6 @@ public class HelpCommand : SimpleCommand
         return string.Join(" ", parts);
     }
 
-    private void AppendArgumentVerbose(StringBuilder sb, ArgumentSchema arg, string indent)
-    {
-        sb.Append(indent).Append(Format.Color(arg.Name, Format.LightBlue));
-        sb.Append(Format.Color($" <{arg.Type.GetFriendlyName()}>", Format.Gray));
-        sb.Append(Format.Color($" {GetKindLabel(arg.ArgumentAttribute)}", Format.Gray));
-
-        if (!string.IsNullOrEmpty(arg.Description))
-        {
-            sb.Append("  ").Append(arg.Description);
-        }
-
-        sb.AppendLine();
-
-        sb.Append(indent).Append("  ")
-          .AppendLine(Format.Color($"Field: {arg.FieldInfo.DeclaringType?.Name}.{arg.FieldInfo.Name}", Format.Gray));
-
-        if (arg.Validators.Count > 0)
-        {
-            sb.Append(indent).Append("  ").AppendLine(Format.Color("Validators:", Format.Gray));
-            foreach (var validator in arg.Validators)
-            {
-                sb.Append(indent).Append("    ")
-                  .AppendLine(Format.Color($"[{validator.GetType().Name}]", Format.Gray));
-            }
-        }
-    }
-
     private static string GetKindLabel(ArgumentAttribute attr)
     {
         return attr switch
@@ -193,5 +155,25 @@ public class HelpCommand : SimpleCommand
             VariadicAttribute   => "[variadic]",
             _                   => "[argument]",
         };
+    }
+
+    private static string[] Suggest(SuggestionContext ctx)
+    {
+        var commandPath = ctx.AutocompleteContext.TokensSoFar.Skip(1).Where(t => t != "-r" && t != "--recursive").ToList();
+
+        var parent = commandPath.FirstOrDefault();
+        var rest = commandPath.Skip(1);
+
+        if (parent == null)
+        {
+            return ctx.BossyContext.SchemaRegistry.GetValidSchemas().Select(s => s.Name).ToArray();
+        }
+        
+        if (ctx.BossyContext.SchemaRegistry.TryResolveSchema(parent, rest, out var schema) is SchemaQueryStatus.Found)
+        {
+            return schema.ChildSchemas.Select(s => s.Name).ToArray();
+        }
+        
+        return Array.Empty<string>();
     }
 }

@@ -136,8 +136,7 @@ namespace Bossy.Frontend.Parsing
         private readonly string _token;
         private readonly string _message;
 
-        public override string Message => $"Could not parse \"{_token}\" as type " +
-                                          $"\"{_targetType.GetFriendlyName()}\":\n\t-{_message}.";
+        public override string Message => $"Could not parse \"{_token}\" as type \"{_targetType.GetFriendlyName()}\": {_message}.";
 
         public TypeAdaptError(Type targetType, string token, string message)
         {

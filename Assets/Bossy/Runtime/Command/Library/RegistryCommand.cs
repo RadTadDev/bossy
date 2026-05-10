@@ -1,5 +1,4 @@
 using Bossy.Command;
-using Bossy.Execution;
 
 namespace Bossy.Runtime.Command.Library
 {

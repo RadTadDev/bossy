@@ -5,7 +5,6 @@ using System.Reflection;
 using Bossy.Schema.Registry;
 using Bossy.Schema;
 using Bossy.Utils;
-using UnityEditor.Experimental.GraphView;
 
 namespace Bossy
 {

@@ -13,10 +13,20 @@ namespace Bossy.Command
     public static class Format
     {
         /// <summary>
+        /// Bossy white.
+        /// </summary>
+        public static Color White = new(0.95f, 0.95f, 0.95f);
+        
+        /// <summary>
         /// Bossy blue.
         /// </summary>
         public static Color LightBlue = new(0.5f, 0.7f, 0.9f);
 
+        /// <summary>
+        /// Bossy blue.
+        /// </summary>
+        public static Color DarkBlue = new(0.1f, 0.2f, 0.7f);
+        
         /// <summary>
         /// Bossy green.
         /// </summary>
@@ -36,6 +46,11 @@ namespace Bossy.Command
         /// Bossy gray.
         /// </summary>
         public static Color Gray = new(0.7f, 0.7f, 0.7f);
+        
+        /// <summary>
+        /// Bossy dark gray.
+        /// </summary>
+        public static Color DarkGray = new(0.3f, 0.3f, 0.3f);
         
         /// <summary>
         /// Prints an enumerated list by prepending numbers.

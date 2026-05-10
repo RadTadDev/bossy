@@ -1,6 +1,5 @@
 using Bossy.Command;
 using Bossy.Frontend;
-using Bossy.Execution;
 
 namespace Bossy.Runtime.Command.Library
 {
@@ -21,6 +20,7 @@ namespace Bossy.Runtime.Command.Library
         }
     }
     
+    [Confirm]
     [Command("clear", "Clears all history.", typeof(HistoryCommand))]
     public class ClearHistoryCommand : SimpleCommand
     {

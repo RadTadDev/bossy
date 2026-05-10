@@ -1,8 +1,10 @@
 #if UNITY_EDITOR
 
 using System;
+using System.Linq;
 using Bossy.Settings;
 using UnityEditor;
+using UnityEngine;
 
 namespace Bossy.Frontend
 {
@@ -44,9 +46,18 @@ namespace Bossy.Frontend
             {
                 _lastFocused.Focus();
             }
-            else
+            else if (HasOpenInstances<SceneView>())
             {
                 FocusWindowIfItsOpen<SceneView>();
+            }
+            else
+            {
+                var window = Resources.FindObjectsOfTypeAll<EditorWindow>().FirstOrDefault(w => !typeof(EditorHost).IsAssignableFrom(w.GetType()));
+
+                if (window != null)
+                {
+                    window.Focus();
+                }
             }
         }
 
@@ -60,6 +71,7 @@ namespace Bossy.Frontend
 
         private void OnLostFocus()
         {
+            _controller?.Hide();
             _manager?.NotifyFocusLost(this, true);
         }
         

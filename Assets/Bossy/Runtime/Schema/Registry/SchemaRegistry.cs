@@ -68,6 +68,11 @@ namespace Bossy.Schema.Registry
         {
             schema = null;
 
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                return SchemaQueryStatus.NotFound;
+            }
+            
             // Validate root first
             if (!_registry.TryGetValue(root, out schema))
             {

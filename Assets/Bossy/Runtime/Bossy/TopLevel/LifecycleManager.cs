@@ -40,12 +40,12 @@ namespace Bossy
             _globalInput = new GlobalInput(settings.BossyInputSettings);
             _globalInput.OnToggleMainHost += OnToggleHostInput;
             
-            _frontEndFactory = new FrontEndFactory(_parser, settings.BossyInputSettings, settings.BossyCliSettings);
+            _context = new BossyContext(schemaRegistry, adapterRegistry, settings, _parser, binder);
+            _frontEndFactory = new FrontEndFactory(_context);
 
             _hostManager = new HostManager(this, settings.BossyInputSettings, CreateBossySession);
             _runtimeManager = new BossyRuntimeManager();
 
-            _context = new BossyContext(schemaRegistry, adapterRegistry, settings, _parser, binder);
             
             ReconnectEditorSessions();
         }
@@ -67,7 +67,7 @@ namespace Bossy
             _containers[bridge] = container;
             var host = _hostManager.AssignHost(viewer, space);
 
-            void ReleaseAction() => _hostManager.NotifyFocusLost(host, false);
+            void ReleaseAction() => _hostManager.NotifyFocusLost(host);
             
             var signaler = new Signaler(ReleaseAction, bridge);
             content.SetSignaler(signaler);
@@ -133,14 +133,14 @@ namespace Bossy
                 var session = new Session(_context, bridge, CreateCommandSession, SessionSpace.Edit);
                 
                 // TODO: Remember correct view via session serializing system (which does not exist yet)
-                var content = new CliUserInterfaceView(_parser, _context.Settings.BossyCliSettings, _context.Settings.BossyInputSettings);
+                var content = new CliUserInterfaceView(_context);
                 var viewer = new SessionViewer(bridge, content);
                 var container = new LifecycleContainer(session, viewer);
             
                 _containers[bridge] = container;
                 _hostManager.ReconnectEditor(viewer, host);
             
-                void ReleaseAction() => _hostManager.NotifyFocusLost(host, false);
+                void ReleaseAction() => _hostManager.NotifyFocusLost(host);
             
                 var signaler = new Signaler(ReleaseAction, bridge);
                 content.SetSignaler(signaler);
@@ -162,7 +162,7 @@ namespace Bossy
             _containers[bridge] = container;
             var host = _hostManager.AssignCommandHost(viewer, session.Space);
 
-            void ReleaseAction() => _hostManager.NotifyFocusLost(host, false);
+            void ReleaseAction() => _hostManager.NotifyFocusLost(host);
             
             var signaler = new Signaler(ReleaseAction, bridge);
             content.SetSignaler(signaler);

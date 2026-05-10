@@ -12,11 +12,11 @@ namespace Bossy.Frontend.Parsing
                 && float.TryParse(tokens[1], out var y))
             {
                 output = new Vector2(x, y);
-                return TypeAdapterResult.Pass();
+                return TypeAdapterResult.Pass(2);
             }
 
             output = default;
-            return TypeAdapterResult.Fail($"Expected Vector2 as \"x y\", got \"{string.Join(" ", tokens ?? new List<string>())}\"");
+            return TypeAdapterResult.Fail($"Expected Vector2 as \"x y\", got \"{string.Join(" ", tokens ?? new List<string>())}\"", 2);
         }
     }
 
@@ -30,11 +30,11 @@ namespace Bossy.Frontend.Parsing
                 && float.TryParse(tokens[2], out var z))
             {
                 output = new Vector3(x, y, z);
-                return TypeAdapterResult.Pass();
+                return TypeAdapterResult.Pass(3);
             }
 
             output = default;
-            return TypeAdapterResult.Fail($"Expected Vector3 as \"x y z\", got \"{string.Join(" ", tokens ?? new List<string>())}\"");
+            return TypeAdapterResult.Fail($"Expected Vector3 as \"x y z\", got \"{string.Join(" ", tokens ?? new List<string>())}\"", 3);
         }
     }
 
@@ -49,11 +49,11 @@ namespace Bossy.Frontend.Parsing
                 && float.TryParse(tokens[3], out var w))
             {
                 output = new Vector4(x, y, z, w);
-                return TypeAdapterResult.Pass();
+                return TypeAdapterResult.Pass(4);
             }
 
             output = default;
-            return TypeAdapterResult.Fail($"Expected Vector4 as \"x y z w\", got \"{string.Join(" ", tokens ?? new List<string>())}\"");
+            return TypeAdapterResult.Fail($"Expected Vector4 as \"x y z w\", got \"{string.Join(" ", tokens ?? new List<string>())}\"", 4);
         }
     }
 
@@ -66,11 +66,11 @@ namespace Bossy.Frontend.Parsing
                 && int.TryParse(tokens[1], out var y))
             {
                 output = new Vector2Int(x, y);
-                return TypeAdapterResult.Pass();
+                return TypeAdapterResult.Pass(2);
             }
 
             output = default;
-            return TypeAdapterResult.Fail($"Expected Vector2Int as \"x y\", got \"{string.Join(" ", tokens ?? new List<string>())}\"");
+            return TypeAdapterResult.Fail($"Expected Vector2Int as \"x y\", got \"{string.Join(" ", tokens ?? new List<string>())}\"", 2);
         }
     }
 
@@ -84,11 +84,11 @@ namespace Bossy.Frontend.Parsing
                 && int.TryParse(tokens[2], out var z))
             {
                 output = new Vector3Int(x, y, z);
-                return TypeAdapterResult.Pass();
+                return TypeAdapterResult.Pass(3);
             }
 
             output = default;
-            return TypeAdapterResult.Fail($"Expected Vector3Int as \"x y z\", got \"{string.Join(" ", tokens ?? new List<string>())}\"");
+            return TypeAdapterResult.Fail($"Expected Vector3Int as \"x y z\", got \"{string.Join(" ", tokens ?? new List<string>())}\"", 3);
         }
     }
 
@@ -99,16 +99,7 @@ namespace Bossy.Frontend.Parsing
             if (!stream.TryPeek(out var first))
             {
                 output = default;
-                return TypeAdapterResult.Fail("Expected Color, got nothing");
-            }
-
-            if (first.StartsWith("#"))
-            {
-                stream.TryConsume(out _);
-                if (ColorUtility.TryParseHtmlString(first, out output))
-                    return TypeAdapterResult.Pass();
-
-                return TypeAdapterResult.Fail($"Expected hex color e.g. \"#FF0000\", got \"{first}\"");
+                return TypeAdapterResult.Fail("Expected Color, got nothing", 3);
             }
 
             if (stream.TryConsume(4, out var tokens)
@@ -118,7 +109,7 @@ namespace Bossy.Frontend.Parsing
                 && float.TryParse(tokens[3], out var a))
             {
                 output = new Color(r, g, b, a);
-                return TypeAdapterResult.Pass();
+                return TypeAdapterResult.Pass(4);
             }
 
             if (stream.TryConsume(3, out tokens)
@@ -127,11 +118,11 @@ namespace Bossy.Frontend.Parsing
                 && float.TryParse(tokens[2], out b))
             {
                 output = new Color(r, g, b);
-                return TypeAdapterResult.Pass();
+                return TypeAdapterResult.Pass(3);
             }
 
             output = default;
-            return TypeAdapterResult.Fail($"Expected Color as \"r g b\" or \"r g b a\" or \"#RRGGBB\", got \"{first}\"");
+            return TypeAdapterResult.Fail($"Expected Color as \"r g b\" or \"r g b a\"", 3);
         }
     }
 }
