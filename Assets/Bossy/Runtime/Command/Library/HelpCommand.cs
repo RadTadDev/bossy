@@ -1,7 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Bossy;
 using Bossy.Command;
 using Bossy.Frontend.Autocomplete;
 using Bossy.Schema;
@@ -159,6 +159,21 @@ public class HelpCommand : SimpleCommand
 
     private static string[] Suggest(SuggestionContext ctx)
     {
-        return ctx.Schema.ChildSchemas.Select(s => s.Name).ToArray();
+        var commandPath = ctx.AutocompleteContext.TokensSoFar.Skip(1).Where(t => t != "-r" && t != "--recursive").ToList();
+
+        var parent = commandPath.FirstOrDefault();
+        var rest = commandPath.Skip(1);
+
+        if (parent == null)
+        {
+            return ctx.BossyContext.SchemaRegistry.GetValidSchemas().Select(s => s.Name).ToArray();
+        }
+        
+        if (ctx.BossyContext.SchemaRegistry.TryResolveSchema(parent, rest, out var schema) is SchemaQueryStatus.Found)
+        {
+            return schema.ChildSchemas.Select(s => s.Name).ToArray();
+        }
+        
+        return Array.Empty<string>();
     }
 }

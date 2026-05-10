@@ -493,8 +493,11 @@ namespace Bossy.Frontend
 
         private void CycleSuggestions()
         {
+            // If autocomplete is not open, try opening it
             if (_autocompleteContainer.childCount == 0)
             {
+                var suggestions = _autocomplete.Suggest(Input.value, Input.cursorIndex);
+                ShowSuggestions(suggestions);
                 return;
             }
 

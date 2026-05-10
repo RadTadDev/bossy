@@ -95,7 +95,7 @@ namespace Bossy.Frontend.Autocomplete
                 if (current.StartsWith("-"))
                 {
                     // Returns a bool indicating whether to continue or not
-                    var switchStatus = HandleSwitch(context, current, predictNext, out var switchSuggestions, out var arg);
+                    var switchStatus = HandleSwitch(context, current, predictedLine, predictNext, out var switchSuggestions, out var arg);
 
                     if (arg != null)
                     {
@@ -231,7 +231,7 @@ namespace Bossy.Frontend.Autocomplete
             return true;
         }
 
-        private SuggestStatus HandleSwitch(CompletionContext context, string current, bool predictNext, out List<string> switchSuggestions, out ArgumentSchema lastArg)
+        private SuggestStatus HandleSwitch(CompletionContext context, string current, string predictedLine, bool predictNext, out List<string> switchSuggestions, out ArgumentSchema lastArg)
         {
             switchSuggestions = new List<string>();
             lastArg = null;
@@ -265,7 +265,7 @@ namespace Bossy.Frontend.Autocomplete
                     return SuggestStatus.Switches;
                 }
 
-                return HandleValueAfterSwitch(context, current, predictNext, ref switchSuggestions, false, out lastArg);
+                return HandleValueAfterSwitch(context, current, predictedLine, predictNext, ref switchSuggestions, false, out lastArg);
             }
             
             // Since it doesn't start with "--", it is a short switch
@@ -365,10 +365,10 @@ namespace Bossy.Frontend.Autocomplete
             }
             
             // User typed "-<x> [something or nothing]" - handle this as a value
-            return HandleValueAfterSwitch(context, current, predictNext, ref switchSuggestions, true, out lastArg);
+            return HandleValueAfterSwitch(context, current, predictedLine, predictNext, ref switchSuggestions, true, out lastArg);
         }
 
-        private SuggestStatus HandleValueAfterSwitch(CompletionContext context, string current, bool predictNext, ref List<string> switchSuggestions, bool shortName, out ArgumentSchema arg)
+        private SuggestStatus HandleValueAfterSwitch(CompletionContext context, string current, string predictedLine, bool predictNext, ref List<string> switchSuggestions, bool shortName, out ArgumentSchema arg)
         {
             var tokenName = shortName ? current[1..] : current[2..];
             
@@ -400,7 +400,7 @@ namespace Bossy.Frontend.Autocomplete
                 }
                     
                 // The argument name is valid and not a bool, lets suggest values
-                if (!GetUserSuggestions(context.Schema, arg, out switchSuggestions))
+                if (!GetUserSuggestions(context, predictedLine, arg, out switchSuggestions))
                 {
                     switchSuggestions.Clear();
                     switchSuggestions.Add(TypeHintString(arg));
@@ -436,7 +436,7 @@ namespace Bossy.Frontend.Autocomplete
                 }
                     
                 // There are no more tokens, return values or a hint
-                if (!GetUserSuggestions(context.Schema, arg, out switchSuggestions, filter:consumedString))
+                if (!GetUserSuggestions(context, predictedLine, arg, out switchSuggestions, filter:consumedString))
                 {
                     switchSuggestions.Clear();
                         
@@ -466,7 +466,7 @@ namespace Bossy.Frontend.Autocomplete
             // We are still on the current token, so return suggested values or a hint. 
             // It is okay that we overwrite consumed tokens here because out suggestions will be the same length
             // and the hint will not be applied to input string ever
-            if (!GetUserSuggestions(context.Schema, arg, out switchSuggestions, filter:consumedString))
+            if (!GetUserSuggestions(context, predictedLine, arg, out switchSuggestions, filter:consumedString))
             {
                 switchSuggestions.Clear();
                 switchSuggestions.Add(TypeHintString(arg));
@@ -576,7 +576,7 @@ namespace Bossy.Frontend.Autocomplete
                 
                 // The result failed and we either don't have enough tokens or haven't moved on yet.
                 // At this point, variadic is not an option.
-                if (!GetUserSuggestions(context.Schema, arg, out var newUserSuggestions, filter: consumedString))
+                if (!GetUserSuggestions(context, predictedLine, arg, out var newUserSuggestions, filter: consumedString))
                 {
                     suggestions.Clear();
 
@@ -654,7 +654,7 @@ namespace Bossy.Frontend.Autocomplete
                 }
 
                 // The adaptation failed but we either have not input enough tokens yet or have not moved on - suggest values
-                if (!GetUserSuggestions(context.Schema, context.Variadic, out var newUserSuggestions, filter: consumedString))
+                if (!GetUserSuggestions(context, predictedLine, context.Variadic, out var newUserSuggestions, filter: consumedString))
                 {
                     suggestions.Clear();
                     string hint;
@@ -720,7 +720,7 @@ namespace Bossy.Frontend.Autocomplete
 
             if (userSuggestions == null)
             {
-                if (GetUserSuggestions(context.Schema, arg, out userSuggestions, filter: current))
+                if (GetUserSuggestions(context, predictedLine, arg, out userSuggestions, filter: current))
                 {
                     currentOptions.AddRange(userSuggestions);
                 }
@@ -756,7 +756,7 @@ namespace Bossy.Frontend.Autocomplete
             if (context.TryGetNextOrderedArg(out var arg, out _))
             {
                 // If we have no suggestions and there are not allowed commands, return a hint
-                if (!GetUserSuggestions(context.Schema, arg, out var suggestions) && result.Count == 0)
+                if (!GetUserSuggestions(context, predictedLine, arg, out var suggestions) && result.Count == 0)
                 {
                     result.Add(new Suggestion("", TypeHintString(arg), isHint:true));
                     return result;
@@ -767,7 +767,7 @@ namespace Bossy.Frontend.Autocomplete
             else if (context.IsOnVariadic)
             {
                 // If we have no suggestions and there are not allowed commands, return a hint
-                if (!GetUserSuggestions(context.Schema, context.Variadic, out var suggestions) && result.Count == 0)
+                if (!GetUserSuggestions(context, predictedLine, context.Variadic, out var suggestions) && result.Count == 0)
                 {
                     result.Add(new Suggestion("", $"{context.Variadic.Name}: <{context.Variadic.Type.GetFriendlyName()}>", isHint:true));
                     return result;
@@ -783,7 +783,7 @@ namespace Bossy.Frontend.Autocomplete
             return result;
         }
         
-        private bool GetUserSuggestions(CommandSchema command, ArgumentSchema arg, out List<string> suggestions, string filter = null)
+        private bool GetUserSuggestions(CompletionContext context, string predictedLine, ArgumentSchema arg, out List<string> suggestions, string filter = null)
         {
             suggestions = new List<string>();
             
@@ -794,7 +794,7 @@ namespace Bossy.Frontend.Autocomplete
                 return false;
             }
             
-            var type = suggestor.Type ?? command.CommandType;
+            var type = suggestor.Type ?? context.Schema.CommandType;
                     
             var method = type.GetMethod(suggestor.FunctionName, BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic);
 
@@ -831,7 +831,8 @@ namespace Bossy.Frontend.Autocomplete
                     return false;
                 }
 
-                args = new object[] { new SuggestionContext(_context, command) };
+                var completion = new ReadOnlyCompletionContext(context, Tokenizer.Tokenize(predictedLine));
+                args = new object[] { new SuggestionContext(_context, context.Schema, completion) };
             }
             
             suggestions = ((IEnumerable<string>)method.Invoke(null, args)).ToList();
@@ -971,7 +972,7 @@ namespace Bossy.Frontend.Autocomplete
             Values
         }
         
-        private class CompletionContext
+        internal class CompletionContext
         {
             /// <summary>
             /// True if the schema has variadic args and that is the current token position.
