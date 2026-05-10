@@ -9,6 +9,13 @@ using Bossy.Schema.Registry;
 using Bossy.Utils;
 using UnityEngine;
 
+/* =============================================================
+ * Warning, adventurer! Here be DRAGONS!
+ *
+ * It works, modify at your own risk :D. PRs are welcome!
+ * ==========   ===================================================
+ */
+
 namespace Bossy.Frontend.Autocomplete
 {
     /// <summary>
@@ -81,7 +88,15 @@ namespace Bossy.Frontend.Autocomplete
                     {
                         if (lastArg == null && !context.TryGetNextOrderedArg(out lastArg, out _))
                         {
-                            result.Add(new Suggestion("", $"Invalid token: {current}", isError:true));
+                            if (context.IsOnVariadic)
+                            {
+                                lastArg = context.Variadic;
+                                result.Add(new Suggestion("", $"{lastArg.Name}: <{lastArg.Type.GetFriendlyName()}>", isHint:true));
+                            }
+                            else
+                            {
+                                result.Add(new Suggestion("", $"Invalid token: {current}", isError:true));
+                            }
                         }
                         else
                         {

@@ -7,6 +7,7 @@ TODO:
 - verify namespaces and TODOs and remove dead usings
 - link.xml file to prevent stripping in some cases
 - GUI
+- Add setting to allow arrow keys to navigate suggestions rather than history
 
 FUTURE FEATURES:
 - Session restoration 
