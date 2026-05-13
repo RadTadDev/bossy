@@ -7,6 +7,7 @@ using Bossy.Command;
 using Bossy.Schema.Registry;
 using Bossy.Schema;
 using Bossy.Execution;
+using Bossy.Utils;
 
 namespace Bossy.Frontend.Parsing
 {

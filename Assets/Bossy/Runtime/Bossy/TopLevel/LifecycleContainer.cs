@@ -26,14 +26,16 @@ namespace Bossy
             _session = session;
             _viewer = viewer;
         }
-        
+
         /// <summary>
         /// Starts the session loop.
         /// </summary>
         /// <param name="graph">A graph to execute if running in command mode.</param>
-        public void Start(CommandGraph graph = null)
+        /// <param name="reader">An override reader to retarget from the default window.</param>
+        /// <param name="writer">An override writer to retarget from the default window.</param>
+        public void Start(CommandGraph graph = null, IReadable reader = null, IWriteable writer = null)
         {
-            var task = graph == null ? _session.RunAsync() : _session.RunGraphAsync(graph);
+            var task = graph == null ? _session.RunAsync() : _session.RunGraphAsync(graph, reader, writer);
             _ = ObserveExceptions(task);
         }
         

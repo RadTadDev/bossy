@@ -1,7 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
+using Bossy.Utils;
 
 namespace Bossy.Execution
 {
@@ -17,9 +19,9 @@ namespace Bossy.Execution
         {
             await _signal.WaitAsync(token);
 
-            return _queue.TryDequeue(out var obj) ? obj : null;
+            return _queue.TryDequeue(out var obj) ? obj : throw new InvalidOperationException("Pipe read after being closed! A pipe should not outlive its command.");
         }
-
+        
         public void Write(object value)
         {
             _queue.Enqueue(value);

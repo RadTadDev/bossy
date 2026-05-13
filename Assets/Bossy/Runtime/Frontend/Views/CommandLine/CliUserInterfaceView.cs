@@ -8,6 +8,7 @@ using Bossy.Command;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
 using Bossy.Frontend.Autocomplete;
+using Bossy.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -241,6 +242,11 @@ namespace Bossy.Frontend
                 );
                 
                 var parseResult = _context.Parser.Parse(line, operatorList, _aliases);
+                if (parseResult.IsEmpty)
+                {
+                    Write("");
+                    return;
+                }
                 if (!parseResult.TryGetGraph(out var graph))
                 {
                     Write(Format.Error(parseResult.Message));

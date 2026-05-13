@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Bossy.Execution;
+using Bossy.Utils;
 
 namespace Bossy.Frontend
 {
@@ -54,7 +55,7 @@ namespace Bossy.Frontend
             {
                 return;
             }
-            
+
             UserInterface.Write(value);
         } 
 

@@ -30,6 +30,11 @@ namespace Bossy.Execution
         public CommandGraphLink Link { get; private set; } = CommandGraphLink.None;
 
         /// <summary>
+        /// The context for this command.
+        /// </summary>
+        public CommandContext Context;
+        
+        /// <summary>
         /// Creates a new command graph node.
         /// </summary>
         /// <param name="command">The command to execute at this step.</param>

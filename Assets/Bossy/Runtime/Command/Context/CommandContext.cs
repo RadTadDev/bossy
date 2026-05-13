@@ -16,6 +16,8 @@ namespace Bossy.Command
     {
         private IReadable _reader;
         private Session _session;
+
+        private List<Task> _tasks = new List<Task>();
         
         private readonly bool _allowRetry;
         private readonly CancellationToken _token;
@@ -91,61 +93,7 @@ namespace Bossy.Command
         /// not necessary to handle, but catching it gives you explicit control when a command would otherwise die.</remarks>
         public async Task<T> ReadAsync<T>()
         {
-            object response;
-            var triedAdapting = false;
-            TypeAdapterResult adapterResult = default;
-
-            do
-            {
-                _token.ThrowIfCancellationRequested();
-
-                response = await _reader.ReadAsync(typeof(T), _token);
-            
-                if (response == CloseWriterSentinel.Object)
-                {
-                    throw new BossyStreamClosedException();
-                }
-
-                if (response is T original)
-                {
-                    return original;
-                }
-                
-                if (response is string textual)
-                {
-                    triedAdapting = true;
-                    adapterResult = Bossy.TypeAdapterRegistry.TryConvert(textual, out T typed, true);
-            
-                    if (adapterResult.Success)
-                    {
-                        return typed;
-                    }
-                }
-            
-                // Catch and allow all numeric conversions 
-                try
-                {
-                    var casted = (T)Convert.ChangeType(response, typeof(T));
-                    return casted;
-                }
-                catch
-                {
-                    // Cast failed, ignore
-                }
-
-                if (_allowRetry)
-                {
-                    Writer.Write($"\"{response}\" could not be converted to type \"{typeof(T).GetFriendlyName()}. Please enter a valid response:");
-                }
-                
-            } while (_allowRetry);
-
-            if (triedAdapting)
-            {
-                throw new BossyNotAdaptableException($"Could not parse response to type \"{typeof(T).GetFriendlyName()}\":\n{adapterResult.ErrorMessage}");
-            }
-            
-            throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type {typeof(T).GetFriendlyName()}");
+            return await ReadInternalAsync<T>(_reader);
         }
         
         /// <summary>
@@ -158,6 +106,15 @@ namespace Bossy.Command
         }
 
         /// <summary>
+        /// Delays the execution of this command.
+        /// </summary>
+        /// <param name="seconds">The seconds to delay for.</param>
+        public async Task Delay(float seconds)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(seconds), _token);
+        }
+        
+        /// <summary>
         /// Yields the execution of this command.
         /// </summary>
         public async Task Yield()
@@ -168,16 +125,19 @@ namespace Bossy.Command
         /// <summary>
         /// Iterates the input stream until it closes.
         /// </summary>
+        /// <param name="input">An optional input to read from. If unspecified, the standard input is used.</param>
         /// <typeparam name="T">The type of data to read.</typeparam>
         /// <returns>Each enumerated value until the stream closes.</returns>
-        public async IAsyncEnumerable<T> ReadAllAsync<T>()
+        public async IAsyncEnumerable<T> ReadAllAsync<T>(IReadable input = null)
         {
+            input ??= _reader;
+            
             while (true)
             {
                 T value;
                 try
                 {
-                    value = await ReadAsync<T>();
+                    value = await ReadInternalAsync<T>(input);
                 }
                 catch (BossyStreamClosedException)
                 {
@@ -213,16 +173,71 @@ namespace Bossy.Command
         /// <summary>
         /// Execute another command.
         /// </summary>
-        /// <param name="command"></param>
-        /// <param name="pipe">The output pipe to observe.</param>
+        /// <param name="command">The command to run.</param>
         /// <returns></returns>
-        public Task ExecuteAsync(string command, ObservablePipe pipe = null)
+        public async Task ExecuteAsync(string command)
         {
             _token.ThrowIfCancellationRequested();
             
-            return _session.ExecuteAsync(command, _token, null, pipe ?? GetWriter());
+            var result = Bossy.Parser.Parse(command, Bossy.Settings.BossyCliSettings.ToOperatorList());
+
+            if (!result.TryGetGraph(out var graph))
+            {
+                return;
+            }
+            
+            await _session.ExecuteAsync(graph, _token);
         }
 
+        /// <summary>
+        /// Execute a new command and link its lifetime to this one.
+        /// </summary>
+        /// <param name="command">The command to run.</param>
+        /// <param name="input">The stream to take input from.</param>
+        /// <param name="output">The stream to send output to.</param>
+        public ParseResult ExecuteAndLink(string command, AsyncPipe input, AsyncPipe output)
+        {
+            _token.ThrowIfCancellationRequested();
+            
+            var result = Bossy.Parser.Parse(command, Bossy.Settings.BossyCliSettings.ToOperatorList());
+
+            if (!result.TryGetGraph(out var graph))
+            {
+                return result;
+            }
+            
+            var task = _session.ExecuteAsync(graph, _token, input, output);
+            
+            // We just add this so the task isn't GCed, it's already canceled by the token.
+            _tasks.Add(task);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Execute a command and read from it.
+        /// </summary>
+        /// <param name="command">The command to execute.</param>
+        /// <typeparam name="T">The type to read.</typeparam>
+        /// <returns>Each item from the output stream.</returns>
+        public IAsyncEnumerable<T> ExecuteAndRead<T>(string command)
+        {
+            var pipe = new AsyncPipe();
+            var dummyInput = new AsyncPipe();
+            dummyInput.CloseWriter();
+            
+            var result = ExecuteAndLink(command, dummyInput, pipe);
+            
+            if (result.IsEmpty || !result.TryGetGraph(out _))
+            {
+                Write(result.Message);
+                pipe.CloseWriter();
+                return Empty<T>();
+            }
+            
+            return ReadAllAsync<T>(pipe);
+        }
+        
         /// <summary>
         /// Displays the prompt string and waits for input.
         /// </summary>
@@ -261,6 +276,71 @@ namespace Bossy.Command
                     return choice;
                 }
             }
+        }
+
+        private async Task<T> ReadInternalAsync<T>(IReadable input)
+        {
+            object response;
+            var triedAdapting = false;
+            TypeAdapterResult adapterResult = default;
+
+            do
+            {
+                _token.ThrowIfCancellationRequested();
+
+                response = await input.ReadAsync(typeof(T), _token);
+            
+                if (response == CloseWriterSentinel.Object)
+                {
+                    throw new BossyStreamClosedException();
+                }
+
+                if (response is T original)
+                {
+                    return original;
+                }
+                
+                if (response is string textual)
+                {
+                    triedAdapting = true;
+                    adapterResult = Bossy.TypeAdapterRegistry.TryConvert(textual, out T typed, true);
+            
+                    if (adapterResult.Success)
+                    {
+                        return typed;
+                    }
+                }
+            
+                // Catch and allow all numeric conversions 
+                try
+                {
+                    var casted = (T)Convert.ChangeType(response, typeof(T));
+                    return casted;
+                }
+                catch
+                {
+                    // Cast failed, ignore
+                }
+
+                if (_allowRetry)
+                {
+                    Writer.Write($"\"{response}\" of type \"{response.GetType().GetFriendlyName()}\" could not be converted to type \"{typeof(T).GetFriendlyName()}. Please enter a valid response:");
+                }
+                
+            } while (_allowRetry);
+
+            if (triedAdapting)
+            {
+                throw new BossyNotAdaptableException($"Could not parse response to type \"{typeof(T).GetFriendlyName()}\":\n{adapterResult.ErrorMessage}");
+            }
+            
+            throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type {typeof(T).GetFriendlyName()}");
+        }
+        
+        private static async IAsyncEnumerable<T> Empty<T>()
+        {
+            await Task.CompletedTask;
+            yield break;
         }
     }
 }

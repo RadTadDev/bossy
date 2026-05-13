@@ -150,7 +150,7 @@ namespace Bossy
 #endif
         }
 
-        private void CreateCommandSession(Session template, CommandGraph graph)
+        private void CreateCommandSession(Session template, CommandGraph graph, IReadable reader = null, IWriteable writer = null)
         {
             var content = _frontEndFactory.Create(FrontendType.CommandDisplay);
             
@@ -169,7 +169,7 @@ namespace Bossy
 
             // We have set this up as a windowed command, don't detect it again
             graph.Windowed = false;
-            container.Start(graph);
+            container.Start(graph, reader, writer);
         }
     }
 }

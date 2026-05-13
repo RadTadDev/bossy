@@ -20,10 +20,8 @@ namespace Bossy.Command
     {
         public override async Task<PrelaunchResult> OnPrelaunch(ICommand command, CommandContext ctx)
         {
-            ctx.Write("Are you sure you want to run this command?");
+            var response = await ctx.Prompt<Confirmation>("Are you sure you want to run this command? (y/n)");
             
-            var response = await ctx.ReadAsync<Confirmation>();
-
             return response is Confirmation.Confirm ? PrelaunchResult.Allow() : PrelaunchResult.Deny("Confirmation not given.");
         }
     }

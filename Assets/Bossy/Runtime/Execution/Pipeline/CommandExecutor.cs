@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Utils;
+using UnityEngine;
 
 namespace Bossy.Execution
 {
@@ -43,21 +44,22 @@ namespace Bossy.Execution
 
             if (graph.Windowed)
             {
-                _session.CreateCommandSession(graph);
+                _session.CreateCommandSession(graph, input, output);
                 return;
             }
             
-            var groups = GroupCommands(graph);
 
             var previousStatus = CommandStatus.Ok;
             var previousLink = CommandGraphLink.Then;
 
             input ??= session.Bridge;
             output ??= session.Bridge;
-
+            
             var defaultContext = new CommandContext(session, _context, input, output, true, token);
             defaultContext.SetCapabilitySourcer(session.Bridge.GetCapabilities);
 
+            var groups = GroupCommands(graph, defaultContext);
+            
             foreach (var group in groups)
             {
                 if (!Continue(previousStatus, previousLink))
@@ -119,7 +121,6 @@ namespace Bossy.Execution
                 }
                 catch (OperationCanceledException)
                 {
-                    output.Write("Task cancelled");
                     previousStatus = CommandStatus.Cancelled;
                 }
                 catch (BossyStreamClosedException)
@@ -140,6 +141,16 @@ namespace Bossy.Execution
                 }
                 finally
                 {
+                    foreach (var node in group.Nodes)
+                    {
+                        node.Context.GetWriter().CloseWriter();
+                    }
+                    
+                    if (previousStatus is CommandStatus.Cancelled)
+                    {
+                        output.Write("Task cancelled");
+                    }
+                    
                     if (group.View != null)
                     {
                         session.Bridge.PopContent();
@@ -177,6 +188,12 @@ namespace Bossy.Execution
                     return InstallBindingResult.Error($"Could not resolve binding for type \"{field.FieldType.GetFriendlyName()}\". Make sure to " +
                                                       $"include an {nameof(IBossyBinder)} when you create the console and register an instance of this type.");
                 }
+
+                if (instance == null)
+                {
+                    return InstallBindingResult.Error($"Instance registered to Bossy for type \"{field.FieldType.GetFriendlyName()}\" was null.");
+                }
+                
                 field.SetValue(command, instance);
             }
 
@@ -192,6 +209,8 @@ namespace Bossy.Execution
             async Task<CommandStatus> RunNode(CommandGraphNode node, IReadable reader, IWriteable writer)
             {
                 var context = new CommandContext(session, _context, reader, writer, false, cts.Token);
+                node.Context = context;
+                
                 try
                 {
                     var status = await node.Command.ExecuteAsync(context);
@@ -233,7 +252,7 @@ namespace Bossy.Execution
                 : CommandStatus.Ok;
         }
 
-        private List<CommandGroup> GroupCommands(CommandGraph graph)
+        private List<CommandGroup> GroupCommands(CommandGraph graph, CommandContext defaultContext)
         {
             List<CommandGroup> groups = new();
             List<CommandGraphNode> current = new();
@@ -241,6 +260,9 @@ namespace Bossy.Execution
             
             foreach (var node in graph.ToArray())
             {
+                // Assign this for all, it will be overriden for windowed commands and pipelines
+                node.Context = defaultContext;
+                
                 last = node;
                 
                 current.Add(node);

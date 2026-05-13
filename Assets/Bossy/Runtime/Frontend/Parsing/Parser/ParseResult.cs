@@ -14,7 +14,7 @@ namespace Bossy.Frontend.Parsing
         /// A message about the result.
         /// </summary>
         public abstract string Message { get; }
-
+        
         /// <summary>
         /// Attempts to get the graph. Succeeds if the parse was successful.
         /// </summary>
@@ -25,6 +25,11 @@ namespace Bossy.Frontend.Parsing
             graph = null;
             return false;
         }
+
+        /// <summary>
+        /// Tells if this parse result is empty.
+        /// </summary>
+        public bool IsEmpty => GetType() == typeof(EmptyInputError);
     }
 
     /// <summary>

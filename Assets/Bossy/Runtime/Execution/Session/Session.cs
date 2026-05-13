@@ -24,7 +24,7 @@ namespace Bossy.Execution
         private readonly CommandExecutor _commandExecutor;
 
         private readonly BossyContext _context;
-        private readonly Action<Session, CommandGraph> _createCommandSession;
+        private readonly Action<Session, CommandGraph,  IReadable, IWriteable> _createCommandSession;
         
         private CancellationTokenSource _commandSource;
         private readonly CancellationTokenSource _sessionSource = new();
@@ -36,7 +36,7 @@ namespace Bossy.Execution
         /// <param name="bridge">The bridge to the frontend.</param>
         /// <param name="createCommandSession">An action to invoke when this session wants to create a new one.</param>
         /// <param name="space">The space this session is running in.</param>
-        public Session(BossyContext context, Bridge bridge, Action<Session, CommandGraph> createCommandSession, SessionSpace space)
+        public Session(BossyContext context, Bridge bridge, Action<Session, CommandGraph, IReadable, IWriteable> createCommandSession, SessionSpace space)
         {
             _context = context;
             Bridge = bridge;
@@ -49,12 +49,14 @@ namespace Bossy.Execution
         /// Runs a single graph.
         /// </summary>
         /// <param name="graph">The graph to run.</param>
-        public async Task RunGraphAsync(CommandGraph graph)
+        /// <param name="reader">An override reader to retarget from the default window.</param>
+        /// <param name="writer">An override writer to retarget from the default window.</param>
+        public async Task RunGraphAsync(CommandGraph graph, IReadable reader = null, IWriteable writer = null)
         {
             _commandSource = new CancellationTokenSource();
             var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandSource.Token, _sessionSource.Token);
 
-            await _commandExecutor.ExecuteAsync(graph, this, linkedSource.Token);
+            await _commandExecutor.ExecuteAsync(graph, this, linkedSource.Token, reader, writer);
         }
         
         /// <summary>
@@ -79,14 +81,16 @@ namespace Bossy.Execution
                 await _commandExecutor.ExecuteAsync(graph, this, linkedSource.Token);
             }
         }
-        
+
         /// <summary>
         /// Creates a command session which simply rungs the command graph and nothing else.
         /// </summary>
         /// <param name="graph">The graph to run.</param>
-        public void CreateCommandSession(CommandGraph graph)
+        /// <param name="reader">An override reader.</param>
+        /// <param name="writer">An override writer.</param>
+        public void CreateCommandSession(CommandGraph graph, IReadable reader, IWriteable writer)
         {
-            _createCommandSession?.Invoke(this, graph);
+            _createCommandSession?.Invoke(this, graph, reader, writer);
         }
         
         /// <summary>
@@ -117,19 +121,12 @@ namespace Bossy.Execution
         /// <summary>
         /// Executes a command string.
         /// </summary>
-        /// <param name="command">Thw command string.</param>
+        /// <param name="graph">The graph to execute.</param>
         /// <param name="token">The cancellation token.</param>
         /// <param name="input">An input source.</param>
         /// <param name="output">An output source.</param>
-        public async Task ExecuteAsync(string command, CancellationToken token, IReadable input = null, IWriteable output = null)
+        public async Task ExecuteAsync(CommandGraph graph, CancellationToken token, IReadable input = null, IWriteable output = null)
         {
-            var result = _context.Parser.Parse(command, _context.Settings.BossyCliSettings.ToOperatorList());
-
-            if (!result.TryGetGraph(out var graph))
-            {
-                return;
-            }
-
             await _commandExecutor.ExecuteAsync(graph, this, token, input, output);
         }
         

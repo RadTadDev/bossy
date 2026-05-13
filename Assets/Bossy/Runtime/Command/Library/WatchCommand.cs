@@ -1,9 +1,8 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Bossy.Command;
-using Bossy.Execution;
 using Bossy.Frontend;
+using Bossy.Utils;
 
 namespace Bossy.Runtime.Command.Library
 {
@@ -23,57 +22,49 @@ namespace Bossy.Runtime.Command.Library
         [Variadic("The command to repeat.")] 
         private string[] _command;
         
-        private CommandContext _ctx;
-
-        private IModifiableOutputBuffer _buffer;
         
         public async Task<CommandStatus> ExecuteAsync(CommandContext ctx)
         {
-            _ctx = ctx;
-
+            Log.Info("Starting with " + _overwrite);
+            ctx.Write("Starting with " + _overwrite);
             if (_command.Length == 0)
             {
                 return CommandStatus.Error;
             }
-            
+            await ctx.Delay(TimeSpan.FromSeconds(1));
             var command = string.Join(" ", _command);
 
+            IModifiableOutputBuffer buffer = null;
             if (_overwrite)
             {
-                if (ctx.Capabilities is IModifiableOutputBuffer buffer)
+                if (ctx.Capabilities is IModifiableOutputBuffer b)
                 {
-                    _buffer = buffer;
+                    buffer = b;
                 }
                 else
                 {
                     ctx.WriteWarning("Current UI does not support overwriting last buffer output. Appending instead.");
                 }
             }
-            
+
             while (_repeatCount-- != 0)
             {
-                var pipe = new ObservablePipe(Write);
-                
-                await ctx.ExecuteAsync(command, pipe);
-                
+                await foreach (var line in ctx.ExecuteAndRead<object>(command))
+                {
+                    if (buffer != null)
+                    {
+                        buffer.Overwrite($"[watch]: {line}");                        
+                    }
+                    else
+                    {
+                        ctx.Write($"[watch]: {line}");                    
+                    }
+                }
+               
                 await ctx.Delay(TimeSpan.FromSeconds(_interval));
             }
 
             return CommandStatus.Ok;
-        }
-
-        private void Write(object value)
-        {
-            var line = $"[Watch] {value}";
-            
-            if (_buffer != null)
-            {
-                _buffer.Overwrite(line);
-            }
-            else
-            {
-                _ctx.Write(line);
-            }
         }
     }
 }

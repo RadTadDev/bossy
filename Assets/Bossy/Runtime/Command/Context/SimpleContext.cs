@@ -23,7 +23,7 @@ namespace Bossy.Command
         /// <summary>
         /// The output writer
         /// </summary>
-        protected readonly IWriteable Writer;
+        protected IWriteable Writer;
         
         private Func<IFrontEndCapabilities> _capabilitiesSourcer;
 

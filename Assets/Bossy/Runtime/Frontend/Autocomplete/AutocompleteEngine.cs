@@ -13,7 +13,7 @@ using UnityEngine;
  * Warning, adventurer! Here be DRAGONS!
  *
  * It works, modify at your own risk :D. PRs are welcome!
- * ==========   ===================================================
+ * =============================================================
  */
 
 namespace Bossy.Frontend.Autocomplete

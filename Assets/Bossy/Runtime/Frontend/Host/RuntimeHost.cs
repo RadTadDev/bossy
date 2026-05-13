@@ -1,7 +1,6 @@
 using System;
 using Bossy.Settings;
 using UnityEngine;
-using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
