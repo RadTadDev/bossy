@@ -30,14 +30,18 @@ namespace Bossy.Frontend.Autocomplete
         // TODO: These should be settings, not hardcoded
         private const int MaxSuggestions = 5;
         private const float Threshold = 0.1f;
+
+        private OperatorList _operators;
         
         /// <summary>
         /// Creates a new autocomplete engine.
         /// </summary>
         /// <param name="context">The Bossy context.</param>
-        public AutocompleteEngine(BossyContext context)
+        /// <param name="operators">The operators this terminal is using.</param>
+        public AutocompleteEngine(BossyContext context, OperatorList operators)
         {
             _context = context;
+            _operators =  operators;
             _allCmdNames = _context.SchemaRegistry.GetValidSchemas().Select(s => s.Name.ToLower()).ToList();
         }
         
@@ -57,15 +61,16 @@ namespace Bossy.Frontend.Autocomplete
             return ResolveSuggestions(line, predictNext);
         }
 
-        private IEnumerable<Suggestion> ResolveSuggestions(string line, bool predictNext)
+        private IEnumerable<Suggestion> ResolveSuggestions(string line, bool predictNext, string prefix = null)
         {
-            var predictedLine = string.Empty;
-            var stream = new TokenStream(Tokenizer.Tokenize(line));
-
+            // The predicted line can be non null when predicting graphs
+            var predictedLine = prefix ?? string.Empty;
+            var stream = new TokenStream(Tokenizer.Tokenize(line, _operators.ToEnumerable()));
+            
             // Returns a bool indicating whether to continue or not
-            if (!HandleResolvingCommand(predictNext, stream, out var schema, out var enumerable))
+            if (!HandleResolvingCommand(predictNext, stream, predictedLine, out var schema, out var cmdSuggestions))
             {
-                return enumerable;
+                return cmdSuggestions;
             }
 
             // We use predicted line to keep in mind the full suggestions
@@ -77,6 +82,21 @@ namespace Bossy.Frontend.Autocomplete
             ArgumentSchema lastArg = null;
             while (context.Stream.TryConsume(out var current))
             {
+                if (IsOperator(current))
+                {
+                    if (current == _operators.WindowOperator)
+                    {
+                        result.Clear();
+                        result.Add(new Suggestion("", "Ready to execute", isHint:true));
+                        return result;
+                    }
+                    
+                    var newLine = string.Join(" ", context.Stream.Explode());
+                
+                    var nextPrefix = $"{predictedLine} {current}{(context.HasMoreTokens || predictNext ? " " : "")}"; 
+                    return ResolveSuggestions(newLine, predictNext, nextPrefix);
+                }
+                
                 var finishedQuote = current.StartsWith("\"") && current.EndsWith("\"");
                 var unfinishedQuote = current.StartsWith("\"") && !current.EndsWith("\"");
                 var cursorHere = !context.HasMoreTokens && !predictNext;
@@ -203,14 +223,23 @@ namespace Bossy.Frontend.Autocomplete
             return result;
         }
 
-        private bool HandleResolvingCommand(bool predictNext, TokenStream stream, out CommandSchema schema, out IEnumerable<Suggestion> enumerable)
+        private bool IsOperator(string token)
         {
+            return token == _operators.ThenOperator ||
+                   token == _operators.AndOperator  ||
+                   token == _operators.OrOperator   ||
+                   token == _operators.PipeOperator ||
+                   token == _operators.WindowOperator;
+        }
+        
+        private bool HandleResolvingCommand(bool predictNext, TokenStream stream, string prefix, out CommandSchema schema, out IEnumerable<Suggestion> enumerable)
+        {
+            schema = null;
             enumerable = Array.Empty<Suggestion>();
             
             // Nothing typed at all
             if (!stream.TryConsume(out var cmdName))
             {
-                schema = null;
                 return false;
             }
 
@@ -221,15 +250,13 @@ namespace Bossy.Frontend.Autocomplete
             if (cmdMatches.Count == 0)
             {
                 // No close matches
-                schema = null;
                 return false;
             }
             
             // We have at least one token. If it is exactly one and the user is still working on it, return predictions
             if (!stream.TryPeek(out _) && !predictNext)
             {
-                schema = null;
-                enumerable = cmdMatches.Select(n => new Suggestion(n, n));
+                enumerable = cmdMatches.Select(n => new Suggestion($"{prefix ?? string.Empty}{n}", n));
                 return false;
             }
             
@@ -815,25 +842,25 @@ namespace Bossy.Frontend.Autocomplete
 
             if (method == null)
             {
-                Debug.LogWarning($"No {Format.Bold("static")} suggestion function with name '{suggestor.FunctionName}' found on type {type}");
+                Log.Warning($"No {Format.Bold("static")} suggestion function with name '{suggestor.FunctionName}' found on type {type}");
                 return false;
             }
 
             if (!method.IsStatic)
             {
-                Debug.LogWarning($"Suggestion function must be static");
+                Log.Warning("Suggestion function must be static");
                 return false;
             }
             
             if (!typeof(IEnumerable<string>).IsAssignableFrom(method.ReturnType))
             {
-                Debug.LogWarning($"Suggestion function must return a type assignable to IEnumerable<string>");
+                Log.Warning("Suggestion function must return a type assignable to IEnumerable<string>");
                 return false;
             }
 
             if (method.GetParameters().Length > 1)
             {
-                Debug.LogWarning($"Suggestion function may only have a parameter of type {typeof(SuggestionContext)}, or no parameters");
+                Log.Warning($"Suggestion function may only have a parameter of type {typeof(SuggestionContext)}, or no parameters");
                 return false;
             }
 
@@ -842,7 +869,7 @@ namespace Bossy.Frontend.Autocomplete
             {
                 if (method.GetParameters()[0].ParameterType != typeof(SuggestionContext))
                 {
-                    Debug.LogWarning($"Suggestion function has a parameter but it was not of type {typeof(SuggestionContext)}");
+                    Log.Warning($"Suggestion function has a parameter but it was not of type {typeof(SuggestionContext)}");
                     return false;
                 }
 

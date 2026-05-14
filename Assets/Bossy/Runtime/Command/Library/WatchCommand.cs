@@ -25,7 +25,6 @@ namespace Bossy.Runtime.Command.Library
         
         public async Task<CommandStatus> ExecuteAsync(CommandContext ctx)
         {
-            Log.Info("Starting with " + _overwrite);
             ctx.Write("Starting with " + _overwrite);
             if (_command.Length == 0)
             {

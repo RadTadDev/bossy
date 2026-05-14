@@ -8,7 +8,6 @@ using Bossy.Command;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
 using Bossy.Frontend.Autocomplete;
-using Bossy.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -90,7 +89,7 @@ namespace Bossy.Frontend
             EditorApplication.quitting += OnBeforeReload;
 #endif
 
-            _autocomplete = new AutocompleteEngine(_context);
+            _autocomplete = new AutocompleteEngine(_context, context.Settings.BossyCliSettings.ToOperatorList());
             
             // Register adapters
             _displayAdapters[typeof(OptionsPrompt)] = new OptionsPromptDisplayAdapter();
