@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Frontend;
-using Bossy.Utils;
 
 namespace Bossy.Runtime.Command.Library
 {
@@ -25,7 +24,6 @@ namespace Bossy.Runtime.Command.Library
         
         public async Task<CommandStatus> ExecuteAsync(CommandContext ctx)
         {
-            ctx.Write("Starting with " + _overwrite);
             if (_command.Length == 0)
             {
                 return CommandStatus.Error;
@@ -45,7 +43,7 @@ namespace Bossy.Runtime.Command.Library
                     ctx.WriteWarning("Current UI does not support overwriting last buffer output. Appending instead.");
                 }
             }
-
+            
             while (_repeatCount-- != 0)
             {
                 await foreach (var line in ctx.ExecuteAndRead<object>(command))

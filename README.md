@@ -132,7 +132,7 @@ hello, world!
 
 The script above is good for unconditionally including Bossy in the editor, runtime, and builds. However, you may want to be more selective. You can use `#if DEVELOPMENT_BUILD` to only inlcude the system in development builds, and `#if UNITY_EDITOR` to detect whether you are in the editor or not.
 
-You also can have more fine grained control over the configuration. The above example used `BossyBuilder.GetCommands.Automatically()` to search all loaded assemblies for commands. You can also use `.FromTypes()`, `.InAssembly()` and `.InAssemblies()` for more control over how to discover commands.
+You also can have more fine grained control over the configuration. The above example used `BossyBuilder.GetCommands.Automatically()` to search all loaded assemblies for commands. You can also use `.FromTypes()`, `.InAssembly()` and `.InAssemblies()` for more control over how to discover commands. 
 
 Before calling `.Build()`, you can also pass in custom type adapters (see [Type Adapting](#type-adapting)) using the `.WithAdapter()` call.
 
@@ -337,27 +337,28 @@ private string[] _files;
 
 ### Command Context
 
-`CommandContext` (exposed as `SimpleContext` in synchronous commands) is the sole API surface available during execution.
+`CommandContext` (exposed as a limited `SimpleContext` in synchronous commands) is the sole API surface available during execution.
 
-| Member                                                      | Description                                                                                                |
-|-------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
-| `ctx.Write(string)`                                         | Writes a line to the console output.                                                                       |
-| `ctx.WriteError(string)`                                    | Writes a formatted error line.                                                                             |
-| `ctx.WriteWarning(string)`                                  | Writes a formatted warning line.                                                                           |
-| `ctx.NewLine()`                                             | Writes a new line.                                                                                         |
-| `ctx.ReadAsync<T>()`                                        | Reads a typed object from the input stream.                                                                |
-| `ctx.ReadAllAsync<T>()`                                     | Reads typed objects from the input stream as long as its open. See below.                                  |
-| `ctx.CloseOutputStream()`                                   | Indicates that no more output is coming. This breaks `ctx.ReadAllAsync<T>()` loops.                        |
-| `ctx.Execute(string, ObservablePipe = null)`                | Executes another command. Use the observable pipe to get callbacks for the new command's reads and writes. |
-| `ctx.Delay(TimeSpace)`                                      | Delays for some time.                                                                                      |
-| `ctx.Yield()`                                               | Yields execution contorl. Useful to break tight loops without a delay.                                     |
-| `ctx.Prompt(string)`                                        | Prompts the user by outputting a string then doing a read.                                                 |
-| `ctx.PromptWithOptions(IEnumerable options, string = null)` | Prompts the user by outputting a string then reading for one of several listed options.                    |
-| `ctx.Bossy`                                                 | Access to the Bossy instance, including the schema registry.                                               |
-| `ctx.CancelationToken`                                      | Gets the command's cancellation token.                                                                     |
-| `ctx.Capabilities`                                          | Gets the front end Capabilities. See below.                                                                |
+| Member                                                            | Description                                                                                                     |
+|-------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| `ctx.Write(object line)`                                          | Writes a line to the console output.                                                                            |
+| `ctx.WriteError(object error)`                                    | Writes a formatted error line.                                                                                  |
+| `ctx.WriteWarning(object warning)`                                | Writes a formatted warning line.                                                                                |
+| `ctx.NewLine()`                                                   | Writes a new line.                                                                                              |
+| `ctx.ReadAsync<T>()`                                              | Reads a typed object from the input stream.                                                                     |
+| `ctx.ReadAllAsync<T>(IReadable input = null)`                     | Reads typed objects from the input stream as long as its open. Defaults to this command's input stream. See below. |
+| `ctx.CloseOutputStream()`                                         | Indicates that no more output is coming. This breaks `ctx.ReadAllAsync<T>()` loops.                             |
+| `ctx.Delay(TimeSpan time)`                                        | Delays for some time.                                                                                           |
+| `ctx.Delay(float seconds)`                                        | Delays for some seconds.                                                                                        |
+| `ctx.Yield()`                                                     | Yields execution contorl. Useful to break tight loops without a delay.                                          |
+| `ctx.Prompt(string)`                                              | Prompts the user by outputting a string then doing a read.                                                      |
+| `ctx.PromptWithOptions(IEnumerable options, string = null)`       | Prompts the user by outputting a string then reading for one of several listed options.                         |
+| `ctx.ExecuteAsync(string command)`                                | Executes another command. You should always await this.                                                         |
+| `ctx.ExecuteAndLink(string command, AsyncPipe in, AsyncPipe out)` | Executes another command and connects its in and out streams to the pipes you pass in.                          |
+| `ctx.ExecuteAndRead<T>(string command)`                           | Executes another command and streams its output to the spawning command. See below.                             |
 
-Note: When using `ctx.ReadAllAsync<T>()`, you should should use it in a loop like so:
+
+Note: When using `ctx.ReadAllAsync<T>(IReadable input)` or `ctx.ExecuteAndRead<T>(string command)`, you should should use it in a loop like so:
 ```csharp
 await foreach (T obj in ctx.ReadAllAsync<T>())
 {
@@ -372,6 +373,15 @@ if (ctx.Capabilities is IClearable clearable)
     
 }
 ```
+
+You also have several fields that can be very useful:
+
+| Field                  | Description                                                  |
+|------------------------|--------------------------------------------------------------|
+| `ctx.Bossy`            | Access to the Bossy instance, including the schema registry. |
+| `ctx.CancelationToken` | Gets the command's cancellation token.                       |
+| `ctx.Capabilities`     | Gets the front end Capabilities. See below.                  |
+
 
 If you want to add your own capability to an existing front end, the CLI for example, do the following:
 ```csharp
@@ -471,7 +481,7 @@ To make your own validators, inherit from the `ArgumentValidationAttribute` clas
 ---
 
 ### Binding
-In many scenarios you may need to access objects that are already created rather than making new ones on the command line. For this you can use the binding system.
+In many scenarios you may need to access objects that are already created rather than making new ones on the command line. For this you can use the binding system. 
 
 To ask for an argument via binding, simply add the `[Bind]` attribute to a field in your command like so:
 
