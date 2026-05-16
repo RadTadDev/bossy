@@ -30,5 +30,14 @@ namespace Bossy
             
             _lifecycleManager = new LifecycleManager(schemaRegistry, typeAdapterRegistry, new FileSource(SettingsPath), binder);
         }
+
+        /// <summary>
+        /// Gets the Bossy context which holds a reference to key subsystems.
+        /// </summary>
+        /// <returns>The context.</returns>
+        public BossyContext GetContext()
+        {
+            return _lifecycleManager.GetContext();
+        }
     }
 }

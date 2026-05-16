@@ -171,5 +171,11 @@ namespace Bossy
             graph.Windowed = false;
             container.Start(graph, reader, writer);
         }
+
+        /// <summary>
+        /// Gets the Bossy context.
+        /// </summary>
+        /// <returns>The context.</returns>
+        public BossyContext GetContext() => _context;
     }
 }
