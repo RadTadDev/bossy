@@ -17,11 +17,16 @@ namespace Bossy.Frontend
         
         public SessionSpace Space { get; private set; }
 
+        /// <summary>
+        /// Invoked when unity silently creates an EditorHost without Bossy knowing.
+        /// </summary>
+        public static event Action<EditorHost> SilentOpen;
+        
         private HostManager _manager;
         private EditorHostController _controller;
 
         private static EditorWindow _lastFocused;
-
+        
         public void Initialize(HostManager manager, BossyInputSettings settings, Action<FrontendType, SessionSpace> createNewSession, SessionSpace space)
         {
             EditorApplication.update += TrackFocus;
@@ -31,12 +36,19 @@ namespace Bossy.Frontend
             _controller = new EditorHostController(settings, createNewSession, rootVisualElement);
         }
 
+        private void CreateGUI()
+        {
+            if (_manager == null)
+            {
+                SilentOpen?.Invoke(this);
+            }
+        }
+
         public void Reveal()
         {
             Focus();
             _controller.Show();
         }
-
 
         public void Hide()
         {

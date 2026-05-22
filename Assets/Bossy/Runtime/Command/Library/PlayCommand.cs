@@ -14,19 +14,25 @@ namespace Bossy.Runtime.Command.Library
         protected override CommandStatus Execute(SimpleContext ctx)
         {
             EditorApplication.isPlaying = true;
+            EditorApplication.playModeStateChanged += FocusGameView;
+
+            return CommandStatus.Ok;
+        }
+        
+        private void FocusGameView(PlayModeStateChange state)
+        {
+            if (state != PlayModeStateChange.EnteredPlayMode)
+                return;
+    
+            EditorApplication.playModeStateChanged -= FocusGameView;
 
             var gameViewType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
             var gameView = Resources.FindObjectsOfTypeAll(gameViewType).FirstOrDefault() as EditorWindow;
 
-            if (gameView == null)
+            if (gameView != null)
             {
-                return CommandStatus.Error;
+                gameView.Focus();
             }
-            
-            ctx.Write("Focusing game window");
-            gameView.Focus();
-
-            return CommandStatus.Ok;
         }
     }
 }

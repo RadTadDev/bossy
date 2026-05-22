@@ -56,7 +56,7 @@ namespace Bossy.Frontend
 
         private void OnDestroy()
         {
-            _manager.RequestClose(this, true);
+            _manager?.RequestClose(this, true);
         }
     }
 }
