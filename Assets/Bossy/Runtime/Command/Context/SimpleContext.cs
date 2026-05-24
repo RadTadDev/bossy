@@ -1,6 +1,7 @@
 using System;
 using Bossy.Frontend;
 using Bossy.Execution;
+using UnityEngine;
 
 namespace Bossy.Command
 {
@@ -83,6 +84,47 @@ namespace Bossy.Command
         public virtual void WriteError(object value, int indentCount = 0)
         {
             Format.Error(value, this, indentCount);
+        }
+
+        /// <summary>
+        /// Tells if this command is running in the editor.
+        /// </summary>
+        /// <returns>True if this is the editor.</returns>
+        public bool IsEditor()
+        {
+#if UNITY_EDITOR
+            return true;
+#else
+            return false;
+#endif
+        }
+
+        /// <summary>
+        /// Tells if this command is running in a build.
+        /// </summary>
+        /// <returns>True if this is in a build.</returns>
+        public bool IsBuild()
+        {
+            return !IsEditor();
+        }
+
+        /// <summary>
+        /// Tells if this command is running in a runtime. Note that playing in the editor is a runtime environment.
+        /// </summary>
+        /// <returns>True if this is runtime.</returns>
+        public bool IsRuntime()
+        {
+            return Application.isPlaying;
+        }
+        
+        /// <summary>
+        /// Tells if this command is running in edit mode or not. Note that when in the editor, all commands
+        /// are considered to NOT be running in edit mode if the application is playing.
+        /// </summary>
+        /// <returns>True if this is edit mode.</returns>
+        public bool IsEditMode()
+        {
+            return !IsRuntime();
         }
     }
 }

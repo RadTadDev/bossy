@@ -46,9 +46,11 @@ namespace Bossy
             _hostManager = new HostManager(this, settings.BossyInputSettings, CreateBossySession);
             _runtimeManager = new BossyRuntimeManager();
 
+#if UNITY_EDITOR
             // This is a quick hack. Unity can recreate windows without telling us. When a window is maximized,
             // it will rebuild the full UI but since Bossy is not recreated, we can miss reconnecting an editor window
             EditorHost.SilentOpen += ReconnectEditorSession;
+#endif
             
             ReconnectEditorSessions();
         }
@@ -135,6 +137,7 @@ namespace Bossy
 #endif
         }
         
+#if UNITY_EDITOR
         private void ReconnectEditorSession(EditorHost host)
         {
             host.Initialize(_hostManager, _context.Settings.BossyInputSettings, CreateBossySession, SessionSpace.Edit);
@@ -157,6 +160,7 @@ namespace Bossy
             
             container.Start();
         }
+#endif
         
         private void CreateCommandSession(Session template, CommandGraph graph, IReadable reader = null, IWriteable writer = null)
         {

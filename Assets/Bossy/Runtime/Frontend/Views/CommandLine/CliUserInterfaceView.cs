@@ -31,7 +31,7 @@ namespace Bossy.Frontend
         private readonly BossyContext _context;
 
         private readonly Dictionary<string, string> _aliases = new();
-        private readonly Dictionary<Type, CliDisplayAdapter> _displayAdapters = new();
+        private readonly Dictionary<Type, ICliDisplayAdapter> _displayAdapters = new();
 
         // Output
         private ListView _view;
@@ -44,7 +44,8 @@ namespace Bossy.Frontend
         private bool _blockInput;
         private bool _reading;
         private bool _requestingCommand;
-
+        private ICliDisplayAdapter _currentReadOwner;
+        
         // History
         private static List<string> _historyBuffer;
         private int _historyIndex;
@@ -191,6 +192,10 @@ namespace Bossy.Frontend
             // The Gui can do this too, but even better with control widgets and such
             if (_displayAdapters.TryGetValue(value.GetType(), out var adapter))
             {
+                if (adapter.OwnsRead())
+                {
+                    _currentReadOwner = adapter;
+                }
                 return adapter.Display(value);
             }
 
@@ -200,7 +205,11 @@ namespace Bossy.Frontend
         public virtual async Task<object> ReadAsync(Type requestedType, CancellationToken token)
         {
             _reading = true;
+            
             Input.focusable = true;
+            Input.value = string.Empty;
+            Input.enabledSelf = true;
+            
             FocusInput();
             
             _requestingCommand = requestedType == typeof(CommandGraph);
@@ -212,7 +221,7 @@ namespace Bossy.Frontend
             
             return result;
         }
-
+        
         private void Submit()
         {
             var line = Input.value;
@@ -221,6 +230,12 @@ namespace Bossy.Frontend
             
             object result = line;
 
+            if (_currentReadOwner != null)
+            {
+                result = _currentReadOwner.Read(line);
+                _currentReadOwner = null;
+            }
+            
             AppendHistory(line);
             _historyIndex = _historyBuffer.Count;
             
@@ -257,6 +272,9 @@ namespace Bossy.Frontend
             
             Input.parent.Focus();
             Input.focusable = false;
+            Input.enabledSelf = false;
+            Input.value = "Executing...";
+            
             _reading = false;
             _readSource.TrySetResult(result);
         }

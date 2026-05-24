@@ -80,6 +80,7 @@ namespace Bossy
             
             // Enum types
             _typeAdapterRegistry.RegisterAdapter(new EnumAdapter<KeyCode>());
+            _typeAdapterRegistry.RegisterAdapter(new EnumAdapter<LogType>());
             
             // Custom
             _typeAdapterRegistry.RegisterAdapter(new ConfirmationAdapter());

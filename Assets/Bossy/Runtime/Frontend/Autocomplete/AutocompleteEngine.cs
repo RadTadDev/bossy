@@ -613,11 +613,10 @@ namespace Bossy.Frontend.Autocomplete
                         return SuggestStatus.Error;
                     }
                     
-                    // The result failed - fall through to suggestions
+                    // The result failed but the user is still working on it - fall through to suggestions
                 }
                 
-                // The result failed and we either don't have enough tokens or haven't moved on yet.
-                // At this point, variadic is not an option.
+                // The result failed and we either don't have enough tokens or haven't moved on yet. Variadic is not an option either
                 if (!GetUserSuggestions(context, predictedLine, arg, out var newUserSuggestions, filter: consumedString))
                 {
                     suggestions.Clear();
@@ -629,7 +628,7 @@ namespace Bossy.Frontend.Autocomplete
                     {
                         hint = $"{TypeHintString(arg)} - current value '{consumedString}' is invalid";
                     }
-                    // If it is wrong but, they have not entered enough tokens, just wait for more.
+                    // If it is wrong but they have not entered enough tokens, just wait for more.
                     // Note, this cannot be a subcommand since those are single tokens
                     else
                     {
@@ -640,15 +639,7 @@ namespace Bossy.Frontend.Autocomplete
                     return SuggestStatus.Hint;
                 }
 
-                // Adaptation failed but the user is still working on it, check invalid before suggesting
-                if (!context.HasMoreTokens && !predictNext && adapterResult.TokensDesired == consumed)
-                {
-                    suggestions.Clear();
-                    var hint = $"{TypeHintString(arg)} - current value '{consumedString}' is invalid";
-                    suggestions.Add(new Suggestion("", hint, isHint:true));
-                    return SuggestStatus.Hint;
-                }
-                
+                // The value is not valid but the user has not moved on. Suggest best options between subcommands and user suggestions
                 return SuggestCommandsAndValues(context, current, predictedLine, ref suggestions, arg, options, newUserSuggestions);
             }
             
@@ -762,10 +753,12 @@ namespace Bossy.Frontend.Autocomplete
 
             if (userSuggestions == null)
             {
-                if (GetUserSuggestions(context, predictedLine, arg, out userSuggestions, filter: current))
-                {
-                    currentOptions.AddRange(userSuggestions);
-                }
+                GetUserSuggestions(context, predictedLine, arg, out userSuggestions, filter: current);
+            }
+
+            if (userSuggestions != null)
+            {
+                currentOptions.AddRange(userSuggestions);
             }
                     
             // Predict best values

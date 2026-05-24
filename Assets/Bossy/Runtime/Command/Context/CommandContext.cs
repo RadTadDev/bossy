@@ -259,7 +259,7 @@ namespace Bossy.Command
         /// <param name="prompt">A custom prompt message.</param>
         /// <typeparam name="T">The type of the options.</typeparam>
         /// <returns>The selected choice.</returns>
-        public async Task<T> PromptWithOptions<T>(IEnumerable<T> options, string prompt = null)
+        public async Task<T> PromptWithOptions<T>(IEnumerable<Option<T>> options, string prompt = null)
         {
             var list = options.ToList();
             
@@ -271,7 +271,7 @@ namespace Bossy.Command
                 
                 var choice = await ReadAsync<T>();
                 
-                if (list.Contains(choice))
+                if (list.Select(o => o.Value).Contains(choice))
                 {
                     return choice;
                 }

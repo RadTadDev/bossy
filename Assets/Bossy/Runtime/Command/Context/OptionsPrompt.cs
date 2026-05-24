@@ -9,9 +9,9 @@ namespace Bossy.Command
     /// <typeparam name="T">The type of the options.</typeparam>
     public class OptionsPrompt
     {
-        private object _options;
-        
-        private OptionsPrompt(object options)
+        private readonly ICollection _options;
+
+        private OptionsPrompt(ICollection options)
         {
             _options = options;
         }
@@ -19,20 +19,23 @@ namespace Bossy.Command
         /// <summary>
         /// Creates a new options prompt.
         /// </summary>
-        /// <param name="options">The list of options.</param>
-        /// <typeparam name="T">The type of the options.</typeparam>
-        /// <returns>The prompt object.</returns>
+        /// <param name="options">The options to allow.</param>
+        /// <typeparam name="T">The element type.</typeparam>
+        /// <returns>The new prompt.</returns>
         public static OptionsPrompt Create<T>(IReadOnlyCollection<T> options)
         {
-            return new OptionsPrompt(options);
+            return new OptionsPrompt((ICollection)options);
         }
-        
+
+        /// <summary>
+        /// The number of options.
+        /// </summary>
+        public int Count => _options.Count;
+    
         /// <summary>
         /// Gets the options.
         /// </summary>
-        public IEnumerable GetOptions()
-        {
-            return (IEnumerable)_options;
-        }
+        /// <returns>The options.</returns>
+        public IEnumerable GetOptions() => _options;
     }
 }
