@@ -207,7 +207,6 @@ namespace Bossy.Frontend
             _reading = true;
             
             Input.focusable = true;
-            Input.value = string.Empty;
             Input.enabledSelf = true;
             
             FocusInput();
@@ -273,7 +272,6 @@ namespace Bossy.Frontend
             Input.parent.Focus();
             Input.focusable = false;
             Input.enabledSelf = false;
-            Input.value = "Executing...";
             
             _reading = false;
             _readSource.TrySetResult(result);

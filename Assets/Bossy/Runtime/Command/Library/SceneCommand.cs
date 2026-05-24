@@ -10,44 +10,11 @@ using UnityEngine;
 #if UNITY_EDITOR
 using System.IO;
 using UnityEditor;
-using UnityEditor.Build;
-using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 #endif
 
 namespace Bossy.Runtime.Command.Library
 {
-    
-#if UNITY_EDITOR
-    [InitializeOnLoad]
-    internal static class SceneCaching
-    {
-        static SceneCaching() => EditorApplication.delayCall += RefreshScenes;
-        
-        public static void RefreshScenes()
-        {
-            EditorApplication.delayCall -= RefreshScenes;
-            
-            var list = AssetDatabase.LoadAssetAtPath<SceneList>("Assets/Bossy/Runtime/Resources/SceneCommandList.asset");
-            
-            if (list == null) return;
-        
-            list.Scenes = EditorBuildSettings.scenes
-                .Where(s => s.enabled)
-                .Select(s => Path.GetFileNameWithoutExtension(s.path))
-                .ToList();
-        
-            EditorUtility.SetDirty(list);
-            AssetDatabase.SaveAssets();
-        }
-    }
-    
-    internal class SceneCachingPreprocessor : IPreprocessBuildWithReport
-    {
-        public int callbackOrder => 0;
-        public void OnPreprocessBuild(BuildReport report) => SceneCaching.RefreshScenes();
-    }
-#endif
     
     [Command("scene", "Commands for inspecting and manipulating Unity scenes.")]
     public class SceneCommand : ICommand
@@ -57,12 +24,41 @@ namespace Bossy.Runtime.Command.Library
             await ctx.ExecuteAsync("help scene");
             return CommandStatus.Ok;
         }
+        
+        public static List<string> SuggestLoadableScenes()
+        {
+            if (Application.isPlaying)
+            {
+                return Enumerable
+                    .Range(0, SceneManager.sceneCountInBuildSettings)
+                    .Select(i => SceneManager.GetSceneByBuildIndex(i).name)
+                    .Distinct()
+                    .ToList();
+            }
+
+#if UNITY_EDITOR
+            return AssetDatabase.FindAssets("t:Scene", new [] { "Assets" } )
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(Path.GetFileNameWithoutExtension)
+                .Distinct()
+                .ToList();
+
+#else
+            return new List<string>();
+#endif
+        }
+        
+        public static List<string> SuggestLoadedScenes()
+        {
+            return Enumerable.Range(0, SceneManager.sceneCount)
+                .Select(i => SceneManager.GetSceneAt(i).name).ToList();
+        }
     }
     
     [Command("load", "Loads a scene", typeof(SceneCommand))]
     public class SceneLoadCommand : ICommand
     {
-        [Suggest(nameof(Suggest))]
+        [Suggest(nameof(SceneCommand.SuggestLoadableScenes), typeof(SceneCommand))]
         [Positional(0, "The name of the scene to load.")]
         private string _name;
 
@@ -100,16 +96,19 @@ namespace Bossy.Runtime.Command.Library
 #endif
             }
 
-            var sceneList = Resources.Load<SceneList>("SceneCommandList");
-                
-            if (sceneList is null || !sceneList.Scenes.Distinct().Contains(_name))
+            var sceneList = Enumerable
+                .Range(0, SceneManager.sceneCountInBuildSettings)
+                .Select(i => SceneManager.GetSceneByBuildIndex(i).name).ToList();
+            
+            if (!sceneList.Distinct().Contains(_name))
             {
                 ctx.WriteError($"Could not find a scene with the name {_name}");
                 return CommandStatus.Error;
             }
 
             SceneManager.LoadScene(_name, _additive ? LoadSceneMode.Additive : LoadSceneMode.Single);
-
+            ctx.Write($"Loaded scene {_name}");
+            
             await Task.CompletedTask;
             return CommandStatus.Ok;
         }
@@ -161,38 +160,12 @@ namespace Bossy.Runtime.Command.Library
             // +1 for the slash after the last common segment, -1 to go one level higher
             return split.First().Take(Math.Max(0, firstDiff - 1)).Sum(p => p.Length + 1);
         }
-        
-        private static List<string> Suggest()
-        {
-            if (Application.isPlaying)
-            {
-                var sceneList = Resources.Load<SceneList>("SceneCommandList");
-                
-                if (sceneList == null)
-                {
-                    return new List<string>();
-                }
-
-                return sceneList.Scenes.Distinct().ToList();
-            }
-
-#if UNITY_EDITOR
-            return AssetDatabase.FindAssets("t:Scene", new [] { "Assets" } )
-                .Select(AssetDatabase.GUIDToAssetPath)
-                .Select(Path.GetFileNameWithoutExtension)
-                .Distinct()
-                .ToList();
-
-#else
-            return new List<string>();
-#endif
-        }
     }
     
     [Command("unload", "Unloads a scene", typeof(SceneCommand))]
     public class SceneUnloadCommand : SimpleCommand
     {
-        [Suggest(nameof(Suggest))]
+        [Suggest(nameof(SceneCommand.SuggestLoadedScenes), typeof(SceneCommand))]
         [Positional(0, "The name of the scene to unload.")]
         private string _name;
         
@@ -218,40 +191,104 @@ namespace Bossy.Runtime.Command.Library
                 return CommandStatus.Error;
 #endif
             }
+            
+            var sceneList = Enumerable
+                .Range(0, SceneManager.sceneCount)
+                .Select(i => SceneManager.GetSceneAt(i).name).ToList();
 
-            try
+            if (sceneList.Count == 1)
             {
-                SceneManager.UnloadSceneAsync(_name);
-                ctx.Write($"Closed scene {_name}");
-            }
-            catch (Exception)
-            {
-                ctx.WriteError($"No open scene named {_name}");
+                ctx.WriteError("Cannot unload the only open scene!");
+                return CommandStatus.Error;
             }
             
+            if (!sceneList.Distinct().Contains(_name))
+            {
+                ctx.WriteError($"Could not find a loaded scene with the name {_name}");
+                return CommandStatus.Error;
+            }
+
+            SceneManager.UnloadSceneAsync(_name);
+
+            ctx.Write($"Unloaded scene {_name}");
             
             return CommandStatus.Ok;
-        }
-
-        private static List<string> Suggest()
-        {
-            return Enumerable.Range(0, SceneManager.sceneCount)
-                .Select(i => SceneManager.GetSceneAt(i).name).ToList();
         }
     }
     
     [Command("list", "Lists all loaded scenes",  typeof(SceneCommand))]
     public class SceneListCommand : SimpleCommand
     {
+        [Switch('a', "List all scenes available")]
+        private bool _all;
+        
         protected override CommandStatus Execute(SimpleContext ctx)
         {
-            ctx.Write("Loaded scenes:");
+            ctx.Write(Format.Color("=== Loaded scenes ===", Format.LightBlue));
             
             foreach (var name in Enumerable.Range(0, SceneManager.sceneCount).Select(i => SceneManager.GetSceneAt(i).name))
             {
-                ctx.Write(name);
+                if (SceneManager.GetActiveScene().name == name)
+                {
+                    ctx.Write($"{ Format.Color(name, Format.Green)}*");
+                }
+                else
+                {
+                    ctx.Write($"{ Format.Color(name, Format.Yellow)}");
+                }
+            }
+
+            if (_all)
+            {
+                ctx.Write(Format.Color("=== Build List ===", Format.LightBlue));
+                
+                var sceneList = Enumerable
+                    .Range(0, SceneManager.sceneCountInBuildSettings)
+                    .Select(i => SceneManager.GetSceneByBuildIndex(i).name)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var name in sceneList)
+                {
+                    ctx.Write(Format.Color(name, Format.Gray));
+                }
             }
             
+            return CommandStatus.Ok;
+        }
+    }
+    
+    [Command("get-active", "Gets the active scene",  typeof(SceneCommand))]
+    public class SceneGetActiveCommand : SimpleCommand
+    {
+        protected override CommandStatus Execute(SimpleContext ctx)
+        {
+            ctx.Write(Format.Color(SceneManager.GetActiveScene().name + "*", Format.Green));
+            
+            return CommandStatus.Ok;
+        }
+    }
+    
+    [Command("set-active", "Sets the active scene",  typeof(SceneCommand))]
+    public class SceneSetActiveCommand : SimpleCommand
+    {
+        [Suggest(nameof(SceneCommand.SuggestLoadedScenes), typeof(SceneCommand))]
+        [Positional(0, "The name of the scene to set active.")]
+        private string _name;
+        
+        protected override CommandStatus Execute(SimpleContext ctx)
+        {
+            var sceneList = Enumerable
+                .Range(0, SceneManager.sceneCount)
+                .Select(i => SceneManager.GetSceneAt(i).name).ToList();
+
+            if (!sceneList.Distinct().Contains(_name))
+            {
+                ctx.WriteError($"Could not find a loaded scene with the name {_name}");
+                return CommandStatus.Error;
+            }
+
+            SceneManager.SetActiveScene(SceneManager.GetSceneByName(_name));
             return CommandStatus.Ok;
         }
     }
