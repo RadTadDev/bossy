@@ -28,7 +28,7 @@ namespace Bossy.Runtime.Command.Library
             {
                 return CommandStatus.Error;
             }
-            await ctx.Delay(TimeSpan.FromSeconds(1));
+
             var command = string.Join(" ", _command);
 
             IModifiableOutputBuffer buffer = null;
