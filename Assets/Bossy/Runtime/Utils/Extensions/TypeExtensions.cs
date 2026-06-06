@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Bossy.Utils
 {
@@ -25,6 +26,25 @@ namespace Bossy.Utils
             { typeof(void),    "void"    },
         };
 
+        
+        private static Dictionary<string, Type> _typeIndex;
+
+        private static Dictionary<string, Type> TypeIndex
+        {
+            get
+            {
+                if (_typeIndex != null) return _typeIndex;
+        
+                _typeIndex = new Dictionary<string, Type>();
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                foreach (var type in assembly.GetTypes())
+                    _typeIndex.TryAdd(type.Name, type);        // simple name, first-one-wins
+        
+                return _typeIndex;
+            }
+        }
+        
+        
         /// <summary>
         /// Prints a friendly name for common built-in types.
         /// </summary>
@@ -43,6 +63,35 @@ namespace Bossy.Utils
             var baseName = type.Name.Substring(0, type.Name.IndexOf('`'));
             var args = string.Join(", ", Array.ConvertAll(type.GetGenericArguments(), a => a.GetFriendlyName()));
             return $"{baseName}<{args}>";
+        }
+        
+
+        public static Type GetTypeFromName(string name)
+        {
+            // Friendly name (int, string, bool etc.)
+            var friendlyMatch = FriendlyNames.FirstOrDefault(kvp => kvp.Value == name);
+            if (friendlyMatch.Key != null)
+                return friendlyMatch.Key;
+
+            // Assembly-qualified or full name
+            var direct = Type.GetType(name);
+            if (direct != null)
+                return direct;
+
+            // Qualified — scan assemblies directly (fast, O(1) per assembly)
+            if (name.Contains('.'))
+            {
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    var t = assembly.GetType(name);
+                    if (t != null) return t;
+                }
+                return null;
+            }
+
+            // Simple name — index lookup
+            TypeIndex.TryGetValue(name, out var result);
+            return result;
         }
     }
 }

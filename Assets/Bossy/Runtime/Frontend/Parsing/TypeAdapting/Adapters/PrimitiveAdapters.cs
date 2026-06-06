@@ -212,4 +212,26 @@ namespace Bossy.Frontend.Parsing
             return TypeAdapterResult.Fail($"Expected {typeof(T).GetFriendlyName()}, got \"{token ?? "nothing"}\". Valid values: {valid}", 1);
         }
     }
+
+    public class TypeTypeAdapter : BaseTypeAdapter<Type>
+    {
+        protected override TypeAdapterResult TryConvertToType(TokenStream stream, TypeAdapterRegistry registry, out Type output)
+        {
+            output = null;
+            
+            if (!stream.TryConsume(out var token))
+            {
+                return TypeAdapterResult.Fail("Missing token.", 1);
+            }
+
+            output = TypeExtensions.GetTypeFromName(token);
+
+            if (output == null)
+            {
+                return TypeAdapterResult.Fail($"No type matching the name '{token}'.", 1);
+            }
+            
+            return TypeAdapterResult.Pass(1);
+        }
+    }
 }

@@ -796,6 +796,7 @@ namespace Bossy.Frontend.Autocomplete
                     result.Add(new Suggestion("", TypeHintString(arg), isHint:true));
                     return result;
                 }
+
                 result.AddRange(suggestions.Select(s => new Suggestion($"{predictedLine} {s}", $"{Format.Color(arg.Name, Format.Yellow)}: {s}")));
                 result = result.Take(MaxSuggestions).ToList();
             }
@@ -807,6 +808,7 @@ namespace Bossy.Frontend.Autocomplete
                     result.Add(new Suggestion("", $"{context.Variadic.Name}: <{context.Variadic.Type.GetFriendlyName()}>", isHint:true));
                     return result;
                 }
+                
                 result.AddRange(suggestions.Take(MaxSuggestions).Select(s => new Suggestion($"{predictedLine} {s}", $"{Format.Color(context.Variadic.Name, Format.Yellow)}: {s}")));
             }
 
@@ -871,10 +873,26 @@ namespace Bossy.Frontend.Autocomplete
             }
             
             suggestions = ((IEnumerable<string>)method.Invoke(null, args)).ToList();
-
+                
+            if (suggestions.Count == 0)
+            {
+                return false;
+            }
+            
             if (filter != null)
             {
                 suggestions = BestMatches(filter, suggestions);
+            }
+            
+            if (arg.Type == typeof(string))
+            {
+                for (int i = 0; i < suggestions.Count; i++)
+                {
+                    if (suggestions[i].Any(char.IsWhiteSpace))
+                    {
+                        suggestions[i] = $"\"{suggestions[i]}\"";
+                    }
+                }
             }
             
             return true;
@@ -886,7 +904,9 @@ namespace Bossy.Frontend.Autocomplete
 
             foreach (var option in options)
             {
-                var score = Score(token, option);
+                var unquotedOption = option.Trim('"');
+                
+                var score = Score(token, unquotedOption);
 
                 if (score < Threshold) continue;
                 

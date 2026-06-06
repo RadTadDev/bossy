@@ -69,7 +69,8 @@ namespace Bossy
             _typeAdapterRegistry.RegisterAdapter(new DoubleAdapter());
             _typeAdapterRegistry.RegisterAdapter(new CharAdapter());
             _typeAdapterRegistry.RegisterAdapter(new StringAdapter());
-
+            _typeAdapterRegistry.RegisterAdapter(new TypeTypeAdapter());
+            
             // Unity primitives
             _typeAdapterRegistry.RegisterAdapter(new Vector2Adapter());
             _typeAdapterRegistry.RegisterAdapter(new Vector3Adapter());
