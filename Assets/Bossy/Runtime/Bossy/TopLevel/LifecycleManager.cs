@@ -55,6 +55,7 @@ namespace Bossy
             ReconnectEditorSessions();
         }
         
+        
         /// <summary>
         /// Creates a new Bossy fullstack session.
         /// </summary>

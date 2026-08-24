@@ -12,7 +12,7 @@ namespace Bossy
         /// <summary>
         /// A binder for resolving objects.
         /// </summary>
-        public readonly IBossyBinder Binder;
+        public IBossyBinder Binder;
 
         /// <summary>
         /// The Bossy schema registry.
@@ -49,6 +49,16 @@ namespace Bossy
             TypeAdapterRegistry = adapterRegistry;
             Settings = settings;
             Parser = parser;
+        }
+
+
+        /// <summary>
+        /// Attaches a new binder.
+        /// </summary>
+        /// <param name="binder">The binder to attach.</param>
+        public void AttachBinder(IBossyBinder binder)
+        {
+            Binder = binder;
         }
     }
 }
