@@ -1,6 +1,8 @@
 using System;
-using Bossy.Command;
+using System.Collections.Generic;
+using System.Linq;
 using Bossy.Frontend.Parsing;
+using Bossy.Runtime.Command.Library;
 using Bossy.Schema.Registry;
 using Bossy.Utils;
 using UnityEngine;
@@ -34,6 +36,15 @@ namespace Bossy
         /// <param name="binder">The binder.</param>
         /// <returns>The builder.</returns>
         public IBossyRegisterStep WithBindings(IBossyBinder binder);
+
+        /// <summary>
+        /// Adds a password step before any commands can be run. If this is not called, not password will be required.
+        /// </summary>
+        /// <param name="password">The password.</param>
+        /// <param name="commandWhitelist">A command whitelist to allow even without a password.</param>
+        /// <returns>The builder.</returns>
+        public IBossyRegisterStep WithPassword(string password, HashSet<Type> commandWhitelist);
+        
         
         /// <summary>
         /// Completes the process of building the console.
@@ -50,6 +61,19 @@ namespace Bossy
         private IBossyBinder _binder;
         private readonly SchemaRegistry _schemaRegistry;
         private readonly TypeAdapterRegistry _typeAdapterRegistry = new();
+        private string _password;
+        private bool _usePassword;
+
+        // Start off with sensible white list defaults
+        private HashSet<Type> _commandWhiteList = new()
+        {
+            typeof(HelpCommand),
+            typeof(RegistryCommand),
+            typeof(ClearCommand),
+            typeof(LogInCommand),
+            typeof(AliasCommand),
+            typeof(HistoryCommand)
+        };
         
         internal BossyAdapterBuilder(SchemaRegistry schemaRegistry)
         {
@@ -118,9 +142,25 @@ namespace Bossy
             return this;
         }
 
+        public IBossyRegisterStep WithPassword(string password, HashSet<Type> commandWhitelist)
+        {
+            foreach (var type in commandWhitelist)
+            {
+                _commandWhiteList.Add(type);
+            }
+            
+            _password = password;
+            _usePassword = true;
+            return this;
+        }
+
         public BossyConsole Build()
         {
-            return new BossyConsole(_schemaRegistry, _typeAdapterRegistry, _binder ?? new NullBinder());
+            var whiteList = _schemaRegistry.GetValidSchemas().Where(s => _commandWhiteList.Contains(s.CommandType)).ToHashSet();
+            
+            var permissions = new BossyPermissions(_password, whiteList, !_usePassword);
+            
+            return new BossyConsole(_schemaRegistry, _typeAdapterRegistry, _binder ?? new NullBinder(), permissions);
         }
     }
 }

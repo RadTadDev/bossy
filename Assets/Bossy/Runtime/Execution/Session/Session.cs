@@ -22,25 +22,34 @@ namespace Bossy.Execution
         public readonly SessionSpace Space;
         
         private readonly CommandExecutor _commandExecutor;
-
+        private readonly BossyPermissions _permissions;
         private readonly BossyContext _context;
         private readonly Action<Session, CommandGraph,  IReadable, IWriteable> _createCommandSession;
         
         private CancellationTokenSource _commandSource;
         private readonly CancellationTokenSource _sessionSource = new();
-        
+
         /// <summary>
         /// Creates a new session.
         /// </summary>
         /// <param name="context">The Bossy context.</param>
         /// <param name="bridge">The bridge to the frontend.</param>
+        /// <param name="permissions">The permissions manager.</param>
         /// <param name="createCommandSession">An action to invoke when this session wants to create a new one.</param>
         /// <param name="space">The space this session is running in.</param>
-        public Session(BossyContext context, Bridge bridge, Action<Session, CommandGraph, IReadable, IWriteable> createCommandSession, SessionSpace space)
+        public Session
+        (
+            BossyContext context,
+            Bridge bridge,
+            BossyPermissions permissions,
+            Action<Session, CommandGraph, IReadable, IWriteable> createCommandSession,
+            SessionSpace space
+        )
         {
             _context = context;
             Bridge = bridge;
-            _commandExecutor = new CommandExecutor(this, context);
+            _permissions = permissions;
+            _commandExecutor = new CommandExecutor(this, context, permissions);
             _createCommandSession = createCommandSession;
             Space = space;
         }
@@ -114,7 +123,7 @@ namespace Bossy.Execution
         /// <returns>The cloned session.</returns>
         public Session Clone(Bridge bridge)
         {
-            var session = new Session(_context, bridge, _createCommandSession, Space);
+            var session = new Session(_context, bridge, _permissions, _createCommandSession, Space);
             return session;
         }
 

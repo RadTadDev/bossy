@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Bossy.Command;
+using Bossy.Schema;
 
 namespace Bossy.Execution
 {
@@ -13,8 +14,9 @@ namespace Bossy.Execution
         /// Adds a command to run.
         /// </summary>
         /// <param name="cmd">The command to run.</param>
+        /// <param name="schema">The schema for this command.</param>
         /// <returns>The builder.</returns>
-        public IGeneralGraphBuilderStep Execute(ICommand cmd);
+        public IGeneralGraphBuilderStep Execute(ICommand cmd, CommandSchema schema);
     }
 
     /// <summary>
@@ -26,29 +28,33 @@ namespace Bossy.Execution
         /// Adds a node to run next.
         /// </summary>
         /// <param name="cmd">The command to run.</param>
+        /// <param name="schema">The schema for this command.</param>
         /// <returns>The builder.</returns>
-        public IGeneralGraphBuilderStep Then(ICommand cmd);
+        public IGeneralGraphBuilderStep Then(ICommand cmd, CommandSchema schema);
         
         /// <summary>
         /// Adds a new node to run if the previous one succeeded.
         /// </summary>
         /// <param name="cmd">The command to run.</param>
+        /// <param name="schema">The schema for this command.</param>
         /// <returns>The builder.</returns>
-        public IGeneralGraphBuilderStep And(ICommand cmd);
+        public IGeneralGraphBuilderStep And(ICommand cmd, CommandSchema schema);
         
         /// <summary>
         /// Adds a new node to run if the previous one failed.
         /// </summary>
         /// <param name="cmd">The command to run.</param>
+        /// <param name="schema">The schema for this command.</param>
         /// <returns>The builder.</returns>
-        public IGeneralGraphBuilderStep Or(ICommand cmd);
-        
+        public IGeneralGraphBuilderStep Or(ICommand cmd, CommandSchema schema);
+
         /// <summary>
         /// Adds a new node to be piped to.
         /// </summary>
         /// <param name="cmd">The command to pipe to.</param>
+        /// <param name="schema">The schema for this command.</param>
         /// <returns>The builder.</returns>
-        public IGeneralGraphBuilderStep AndPipeTo(ICommand cmd);
+        public IGeneralGraphBuilderStep AndPipeTo(ICommand cmd, CommandSchema schema);
         
         /// <summary>
         /// Completes the graph.
@@ -89,30 +95,30 @@ namespace Bossy.Execution
             return new CommandGraph(windowed);
         }
         
-        public IGeneralGraphBuilderStep Execute(ICommand cmd)
+        public IGeneralGraphBuilderStep Execute(ICommand cmd, CommandSchema schema)
         {
-            _nodes.Add(new CommandGraphNode(cmd));
+            _nodes.Add(new CommandGraphNode(cmd, schema));
             return this;
         }
         
-        public IGeneralGraphBuilderStep Then(ICommand cmd)
+        public IGeneralGraphBuilderStep Then(ICommand cmd, CommandSchema schema)
         {
-            return AddNode(cmd, CommandGraphLink.Then);
+            return AddNode(cmd, schema, CommandGraphLink.Then);
         }
         
-        public IGeneralGraphBuilderStep And(ICommand cmd)
+        public IGeneralGraphBuilderStep And(ICommand cmd, CommandSchema schema)
         {
-            return AddNode(cmd, CommandGraphLink.And);
+            return AddNode(cmd, schema, CommandGraphLink.And);
         }
         
-        public IGeneralGraphBuilderStep Or(ICommand cmd)
+        public IGeneralGraphBuilderStep Or(ICommand cmd, CommandSchema schema)
         {
-            return AddNode(cmd, CommandGraphLink.Or);
+            return AddNode(cmd, schema, CommandGraphLink.Or);
         }
         
-        public IGeneralGraphBuilderStep AndPipeTo(ICommand cmd)
+        public IGeneralGraphBuilderStep AndPipeTo(ICommand cmd, CommandSchema schema)
         {
-            return AddNode(cmd, CommandGraphLink.Pipe);
+            return AddNode(cmd, schema, CommandGraphLink.Pipe);
         }
         
         public CommandGraph Build() => this;
@@ -123,11 +129,11 @@ namespace Bossy.Execution
         /// <returns>The array of nodes.</returns>
         public CommandGraphNode[] ToArray() => _nodes.ToArray();
         
-        private IGeneralGraphBuilderStep AddNode(ICommand command, CommandGraphLink link)
+        private IGeneralGraphBuilderStep AddNode(ICommand command, CommandSchema schema, CommandGraphLink link)
         {
             ICommandGraphNodeWriter writer = _nodes.Last();
             writer.AddLink(link);
-            _nodes.Add(new CommandGraphNode(command));
+            _nodes.Add(new CommandGraphNode(command, schema));
             return this;
         }
     }

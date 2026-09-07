@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Bossy;
 using JetBrains.Annotations;
 
@@ -51,6 +53,7 @@ public static class CommonStartup
         return BossyBuilder
             .GetCommands()
             .Automatically()
+            .WithPassword("test", new HashSet<Type> { typeof(HelpCommand)} )
             .WithBindings(binder)
             .Build();
     }

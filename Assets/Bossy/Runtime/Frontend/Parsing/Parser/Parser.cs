@@ -437,7 +437,7 @@ namespace Bossy.Frontend.Parsing
             var first = pipeline.First();
             pipeline = pipeline.Skip(1).ToList();
             
-            var builder = CommandGraph.Create(isWindowed).Execute(first.Command);
+            var builder = CommandGraph.Create(isWindowed).Execute(first.Command, first.Schema);
             var linkToCurrent = first.Link;
 
             foreach (var node in pipeline)
@@ -448,16 +448,16 @@ namespace Bossy.Frontend.Parsing
                         // This should not happen as we switch on the previous link...
                         return builder.Build();
                     case CommandGraphLink.Then:
-                        builder.Then(node.Command);
+                        builder.Then(node.Command, node.Schema);
                         break;
                     case CommandGraphLink.And:
-                        builder.And(node.Command);
+                        builder.And(node.Command, node.Schema);
                         break;
                     case CommandGraphLink.Or:
-                        builder.Or(node.Command);
+                        builder.Or(node.Command, node.Schema);
                         break;
                     case CommandGraphLink.Pipe:
-                        builder.AndPipeTo(node.Command);
+                        builder.AndPipeTo(node.Command, node.Schema);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();

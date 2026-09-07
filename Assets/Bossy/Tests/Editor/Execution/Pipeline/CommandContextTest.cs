@@ -5,6 +5,7 @@ using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
+using Bossy.Schema;
 using Bossy.Tests.Utils;
 using Bossy.Utils;
 using NUnit.Framework;
@@ -19,15 +20,17 @@ namespace Bossy.Tests.Shell
         private Session _session;
         private TypeAdapterRegistry _adapterRegistry;
         private BossyContext _context;
+        private BossyPermissions _permissions;
         
         [OneTimeSetUp]
         public void Setup()
         {
             _adapterRegistry = new TypeAdapterRegistry();
             _adapterRegistry.RegisterAdapter(typeof(int), new IntAdapter()); 
-            _context = new BossyContext(null, _adapterRegistry, null, null, null);
+            _context = new BossyContext(null, _adapterRegistry, null, null, null, null);
+            _permissions = new BossyPermissions("", new HashSet<CommandSchema>(), true);
             
-            _session = new Session(_context, new Bridge(_ => { }, _ => { }), (_, _, _, _) => { }, SessionSpace.Edit);
+            _session = new Session(_context, new Bridge(_ => { }, _ => { }), _permissions, (_, _, _, _) => { }, SessionSpace.Edit);
         }
         
         [Test]

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
+using Bossy.Schema;
 using Bossy.Tests.Utils;
 using Bossy.Tests.Utils.Commands;
 using NUnit.Framework;
@@ -19,17 +20,20 @@ namespace Bossy.Tests.Shell
     {
         private Session _session;
         private CommandExecutor _executor;
+        private BossyPermissions _permissions;
         
         [OneTimeSetUp]
         public void Setup()
         {
             var registry = new TypeAdapterRegistry();
             registry.RegisterAdapter(typeof(string), new StringAdapter());
+            _permissions = new BossyPermissions("", new HashSet<CommandSchema>(), true);
             
-            var context = new BossyContext(null, registry, null, null, null);
+            
+            var context = new BossyContext(null, registry, null, null, null, null);
             var bridge = new Bridge(_ => { }, _ => { });
-            _session = new Session(context, bridge, (_, _, _, _) => { }, SessionSpace.Edit);
-            _executor = new CommandExecutor(_session, context);
+            _session = new Session(context, bridge, _permissions, (_, _, _, _) => { }, SessionSpace.Edit);
+            _executor = new CommandExecutor(_session, context, _permissions);
         }
         
         [Test]
@@ -40,7 +44,7 @@ namespace Bossy.Tests.Shell
 
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new EchoCommand())
+                .Execute(new EchoCommand(), null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -60,9 +64,9 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(tracker1)
-                .Then(tracker2)
-                .Then(tracker3)
+                .Execute(tracker1, null)
+                .Then(tracker2, null)
+                .Then(tracker3, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -82,8 +86,8 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new FailCommand())
-                .And(tracker)
+                .Execute(new FailCommand(), null)
+                .And(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -101,8 +105,8 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new SuccessfulCommand())
-                .And(tracker)
+                .Execute(new SuccessfulCommand(), null)
+                .And(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -120,8 +124,8 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new SuccessfulCommand())
-                .Or(tracker)
+                .Execute(new SuccessfulCommand(), null)
+                .Or(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -139,8 +143,8 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new FailCommand())
-                .Or(tracker)
+                .Execute(new FailCommand(), null)
+                .Or(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -161,8 +165,8 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(infinite)
-                .Then(tracker)
+                .Execute(infinite, null)
+                .Then(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -183,8 +187,8 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(infinite)
-                .Then(tracker)
+                .Execute(infinite, null)
+                .Then(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -205,8 +209,8 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(infinite)
-                .Then(tracker)
+                .Execute(infinite, null)
+                .Then(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -226,9 +230,9 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new FailCommand())
-                .And(new SuccessfulCommand())
-                .Or(tracker)
+                .Execute(new FailCommand(), null)
+                .And(new SuccessfulCommand(), null)
+                .Or(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -248,9 +252,9 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new SuccessfulCommand())
-                .And(new SuccessfulCommand())
-                .Or(tracker)
+                .Execute(new SuccessfulCommand(), null)
+                .And(new SuccessfulCommand(), null)
+                .Or(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -270,9 +274,9 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new SuccessfulCommand())
-                .And(new FailCommand())
-                .Or(tracker)
+                .Execute(new SuccessfulCommand(), null)
+                .And(new FailCommand(), null)
+                .Or(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -292,9 +296,9 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new SuccessfulCommand())
-                .Or(new FailCommand())
-                .And(tracker)
+                .Execute(new SuccessfulCommand(), null)
+                .Or(new FailCommand(), null)
+                .And(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -314,9 +318,9 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new FailCommand())
-                .Or(new FailCommand())
-                .And(tracker)
+                .Execute(new FailCommand(), null)
+                .Or(new FailCommand(), null)
+                .And(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -336,9 +340,9 @@ namespace Bossy.Tests.Shell
             
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new FailCommand())
-                .Or(new SuccessfulCommand())
-                .And(tracker)
+                .Execute(new FailCommand(), null)
+                .Or(new SuccessfulCommand(), null)
+                .And(tracker, null)
                 .Build();
             
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -354,8 +358,8 @@ namespace Bossy.Tests.Shell
 
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new EchoCommand())
-                .AndPipeTo(new EchoCommand())
+                .Execute(new EchoCommand(), null)
+                .AndPipeTo(new EchoCommand(), null)
                 .Build();
 
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -371,9 +375,9 @@ namespace Bossy.Tests.Shell
 
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new EchoCommand())
-                .AndPipeTo(new EchoCommand())
-                .AndPipeTo(new EchoCommand())
+                .Execute(new EchoCommand(), null)
+                .AndPipeTo(new EchoCommand(), null)
+                .AndPipeTo(new EchoCommand(), null)
                 .Build();
 
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -391,9 +395,9 @@ namespace Bossy.Tests.Shell
 
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new EchoCommand())
-                .AndPipeTo(new EchoCommand())
-                .Then(tracker)
+                .Execute(new EchoCommand(), null)
+                .AndPipeTo(new EchoCommand(), null)
+                .Then(tracker, null)
                 .Build();
 
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -411,9 +415,9 @@ namespace Bossy.Tests.Shell
 
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new EchoCommand())
-                .AndPipeTo(new FailCommand())
-                .Then(tracker)
+                .Execute(new EchoCommand(), null)
+                .AndPipeTo(new FailCommand(), null)
+                .Then(tracker, null)
                 .Build();
 
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -431,9 +435,9 @@ namespace Bossy.Tests.Shell
 
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new EchoCommand())
-                .AndPipeTo(new FailCommand())
-                .Or(tracker)
+                .Execute(new EchoCommand(), null)
+                .AndPipeTo(new FailCommand(), null)
+                .Or(tracker, null)
                 .Build();
 
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -451,9 +455,9 @@ namespace Bossy.Tests.Shell
 
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new EchoCommand())
-                .AndPipeTo(new SuccessfulCommand())
-                .And(tracker)
+                .Execute(new EchoCommand(), null)
+                .AndPipeTo(new SuccessfulCommand(), null)
+                .And(tracker, null)
                 .Build();
 
             await _executor.ExecuteAsync(graph, _session, CancellationToken.None, reader, writer);
@@ -474,9 +478,9 @@ namespace Bossy.Tests.Shell
 
             var graph = CommandGraph
                 .Create(false)
-                .Execute(infinite)
-                .AndPipeTo(new EchoCommand())
-                .Then(tracker)
+                .Execute(infinite, null)
+                .AndPipeTo(new EchoCommand(), null)
+                .Then(tracker, null)
                 .Build();
 
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -496,9 +500,9 @@ namespace Bossy.Tests.Shell
         
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new InfiniteCommand(null, InfiniteOperation.Read))
-                .AndPipeTo(new FailCommand())
-                .Then(tracker)
+                .Execute(new InfiniteCommand(null, InfiniteOperation.Read), null)
+                .AndPipeTo(new FailCommand(), null)
+                .Then(tracker, null)
                 .Build();
         
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -516,7 +520,7 @@ namespace Bossy.Tests.Shell
         
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new IntReaderCommand())
+                .Execute(new IntReaderCommand(), null)
                 .Build();
         
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
@@ -534,7 +538,7 @@ namespace Bossy.Tests.Shell
         
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new ThrowsCommand())
+                .Execute(new ThrowsCommand(), null)
                 .Build();
 
             UnityEngine.TestTools.LogAssert.Expect(LogType.Exception, new Regex("ArgumentException:.*"));

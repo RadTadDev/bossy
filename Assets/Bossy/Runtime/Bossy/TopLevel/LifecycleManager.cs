@@ -20,6 +20,7 @@ namespace Bossy
         private readonly HostManager _hostManager;
         private readonly GlobalInput _globalInput;
         private readonly FrontEndFactory _frontEndFactory;
+        private readonly BossyPermissions _permissions;
         [UsedImplicitly] private readonly BossyRuntimeManager _runtimeManager;
         
         private Dictionary<Bridge, LifecycleContainer> _containers = new();
@@ -31,8 +32,11 @@ namespace Bossy
         /// <param name="adapterRegistry">The adapter registry.</param>
         /// <param name="settingsSource">The settings source.</param>
         /// <param name="binder">A item binder.</param>
-        public LifecycleManager(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, ISettingsSource settingsSource, IBossyBinder binder)
+        /// <param name="permissions">The permissions controller.</param>
+        public LifecycleManager(SchemaRegistry schemaRegistry, TypeAdapterRegistry adapterRegistry, ISettingsSource settingsSource, IBossyBinder binder, BossyPermissions permissions)
         {
+            _permissions = permissions;
+            
             _parser = new Parser(schemaRegistry, adapterRegistry);
             var settings = new SettingsManager(settingsSource);
             settings.Load();
@@ -40,12 +44,12 @@ namespace Bossy
             _globalInput = new GlobalInput(settings.BossyInputSettings);
             _globalInput.OnToggleMainHost += OnToggleHostInput;
             
-            _context = new BossyContext(schemaRegistry, adapterRegistry, settings, _parser, binder);
+            _context = new BossyContext(schemaRegistry, adapterRegistry, settings, _parser, binder, _permissions);
             _frontEndFactory = new FrontEndFactory(_context);
 
             _hostManager = new HostManager(this, settings.BossyInputSettings, CreateBossySession);
             _runtimeManager = new BossyRuntimeManager();
-
+            
 #if UNITY_EDITOR
             // This is a quick hack. Unity can recreate windows without telling us. When a window is maximized,
             // it will rebuild the full UI but since Bossy is not recreated, we can miss reconnecting an editor window
@@ -66,7 +70,7 @@ namespace Bossy
             var content = _frontEndFactory.Create(frontendType);
             
             var bridge = new Bridge(CloseSession, CancelCommand);
-            var session = new Session(_context, bridge, CreateCommandSession, space);
+            var session = new Session(_context, bridge, _permissions, CreateCommandSession, space);
             var viewer = new SessionViewer(bridge, content);
             var container = new LifecycleContainer(session, viewer);
             
@@ -144,7 +148,7 @@ namespace Bossy
             host.Initialize(_hostManager, _context.Settings.BossyInputSettings, CreateBossySession, SessionSpace.Edit);
                 
             var bridge = new Bridge(CloseSession, CancelCommand);
-            var session = new Session(_context, bridge, CreateCommandSession, SessionSpace.Edit);
+            var session = new Session(_context, bridge, _permissions, CreateCommandSession, SessionSpace.Edit);
                 
             // TODO: Remember correct view via session serializing system (which does not exist yet)
             var content = new CliUserInterfaceView(_context);

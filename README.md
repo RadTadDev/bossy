@@ -702,4 +702,5 @@ In the example above, you can see that its simple enough to check which tokens h
 ---
 
 ## Limitations and Known Bugs
-- Due to a known UI Toolkit bug, on rare occasions the system font may become invisible. An editor restart will fix this
+- Due to a known UI Toolkit bug, on rare occasions the system font may become invisible. An editor restart will fix this.
+- Adding an event system will cause Bossy not to become focused the first time you open it in a runtime context. To fix this, add a `PanelInputConfiguration` component to the `EventSystem` GameObject and set its `Panel Input Redirection` field to `No input redirection`. 

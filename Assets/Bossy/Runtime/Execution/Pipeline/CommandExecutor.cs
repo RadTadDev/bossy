@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Utils;
-using UnityEngine;
 
 namespace Bossy.Execution
 {
@@ -18,16 +17,19 @@ namespace Bossy.Execution
     {
         private readonly Session _session;
         private readonly BossyContext _context;
-
+        private readonly BossyPermissions _permissions;
+        
         /// <summary>
         /// Creates a new executor.
         /// </summary>
         /// <param name="session">The session that owns this executor.</param>
         /// <param name="context">The Bossy context.</param>
-        public CommandExecutor(Session session, BossyContext context)
+        /// <param name="permissions">The current permissions.</param>
+        public CommandExecutor(Session session, BossyContext context, BossyPermissions permissions)
         {
             _session = session;
             _context = context;
+            _permissions = permissions;
         }
 
         /// <summary>
@@ -41,7 +43,7 @@ namespace Bossy.Execution
         public async Task ExecuteAsync(CommandGraph graph, Session session, CancellationToken token, IReadable input = null, IWriteable output = null)
         {
             if (graph.IsEmpty) return;
-
+            
             if (graph.Windowed)
             {
                 _session.CreateCommandSession(graph, input, output);
@@ -59,6 +61,19 @@ namespace Bossy.Execution
             defaultContext.SetCapabilitySourcer(session.Bridge.GetCapabilities);
 
             var groups = GroupCommands(graph, defaultContext);
+            
+            // Validate permissions for all commands
+            foreach (var group in groups)
+            {
+                foreach (var node in group.Nodes)
+                {
+                    if (!_permissions.CanExecute(node.Schema))
+                    {
+                        output.Write(Format.Error($"You do not have permission to execute command: {node.Schema.Name}. Use the command 'login' to login."));
+                        return;
+                    }
+                }
+            }
             
             foreach (var group in groups)
             {

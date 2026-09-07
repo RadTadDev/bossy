@@ -1,4 +1,5 @@
 using Bossy.Command;
+using Bossy.Schema;
 
 namespace Bossy.Execution
 {
@@ -24,6 +25,12 @@ namespace Bossy.Execution
         /// </summary>
         public ICommand Command { get; }
 
+
+        /// <summary>
+        /// The schema for this command.
+        /// </summary>
+        public CommandSchema Schema { get; }
+        
         /// <summary>
         /// The link to the next command.
         /// </summary>
@@ -33,14 +40,16 @@ namespace Bossy.Execution
         /// The context for this command.
         /// </summary>
         public CommandContext Context;
-        
+
         /// <summary>
         /// Creates a new command graph node.
         /// </summary>
         /// <param name="command">The command to execute at this step.</param>
-        public CommandGraphNode(ICommand command)
+        /// <param name="schema">The schema for this command.</param>
+        public CommandGraphNode(ICommand command, CommandSchema schema)
         {
-            Command =  command;
+            Command = command;
+            Schema = schema;
         }
         
         void ICommandGraphNodeWriter.AddLink(CommandGraphLink link)
