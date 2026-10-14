@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Bossy;
 using JetBrains.Annotations;
+using UnityEngine;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -50,11 +51,14 @@ public static class CommonStartup
         binder.RegisterSingleton("Hello binding world!");
         binder.RegisterSingleton(42);
         
-        return BossyBuilder
+        var console = BossyBuilder
             .GetCommands()
             .Automatically()
-            .WithPassword("test", new HashSet<Type> { typeof(HelpCommand)} )
             .WithBindings(binder)
             .Build();
+
+        console.OnConsoleToggle += (s, sh) => Debug.Log($"Space = {s}, shown = {sh}");
+        
+        return console;
     }
 }

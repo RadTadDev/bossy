@@ -15,6 +15,11 @@ namespace Bossy
     /// </summary>
     internal class LifecycleManager
     {
+        /// <summary>
+        /// Fires when a console is toggled. Boolean means the console was shown when true, otherwise it was hidden.
+        /// </summary>
+        public event Action<SessionSpace, bool> ToggleConsole;
+        
         private readonly BossyContext _context;
         private readonly Parser _parser;
         private readonly HostManager _hostManager;
@@ -107,15 +112,21 @@ namespace Bossy
 
         private void OnToggleHostInput(SessionSpace space)
         {
+            bool shown = false;
+            
             if (!_hostManager.HasOpenHost(space))
             {
                 // TODO: Allow user to specify default view in settings
                 CreateBossySession(FrontendType.CommandLine, space);
+
+                shown = true;
             }
             else
             {
-                _hostManager.ToggleHost(space);
+                shown = _hostManager.ToggleHost(space);
             }
+            
+            ToggleConsole?.Invoke(space, shown);
         }
         
         private void CloseSession(Bridge bridge)

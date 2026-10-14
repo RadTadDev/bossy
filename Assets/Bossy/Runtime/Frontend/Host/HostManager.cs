@@ -29,18 +29,24 @@ namespace Bossy.Frontend
         
         public bool HasOpenHost(SessionSpace space) => _mainHosts.ContainsKey(space);
 
-        public void ToggleHost(SessionSpace space)
+        
+        /// <summary>
+        /// Toggles the currently focused host.
+        /// </summary>
+        /// <param name="space">The space to toggle in.</param>
+        /// <returns>True if the host was shown, otherwise false.</returns>
+        public bool ToggleHost(SessionSpace space)
         {
             if (_hostHasFocus)
             {
                 _mainHosts[space].Hide();
                 _hostHasFocus = false;
+                return false;
             }
-            else
-            {
-                _hostHasFocus = true;
-                _mainHosts[space].Reveal();
-            }
+
+            _hostHasFocus = true;
+            _mainHosts[space].Reveal();
+            return true;
         }
         
         /// <summary>

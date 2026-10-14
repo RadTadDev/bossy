@@ -1,3 +1,4 @@
+using System;
 using Bossy.Frontend.Parsing;
 using Bossy.Schema.Registry;
 using Bossy.Settings;
@@ -13,6 +14,12 @@ namespace Bossy
     /// </summary>
     public class BossyConsole 
     {
+        /// <summary>
+        /// Fires when a console is toggled. Boolean means the console was shown when true, otherwise it was hidden.
+        /// </summary>
+        public event Action<SessionSpace, bool> OnConsoleToggle;
+        
+        
         [UsedImplicitly] private readonly LifecycleManager _lifecycleManager;
         
         private static readonly string SettingsPath = Application.persistentDataPath + "/bossy/settings.json";
@@ -35,8 +42,11 @@ namespace Bossy
             DebugManager.instance.enableRuntimeUI = false;
             
             _lifecycleManager = new LifecycleManager(schemaRegistry, typeAdapterRegistry, new FileSource(SettingsPath), binder, permissions);
+
+            _lifecycleManager.ToggleConsole += OnToggleConsole;
         }
 
+        
         /// <summary>
         /// Gets the Bossy context which holds a reference to key subsystems.
         /// </summary>
@@ -44,6 +54,12 @@ namespace Bossy
         public BossyContext GetContext()
         {
             return _lifecycleManager.GetContext();
+        }
+        
+        
+        private void OnToggleConsole(SessionSpace space, bool shown)
+        {
+            OnConsoleToggle?.Invoke(space, shown);
         }
     }
 }

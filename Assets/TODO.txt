@@ -19,6 +19,8 @@ DEV NOTES:
     - Currently, the graphics host only knows a window has closed when querying it to see if its toggleable.
       This is done because editor windows especially can close from outside sources. I dont think its unclean, just be aware.
     - Not including headless host in design, this is never going to be useful or implemented
+BUGS:
+- OnToggle events in lifecycle and console don't fire when closing console in edit space, this is likely because the editor steals focus.
 
 Roslyn Analyzers
 - Ensure positional indexes are unique and ordered
