@@ -1,5 +1,4 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Assets/Bossy/Runtime/Resources/BossyTheme.uss?fileID=7433441132597879392&amp;guid=87dcfa05cf8903f468bb7150b528a0eb&amp;type=3#BossyTheme"/>
     <ui:VisualElement name="cli-root" style="width: 100%; height: 100%; flex-direction: column;">
         <ui:ListView name="output-list" style="flex-grow: 1; background-color: rgb(56, 56, 56);"/>
         <ui:VisualElement name="input-row" style="flex-direction: row; align-items: center; border-top-width: 1px; padding: 4px; flex-shrink: 0;">
