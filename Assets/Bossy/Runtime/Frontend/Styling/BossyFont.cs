@@ -93,12 +93,15 @@ namespace Bossy.Frontend
             asset.name = AssetName(resourcePath);
 
             // Unity destroys objects created in play mode when play mode ends, and unloads objects nothing
-            // serialized refers to. Either would leave the console drawing with a destroyed font.
-            asset.hideFlags = HideFlags.DontSave;
-            asset.material.hideFlags = HideFlags.DontSave;
+            // serialized refers to, including when unused assets are unloaded explicitly. Either would leave
+            // the console drawing with a destroyed font. Only DontUnloadUnusedAsset stops the unloading, because
+            // the font is referenced from C# alone.
+            const HideFlags flags = HideFlags.DontSave | HideFlags.DontUnloadUnusedAsset;
+            asset.hideFlags = flags;
+            asset.material.hideFlags = flags;
             foreach (var atlas in asset.atlasTextures)
             {
-                atlas.hideFlags = HideFlags.DontSave;
+                atlas.hideFlags = flags;
             }
 
             return asset;

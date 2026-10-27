@@ -24,10 +24,10 @@ namespace Bossy.Tests.Runtime
     /// This does not use <c>InputTestFixture</c>, because its save and restore of the editor's input state is suspected
     /// of leaving Input System action states behind that error on later mouse events in the editor.
     /// </remarks>
-    internal class RuntimeConsoleTest
+    internal class RuntimeHostTest
     {
         private Keyboard _keyboard;
-        private RuntimeConsole _console;
+        private RuntimeHost _host;
         private RuntimeOverlay _overlay;
         private InputSettings.EditorInputBehaviorInPlayMode _previousEditorInputBehavior;
         private InputSettings.BackgroundBehavior _previousBackgroundBehavior;
@@ -54,14 +54,14 @@ namespace Bossy.Tests.Runtime
 
             // Keyboard.current is the device the toggle key is read from, so the simulated keyboard must be it
             _keyboard.MakeCurrent();
-            _console = new RuntimeConsole(CreateSessionFactory());
+            _host = new RuntimeHost(CreateSessionFactory());
             _overlay = Object.FindAnyObjectByType<RuntimeOverlay>();
         }
 
         [TearDown]
         public void TearDown()
         {
-            _console?.Dispose();
+            _host?.Dispose();
             InputSystem.RemoveDevice(_keyboard);
             InputSystem.settings.editorInputBehaviorInPlayMode = _previousEditorInputBehavior;
             InputSystem.settings.backgroundBehavior = _previousBackgroundBehavior;
@@ -164,14 +164,14 @@ namespace Bossy.Tests.Runtime
         [UnityTest]
         public IEnumerator Dispose_DestroysOverlay()
         {
-            _console.Dispose();
-            _console = null;
+            _host.Dispose();
+            _host = null;
             yield return null;
 
             Assert.That(_overlay == null, Is.True);
         }
 
-        private bool IsConsoleVisible => _console.IsVisible;
+        private bool IsConsoleVisible => _host.IsVisible;
 
         private TextField Input => _overlay.ConsolePanel.Q<TextField>("input-field");
 

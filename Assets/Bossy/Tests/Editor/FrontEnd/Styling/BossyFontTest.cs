@@ -64,11 +64,13 @@ namespace Bossy.Tests.FrontEnd.Styling
 
             yield return new EnterPlayMode();
 
-            // Entering play mode normally reloads scripts, so the font is created again inside play mode
+            // Entering play mode normally reloads scripts, so the font is created again inside play mode.
+            // Existing assets are renamed rather than destroyed, because open windows may still draw with them.
             typeof(BossyFont).GetField("_regular", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, null);
-            foreach (var existing in Resources.FindObjectsOfTypeAll<FontAsset>().Where(a => a.name.StartsWith("Bossy ")))
+            var existing = Resources.FindObjectsOfTypeAll<FontAsset>().Where(a => a.name.StartsWith("Bossy ")).ToList();
+            foreach (var font in existing)
             {
-                Object.DestroyImmediate(existing);
+                font.name = "Retired " + font.name;
             }
             var element = new VisualElement();
             BossyFont.ApplyTo(element);
@@ -78,6 +80,10 @@ namespace Bossy.Tests.FrontEnd.Styling
 
             EditorSettings.enterPlayModeOptionsEnabled = optionsEnabled;
             EditorSettings.enterPlayModeOptions = options;
+            foreach (var font in existing)
+            {
+                font.name = font.name.Substring("Retired ".Length);
+            }
 
             Assert.That(asset != null, Is.True, "Font asset was destroyed.");
             Assert.That(asset.material != null, Is.True, "Font material was destroyed.");

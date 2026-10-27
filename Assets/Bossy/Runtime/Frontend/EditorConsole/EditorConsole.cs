@@ -27,6 +27,7 @@ namespace Bossy.Frontend
         public event Action<ConsoleVisibility> VisibilityChanged;
 
         private readonly SessionFactory _sessionFactory;
+        private readonly EditorConsole _replacedConsole;
 
         private SessionView _consoleView;
         private ConsoleWindow _consoleWindow;
@@ -39,7 +40,9 @@ namespace Bossy.Frontend
         /// <param name="sessionFactory">Creates sessions for the console and command windows.</param>
         public EditorConsole(SessionFactory sessionFactory)
         {
-            Active?.Dispose();
+            // The previous console is not disposed, so it keeps working once this one is disposed. Tests create
+            // their own consoles while the real one is running.
+            _replacedConsole = Active;
             Active = this;
 
             _sessionFactory = sessionFactory;
@@ -69,7 +72,7 @@ namespace Bossy.Frontend
 
             if (Active == this)
             {
-                Active = null;
+                Active = _replacedConsole;
             }
         }
         

@@ -37,7 +37,7 @@ namespace Bossy.Frontend
         private const string CommandViewClass = "bossy-command-view";
         private const string CommandViewEnteringClass = "bossy-command-view--entering";
 
-        private readonly IVisualEndpoint _endpoint;
+        private readonly IToolkitEndpoint _endpoint;
         private readonly CommandWindowOpener _openCommandWindow;
         private readonly Stack<VisualElement> _commandViews = new();
         private bool _disposed;
@@ -50,7 +50,7 @@ namespace Bossy.Frontend
         /// <param name="createSession">Creates the session given this view as its host.</param>
         /// <param name="openCommandWindow">Opens command windows for this session.</param>
         /// <param name="inputSettings">The input settings.</param>
-        public SessionView(string title, IVisualEndpoint endpoint, Func<ISessionHost, Session> createSession, CommandWindowOpener openCommandWindow, BossyInputSettings inputSettings)
+        public SessionView(string title, IToolkitEndpoint endpoint,Func<ISessionHost, Session> createSession, CommandWindowOpener openCommandWindow, BossyInputSettings inputSettings)
         {
             Title = title;
             _endpoint = endpoint;
