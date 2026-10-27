@@ -31,6 +31,7 @@ namespace Bossy.Frontend
                 view.Focus();
             }
         }
+        
 
         protected virtual void CreateGUI()
         {
@@ -38,11 +39,13 @@ namespace Bossy.Frontend
             rootVisualElement.RegisterCallback<KeyDownEvent>(OnKeyDown, TrickleDown.TrickleDown);
         }
 
+        
         protected virtual void OnFocus()
         {
             View?.Focus();
         }
 
+        
         private void OnKeyDown(KeyDownEvent evt)
         {
             if (!ToggleKey.Matches(evt)) return;
@@ -53,7 +56,7 @@ namespace Bossy.Frontend
             ToggleKey.Suppress(evt, rootVisualElement);
 
             // Unity does not run shortcuts while text is being edited, so the key is handled here instead
-            if (ToggleKey.IsKeyPress(evt) && ToggleKey.IsEditingText(focused))
+            if (ToggleKey.IsKeyPress(evt) && ToggleKey.IsTextFieldFocused(focused))
             {
                 EditorConsole.Active?.Toggle();
             }

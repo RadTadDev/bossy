@@ -51,6 +51,7 @@ Each PR description must contain:
 - Do not add a dependency on a Unity package or third-party library without asking.
 - Do not leave dead code, commented-out code, or `TODO`s without a reason. If you must leave a `TODO`, say why in the PR.
 - Errors should be reported through the console (`Format.Error`, `ctx.WriteError`, and so on) with a clear message, not swallowed silently.
+- Place public fields, accessors, functions, etc. above their private and protected counterparts. Classes should list events, then accessors, then fields, then methods and always public, then protected, then private within those. Dispose methods should be placed directly beneath the constructor, or at the top of the file if no constructor is given. The unity lifecycle methods for Awake, Start, OnEnable, OnDisable, and OnDestroy should be at the top of the file despite being private.
 
 ## Testing and verification
 

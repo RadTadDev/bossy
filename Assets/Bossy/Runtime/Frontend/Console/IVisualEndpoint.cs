@@ -5,7 +5,7 @@ namespace Bossy.Frontend
     /// <summary>
     /// A frontend drawn with UI Toolkit, which can be shown in an editor window or at runtime.
     /// </summary>
-    internal interface IVisualFrontend : ISessionFrontend
+    internal interface IVisualEndpoint : ISessionEndpoint
     {
         /// <summary>
         /// The root of the frontend's UI.

@@ -9,7 +9,7 @@ namespace Bossy.Frontend
     /// <remarks>
     /// Commands can test a frontend for optional capabilities, such as <see cref="IClearable"/>, by casting it.
     /// </remarks>
-    public interface ISessionFrontend : IOHandler, IFrontEndCapabilities
+    public interface ISessionEndpoint : IOHandler, IFrontEndCapabilities
     {
         /// <summary>
         /// Resets capabilities a command changed for its run, such as the prompt header.

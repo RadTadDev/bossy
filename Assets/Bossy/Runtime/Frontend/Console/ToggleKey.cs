@@ -53,7 +53,7 @@ namespace Bossy.Frontend
         /// </summary>
         /// <param name="focused">The element with keyboard focus, or null.</param>
         /// <returns>True if text is being edited.</returns>
-        public static bool IsEditingText(Focusable focused) => GetTextField(focused) != null;
+        public static bool IsTextFieldFocused(Focusable focused) => GetTextField(focused) != null;
 
         /// <summary>
         /// Stops a toggle key event from reaching the focused element, so it is not typed.

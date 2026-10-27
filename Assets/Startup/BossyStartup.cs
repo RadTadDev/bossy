@@ -46,18 +46,10 @@ public static class CommonStartup
 {
     public static BossyConsole Make()
     {
-        var binder = new MyBinder();
-        
-        binder.RegisterSingleton("Hello binding world!");
-        binder.RegisterSingleton(42);
-        
         var console = BossyBuilder
             .GetCommands()
             .Automatically()
-            .WithBindings(binder)
             .Build();
-
-        console.OnConsoleToggle += (s, sh) => Debug.Log($"Space = {s}, shown = {sh}");
         
         return console;
     }

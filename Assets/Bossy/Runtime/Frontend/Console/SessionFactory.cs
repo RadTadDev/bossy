@@ -47,7 +47,7 @@ namespace Bossy.Frontend
         /// <param name="template">The session that opened the window.</param>
         /// <param name="graph">The graph the window will run, used for its title.</param>
         /// <param name="openCommandWindow">Opens command windows for the new session.</param>
-        /// <returns>The view. Call <see cref="SessionView.Start(CommandGraph, IReadable, IWriteable)"/> to run it.</returns>
+        /// <returns>The view. Call <see cref="SessionView.Start"/> to run it.</returns>
         public SessionView CreateCommandWindow(Session template, CommandGraph graph, SessionView.CommandWindowOpener openCommandWindow)
         {
             var frontend = new CliView(_context, CliView.InputVisibility.WhenReading);

@@ -30,7 +30,7 @@ namespace Bossy.Tests.Runtime
             base.Setup();
             
             // Destroying is deferred, so an earlier test's overlay can still exist
-            foreach (var leftover in Object.FindObjectsByType<RuntimeOverlay>(FindObjectsSortMode.None))
+            foreach (var leftover in Object.FindObjectsByType<RuntimeOverlay>())
             {
                 Object.DestroyImmediate(leftover.gameObject);
             }
@@ -86,7 +86,7 @@ namespace Bossy.Tests.Runtime
             yield return Submit("notacommand");
             for (var i = 0; i < 5; i++) yield return null;
 
-            Assert.That(ToggleKey.IsEditingText(_overlay.Root.focusController.focusedElement), Is.True);
+            Assert.That(ToggleKey.IsTextFieldFocused(_overlay.Root.focusController.focusedElement), Is.True);
         }
 
         [UnityTest]
@@ -98,7 +98,7 @@ namespace Bossy.Tests.Runtime
             yield return Submit(string.Empty);
             for (var i = 0; i < 5; i++) yield return null;
 
-            Assert.That(ToggleKey.IsEditingText(_overlay.Root.focusController.focusedElement), Is.True);
+            Assert.That(ToggleKey.IsTextFieldFocused(_overlay.Root.focusController.focusedElement), Is.True);
         }
 
         [UnityTest]
@@ -155,12 +155,12 @@ namespace Bossy.Tests.Runtime
         private IEnumerator WaitForInputFocus()
         {
             // The first frames of play mode can pass before the panel is ready to take focus
-            for (var i = 0; i < 120 && !ToggleKey.IsEditingText(_overlay.Root.focusController.focusedElement); i++)
+            for (var i = 0; i < 120 && !ToggleKey.IsTextFieldFocused(_overlay.Root.focusController.focusedElement); i++)
             {
                 yield return null;
             }
             
-            Assert.That(ToggleKey.IsEditingText(_overlay.Root.focusController.focusedElement), Is.True, "The console input never received focus.");
+            Assert.That(ToggleKey.IsTextFieldFocused(_overlay.Root.focusController.focusedElement), Is.True, "The console input never received focus.");
         }
 
         private IEnumerator Submit(string line)

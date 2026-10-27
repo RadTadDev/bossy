@@ -20,7 +20,8 @@ namespace Bossy.Frontend
 
             if (EditorConsole.Active != null)
             {
-                EditorConsole.Active.Attach(this);
+                // The window may have been created after the console started, such as from the menu
+                EditorConsole.Active.AttachWindow(this);
             }
             else
             {
@@ -31,7 +32,7 @@ namespace Bossy.Frontend
 
         private void OnDestroy()
         {
-            EditorConsole.Active?.Detach(this);
+            EditorConsole.Active?.DetachWindow(this);
         }
     }
 }

@@ -14,32 +14,32 @@ namespace Bossy.Execution
         /// <summary>
         /// The frontend this session reads from and writes to.
         /// </summary>
-        public readonly ISessionFrontend Frontend;
+        public readonly ISessionEndpoint Endpoint;
 
         /// <summary>
         /// Where this session's UI lives, or null if it has none.
         /// </summary>
         internal readonly ISessionHost Host;
 
-        private readonly CommandExecutor _commandExecutor;
-        private readonly BossyPermissions _permissions;
         private readonly BossyContext _context;
+        private readonly BossyPermissions _permissions;
+        private readonly CommandExecutor _commandExecutor;
 
-        private CancellationTokenSource _commandSource;
-        private readonly CancellationTokenSource _sessionSource = new();
+        private CancellationTokenSource _commandCancellationSource;
+        private readonly CancellationTokenSource _sessionCancellationSource = new();
 
         /// <summary>
         /// Creates a new session.
         /// </summary>
         /// <param name="context">The Bossy context.</param>
         /// <param name="permissions">The permissions manager.</param>
-        /// <param name="frontend">The frontend to read from and write to.</param>
+        /// <param name="endpoint">The frontend to read from and write to.</param>
         /// <param name="host">Where this session's UI lives, or null if it has none.</param>
-        internal Session(BossyContext context, BossyPermissions permissions, ISessionFrontend frontend, ISessionHost host)
+        internal Session(BossyContext context, BossyPermissions permissions, ISessionEndpoint endpoint, ISessionHost host)
         {
             _context = context;
             _permissions = permissions;
-            Frontend = frontend;
+            Endpoint = endpoint;
             Host = host;
             _commandExecutor = new CommandExecutor(context, permissions);
         }
@@ -52,8 +52,8 @@ namespace Bossy.Execution
         /// <param name="writer">An override writer to retarget from the default window.</param>
         public async Task RunGraphAsync(CommandGraph graph, IReadable reader = null, IWriteable writer = null)
         {
-            _commandSource = new CancellationTokenSource();
-            var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandSource.Token, _sessionSource.Token);
+            _commandCancellationSource = new CancellationTokenSource();
+            var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandCancellationSource.Token, _sessionCancellationSource.Token);
 
             await _commandExecutor.ExecuteAsync(graph, this, linkedSource.Token, reader, writer);
         }
@@ -64,9 +64,9 @@ namespace Bossy.Execution
         /// <exception cref="BossyNotAdaptableException">Throws when a front end fails to give a command graph after one is requested.</exception>
         public async Task RunAsync()
         {
-            while (!_sessionSource.IsCancellationRequested)
+            while (!_sessionCancellationSource.IsCancellationRequested)
             {
-                var response = await Frontend.ReadAsync(typeof(CommandGraph), _sessionSource.Token);
+                var response = await Endpoint.ReadAsync(typeof(CommandGraph), _sessionCancellationSource.Token);
 
                 // Require direct graphs from the front ends, no adapting here because the parser should be used
                 if (response is not CommandGraph graph)
@@ -74,8 +74,8 @@ namespace Bossy.Execution
                     throw new BossyNotAdaptableException("All front ends must return command graphs where queried for one.");
                 }
 
-                _commandSource = new CancellationTokenSource();
-                var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandSource.Token, _sessionSource.Token);
+                _commandCancellationSource = new CancellationTokenSource();
+                var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandCancellationSource.Token, _sessionCancellationSource.Token);
 
                 await _commandExecutor.ExecuteAsync(graph, this, linkedSource.Token);
             }
@@ -87,23 +87,23 @@ namespace Bossy.Execution
         public void CancelCommand()
         {
             // No command is running
-            if (_commandSource == null) return;
+            if (_commandCancellationSource == null) return;
 
-            if (_commandSource.Token.CanBeCanceled)
+            if (_commandCancellationSource.Token.CanBeCanceled)
             {
-                _commandSource.Cancel();
+                _commandCancellationSource.Cancel();
             }
         }
 
         /// <summary>
         /// Creates a new session that shares this session's context and permissions.
         /// </summary>
-        /// <param name="frontend">The frontend of the new session.</param>
+        /// <param name="endpoint">The frontend of the new session.</param>
         /// <param name="host">Where the new session's UI lives.</param>
         /// <returns>The cloned session.</returns>
-        internal Session Clone(ISessionFrontend frontend, ISessionHost host)
+        internal Session Clone(ISessionEndpoint endpoint, ISessionHost host)
         {
-            return new Session(_context, _permissions, frontend, host);
+            return new Session(_context, _permissions, endpoint, host);
         }
 
         /// <summary>
@@ -123,10 +123,10 @@ namespace Bossy.Execution
         /// </summary>
         public void Dispose()
         {
-            _commandSource?.Cancel();
-            _sessionSource.Cancel();
-            _commandSource?.Dispose();
-            _sessionSource.Dispose();
+            _commandCancellationSource?.Cancel();
+            _sessionCancellationSource.Cancel();
+            _commandCancellationSource?.Dispose();
+            _sessionCancellationSource.Dispose();
         }
     }
 }

@@ -65,14 +65,14 @@ namespace Bossy.Tests.FrontEnd.Console
 
             var window = EditorWindow.GetWindow<ConsoleWindow>();
             var input = window.rootVisualElement.Q<TextField>("input-field");
-            Assert.That(ToggleKey.IsEditingText(window.rootVisualElement.focusController.focusedElement), Is.True, "Input was not focused to begin with.");
+            Assert.That(ToggleKey.IsTextFieldFocused(window.rootVisualElement.focusController.focusedElement), Is.True, "Input was not focused to begin with.");
 
             input.value = "notacommand";
             window.SendEvent(Event.KeyboardEvent("return"));
             for (var i = 0; i < 5; i++) yield return null;
 
             Assert.That(input.value, Is.Empty, "The line was not submitted.");
-            Assert.That(ToggleKey.IsEditingText(window.rootVisualElement.focusController.focusedElement), Is.True);
+            Assert.That(ToggleKey.IsTextFieldFocused(window.rootVisualElement.focusController.focusedElement), Is.True);
         }
 
         [UnityTest]
@@ -104,13 +104,14 @@ namespace Bossy.Tests.FrontEnd.Console
             var first = EditorWindow.GetWindow<ConsoleWindow>();
             var sessionView = first.rootVisualElement.Q("session-view");
             first.Close();
-            yield return null;
-            yield return null;
+            yield return new WaitUntil(() => first == null);
+            for (var i = 0; i < 5; i++) yield return null;
 
             _console.Show();
             yield return null;
 
             var second = EditorWindow.GetWindow<ConsoleWindow>();
+            Assert.That(second, Is.Not.SameAs(first), "Show returned the closed window");
             Assert.That(second.rootVisualElement.Q("session-view"), Is.Not.SameAs(sessionView));
         }
 

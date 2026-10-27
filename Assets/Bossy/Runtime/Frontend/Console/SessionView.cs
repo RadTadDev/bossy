@@ -35,7 +35,7 @@ namespace Bossy.Frontend
         /// </summary>
         public string Title { get; }
 
-        private readonly IVisualFrontend _frontend;
+        private readonly IVisualEndpoint _endpoint;
         private readonly CommandWindowOpener _openCommandWindow;
         private readonly Stack<VisualElement> _commandViews = new();
         private bool _disposed;
@@ -44,27 +44,27 @@ namespace Bossy.Frontend
         /// Creates a new session view.
         /// </summary>
         /// <param name="title">The title for a window or panel showing this view.</param>
-        /// <param name="frontend">The frontend to show.</param>
+        /// <param name="endpoint">The frontend to show.</param>
         /// <param name="createSession">Creates the session given this view as its host.</param>
         /// <param name="openCommandWindow">Opens command windows for this session.</param>
         /// <param name="inputSettings">The input settings.</param>
-        public SessionView(string title, IVisualFrontend frontend, Func<ISessionHost, Session> createSession, CommandWindowOpener openCommandWindow, BossyInputSettings inputSettings)
+        public SessionView(string title, IVisualEndpoint endpoint, Func<ISessionHost, Session> createSession, CommandWindowOpener openCommandWindow, BossyInputSettings inputSettings)
         {
             Title = title;
-            _frontend = frontend;
+            _endpoint = endpoint;
             _openCommandWindow = openCommandWindow;
 
             Root = new VisualElement { name = "session-view" };
             Root.style.flexGrow = 1;
-            Root.Add(frontend.Root);
+            Root.Add(endpoint.Root);
 
             Root.RegisterCallback<KeyDownEvent>(evt =>
             {
                 if (!inputSettings.CancelCommand.IsAsserted(evt)) return;
 
-                Session.CancelCommand();
-                _frontend.OnCancelPressed();
-                evt.StopImmediatePropagation();
+                Session?.CancelCommand();
+                _endpoint?.OnCancelPressed();
+                evt?.StopImmediatePropagation();
             }, TrickleDown.TrickleDown);
 
             Session = createSession(this);
@@ -84,7 +84,7 @@ namespace Bossy.Frontend
         /// <param name="graph">The graph to run.</param>
         /// <param name="reader">An override reader, or null to read from this view.</param>
         /// <param name="writer">An override writer, or null to write to this view.</param>
-        public void Start(CommandGraph graph, IReadable reader, IWriteable writer)
+        public void StartGraph(CommandGraph graph, IReadable reader, IWriteable writer)
         {
             // The graph is already in its own window, so it must not open another one when it runs
             graph.Windowed = false;
@@ -102,7 +102,7 @@ namespace Bossy.Frontend
             }
             else
             {
-                _frontend.Focus();
+                _endpoint.Focus();
             }
         }
 

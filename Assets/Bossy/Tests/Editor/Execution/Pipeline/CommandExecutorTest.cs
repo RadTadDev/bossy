@@ -32,7 +32,7 @@ namespace Bossy.Tests.Shell
             
             
             _context = new BossyContext(null, registry, null, null, null, null);
-            _session = new Session(_context, _permissions, new MockFrontend(), null);
+            _session = new Session(_context, _permissions, new MockEndpoint(), null);
             _executor = new CommandExecutor(_context, _permissions);
         }
         
@@ -551,7 +551,7 @@ namespace Bossy.Tests.Shell
         public async Task Test_CommandView_PushedAndPopped()
         {
             var host = new MockSessionHost();
-            var session = new Session(_context, _permissions, new MockFrontend(), host);
+            var session = new Session(_context, _permissions, new MockEndpoint(), host);
 
             var graph = CommandGraph
                 .Create(false)
@@ -567,7 +567,7 @@ namespace Bossy.Tests.Shell
         public async Task Test_Windowed_OpensCommandWindow()
         {
             var host = new MockSessionHost();
-            var session = new Session(_context, _permissions, new MockFrontend(), host);
+            var session = new Session(_context, _permissions, new MockEndpoint(), host);
 
             var graph = CommandGraph
                 .Create(true)
@@ -583,7 +583,7 @@ namespace Bossy.Tests.Shell
         [Test]
         public async Task Test_Windowed_NoHost_WritesError()
         {
-            var frontend = new MockFrontend();
+            var frontend = new MockEndpoint();
             var session = new Session(_context, _permissions, frontend, null);
             var tracker = new TrackingCommand();
 
@@ -601,7 +601,7 @@ namespace Bossy.Tests.Shell
         [Test]
         public async Task Test_ResetsFrontendCapabilitiesAfterCommand()
         {
-            var frontend = new MockFrontend();
+            var frontend = new MockEndpoint();
             var session = new Session(_context, _permissions, frontend, null);
 
             var graph = CommandGraph
@@ -617,7 +617,7 @@ namespace Bossy.Tests.Shell
         [Test]
         public void Test_ClosingFrontendAsWriter_WritesNothing()
         {
-            var frontend = new MockFrontend();
+            var frontend = new MockEndpoint();
 
             ((IWriteable)frontend).CloseWriter();
 

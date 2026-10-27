@@ -22,11 +22,11 @@ namespace Bossy.Frontend
         public static EditorConsole Active { get; private set; }
 
         /// <summary>
-        /// Invoked when the console is shown (true) or hidden (false).
+        /// Invoked when the console is shown or hidden.
         /// </summary>
-        public event Action<bool> VisibilityChanged;
+        public event Action<ConsoleVisibility> VisibilityChanged;
 
-        private readonly SessionFactory _sessions;
+        private readonly SessionFactory _sessionFactory;
 
         private SessionView _consoleView;
         private ConsoleWindow _consoleWindow;
@@ -34,39 +34,93 @@ namespace Bossy.Frontend
         private bool _hiding;
 
         /// <summary>
-        /// Creates the editor console and attaches it to any console window that is already open.
+        /// Creates the editor console and attaches it to the console window that is already open, closing any others.
         /// </summary>
-        /// <param name="sessions">Creates sessions for the console and command windows.</param>
-        public EditorConsole(SessionFactory sessions)
+        /// <param name="sessionFactory">Creates sessions for the console and command windows.</param>
+        public EditorConsole(SessionFactory sessionFactory)
         {
             Active?.Dispose();
             Active = this;
 
-            _sessions = sessions;
+            _sessionFactory = sessionFactory;
 
             EditorWindow.windowFocusChanged += TrackLastOtherWindow;
             AssemblyReloadEvents.beforeAssemblyReload += CommandWindow.CloseAll;
 
-            // A console window that survived a domain reload was restored before this console existed
+            /*
+             * When the editor console is created, it's possible that existing windows have already run CreateGUI.
+             * By searching for them here, we can attach to them no matter when the console is created.
+             */
             foreach (var window in Resources.FindObjectsOfTypeAll<ConsoleWindow>())
             {
-                Attach(window);
+                AttachWindow(window);
             }
         }
-
-        [Shortcut(ShortcutId, ToggleKey.Key)]
-        private static void OnToggleShortcut() => Active?.HandleToggleShortcut();
-
-        [MenuItem("Window/Bossy Console")]
-        private static void OpenFromMenu()
+        
+        /// <summary>
+        /// Ends the console session and stops listening to the editor.
+        /// </summary>
+        public void Dispose()
         {
-            if (Active == null)
+            EditorWindow.windowFocusChanged -= TrackLastOtherWindow;
+            AssemblyReloadEvents.beforeAssemblyReload -= CommandWindow.CloseAll;
+
+            CloseConsoleSession();
+
+            if (Active == this)
             {
-                EditorWindow.GetWindow<ConsoleWindow>();
-                return;
+                Active = null;
+            }
+        }
+        
+        /// <summary>
+        /// Displays the console session in a console window, starting the session if needed.
+        /// Only one console window is supported, so any other console window is closed.
+        /// </summary>
+        /// <param name="window">The window.</param>
+        public void AttachWindow(ConsoleWindow window)
+        {
+            if (_consoleWindow != null && _consoleWindow != window)
+            {
+                _consoleWindow.Close();
             }
 
-            Active.Show();
+            _consoleWindow = window;
+
+            if (_consoleView == null)
+            {
+                _consoleView = _sessionFactory.CreateConsole(OpenCommandWindow);
+                _consoleView.Start();
+            }
+
+            window.Display(_consoleView);
+        }
+
+        /// <summary>
+        /// Called when a console window is destroyed. Ends the console session unless another window takes it over.
+        /// </summary>
+        /// <param name="window">The window being destroyed.</param>
+        public void DetachWindow(ConsoleWindow window)
+        {
+            // An older instance of a window that was recreated
+            if (window != _consoleWindow) return;
+
+            _consoleWindow = null;
+
+            // Unity sometimes destroys and recreates a window, for example when maximizing it. Waiting
+            // until the next update lets the recreated window take over the session instead of starting a new one.
+            EditorApplication.update -= CloseSessionIfNotReplaced;
+            EditorApplication.update += CloseSessionIfNotReplaced;
+        }
+
+        private void CloseSessionIfNotReplaced()
+        {
+            EditorApplication.update -= CloseSessionIfNotReplaced;
+
+            if (_consoleWindow == null)
+            {
+                CloseConsoleSession();
+            }
         }
 
         /// <summary>
@@ -93,13 +147,13 @@ namespace Bossy.Frontend
             var window = EditorWindow.GetWindow<ConsoleWindow>();
             window.Focus();
 
-            VisibilityChanged?.Invoke(true);
+            VisibilityChanged?.Invoke(ConsoleVisibility.Shown);
         }
 
         /// <summary>
         /// Gives focus back to the window that had it before the console. The console window stays open.
         /// </summary>
-        public void Hide()
+        private void Hide()
         {
             if (_hiding || !IsFocused) return;
 
@@ -107,66 +161,30 @@ namespace Bossy.Frontend
             _hiding = true;
             EditorApplication.delayCall += FocusLastOtherWindow;
 
-            VisibilityChanged?.Invoke(false);
+            VisibilityChanged?.Invoke(ConsoleVisibility.Hidden);
         }
-
-        /// <summary>
-        /// Displays the console session in a console window, starting the session if needed.
-        /// </summary>
-        /// <param name="window">The window.</param>
-        public void Attach(ConsoleWindow window)
-        {
-            _consoleWindow = window;
-
-            if (_consoleView == null)
-            {
-                _consoleView = _sessions.CreateConsole(OpenCommandWindow);
-                _consoleView.Start();
-            }
-
-            window.Display(_consoleView);
-        }
-
-        /// <summary>
-        /// Called when a console window is destroyed. Ends the console session unless another window takes it over.
-        /// </summary>
-        /// <param name="window">The window being destroyed.</param>
-        public void Detach(ConsoleWindow window)
-        {
-            // An older instance of a window that was recreated
-            if (window != _consoleWindow) return;
-
-            _consoleWindow = null;
-
-            // Unity sometimes destroys and recreates a window, for example when maximizing it. Waiting
-            // a moment lets the recreated window take over the session instead of starting a new one.
-            EditorApplication.delayCall += () =>
-            {
-                if (_consoleWindow == null)
-                {
-                    CloseConsoleSession();
-                }
-            };
-        }
-
-        /// <summary>
-        /// Ends the console session and stops listening to the editor.
-        /// </summary>
-        public void Dispose()
-        {
-            EditorWindow.windowFocusChanged -= TrackLastOtherWindow;
-            AssemblyReloadEvents.beforeAssemblyReload -= CommandWindow.CloseAll;
-
-            CloseConsoleSession();
-
-            if (Active == this)
-            {
-                Active = null;
-            }
-        }
+        
 
         private bool IsFocused => _consoleWindow != null && EditorWindow.focusedWindow == _consoleWindow;
 
+        
+        [Shortcut(ShortcutId, ToggleKey.Key)]
+        private static void OnToggleShortcut() => Active?.HandleToggleShortcut();
+
+        
+        [MenuItem("Window/Bossy Console")]
+        private static void OpenFromMenu()
+        {
+            if (Active == null)
+            {
+                EditorWindow.GetWindow<ConsoleWindow>();
+                return;
+            }
+
+            Active.Show();
+        }
+        
+        
         private void HandleToggleShortcut()
         {
             // While playing with the Game view focused, the runtime console owns the key. This is the
@@ -184,9 +202,9 @@ namespace Bossy.Frontend
 
         private void OpenCommandWindow(Session template, CommandGraph graph, IReadable reader, IWriteable writer)
         {
-            var view = _sessions.CreateCommandWindow(template, graph, OpenCommandWindow);
+            var view = _sessionFactory.CreateCommandWindow(template, graph, OpenCommandWindow);
             CommandWindow.Open(view);
-            view.Start(graph, reader, writer);
+            view.StartGraph(graph, reader, writer);
         }
 
         private void CloseConsoleSession()

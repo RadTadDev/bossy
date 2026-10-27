@@ -15,12 +15,12 @@ namespace Bossy
     /// The top level boss (pun intended). Maybe this is a terrible spot for a joke, especially
     /// seeing as it's the only joke in the whole system (don't think about that too hard).
     /// </summary>
-    public class BossyConsole 
+    public class BossyConsole : IDisposable
     {
         /// <summary>
-        /// Fires when a console is toggled. Boolean means the console was shown when true, otherwise it was hidden.
+        /// Fires when a console is toggled.
         /// </summary>
-        public event Action<ConsoleSpace, bool> OnConsoleToggle;
+        public event Action<ConsoleSpace, ConsoleVisibility> OnConsoleToggle;
         
         private static readonly string SettingsPath = Application.persistentDataPath + "/bossy/settings.json";
 
@@ -56,13 +56,13 @@ namespace Bossy
             var parser = new Parser(schemaRegistry, typeAdapterRegistry);
             _context = new BossyContext(schemaRegistry, typeAdapterRegistry, settings, parser, binder, permissions);
             
-            var sessions = new SessionFactory(_context, permissions);
+            var sessionFactory = new SessionFactory(_context, permissions);
             
-            _runtimeConsole = new RuntimeConsole(sessions);
+            _runtimeConsole = new RuntimeConsole(sessionFactory);
             _runtimeConsole.VisibilityChanged += shown => OnConsoleToggle?.Invoke(ConsoleSpace.Runtime, shown);
             
 #if UNITY_EDITOR
-            _editorConsole = new EditorConsole(sessions);
+            _editorConsole = new EditorConsole(sessionFactory);
             _editorConsole.VisibilityChanged += shown => OnConsoleToggle?.Invoke(ConsoleSpace.Editor, shown);
 #endif
         }
@@ -71,9 +71,13 @@ namespace Bossy
         /// Gets the Bossy context which holds a reference to key subsystems.
         /// </summary>
         /// <returns>The context.</returns>
-        public BossyContext GetContext()
+        public BossyContext GetContext() => _context;
+        
+
+        public void Dispose()
         {
-            return _context;
+            _runtimeConsole?.Dispose();
+            _editorConsole?.Dispose();
         }
     }
 }

@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using Bossy.Execution;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
 using UnityEditor;
+#else
+using UnityEngine.SceneManagement;
 #endif
 
 namespace Bossy.Frontend
@@ -19,15 +20,15 @@ namespace Bossy.Frontend
     internal sealed class RuntimeConsole : IDisposable
     {
         // Each new command window opens this far below and to the right of the previous one
-        private const float WindowCascadeOffset = 24f;
+        private const float NewWindowCascadeOffset = 24f;
         private static readonly Vector2 FirstWindowPosition = new(40f, 40f);
 
         /// <summary>
-        /// Invoked when the console is shown (true) or hidden (false).
+        /// Invoked when the console is shown or hidden.
         /// </summary>
-        public event Action<bool> VisibilityChanged;
+        public event Action<ConsoleVisibility> VisibilityChanged;
 
-        private readonly SessionFactory _sessions;
+        private readonly SessionFactory _sessionFactory;
         private readonly List<RuntimeCommandWindow> _commandWindows = new();
 
         private RuntimeOverlay _overlay;
@@ -37,10 +38,10 @@ namespace Bossy.Frontend
         /// <summary>
         /// Creates the runtime console. It starts now if the runtime is already running, otherwise when it starts.
         /// </summary>
-        /// <param name="sessions">Creates sessions for the console and command windows.</param>
-        public RuntimeConsole(SessionFactory sessions)
+        /// <param name="sessionFactory">Creates sessions for the console and command windows.</param>
+        public RuntimeConsole(SessionFactory sessionFactory)
         {
-            _sessions = sessions;
+            _sessionFactory = sessionFactory;
 
 #if UNITY_EDITOR
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
@@ -61,11 +62,26 @@ namespace Bossy.Frontend
             }
 #endif
         }
+        
+        
+        /// <summary>
+        /// Stops the runtime console and stops listening for the runtime to start.
+        /// </summary>
+        public void Dispose()
+        {
+#if UNITY_EDITOR
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+#else
+            SceneManager.sceneLoaded -= StartOnFirstScene;
+#endif
+            Stop();
+        }
+        
 
         /// <summary>
         /// Shows the console if it is hidden, otherwise hides it.
         /// </summary>
-        public void Toggle()
+        private void Toggle()
         {
             if (_visible)
             {
@@ -80,13 +96,13 @@ namespace Bossy.Frontend
         /// <summary>
         /// Shows the console, starting its session the first time.
         /// </summary>
-        public void Show()
+        private void Show()
         {
             if (_overlay == null) return;
 
             if (_consoleView == null)
             {
-                _consoleView = _sessions.CreateConsole(OpenCommandWindow);
+                _consoleView = _sessionFactory.CreateConsole(OpenCommandWindow);
                 _overlay.ConsoleLayer.Add(_consoleView.Root);
                 _consoleView.Start();
             }
@@ -95,13 +111,13 @@ namespace Bossy.Frontend
             _visible = true;
             _consoleView.Focus();
 
-            VisibilityChanged?.Invoke(true);
+            VisibilityChanged?.Invoke(ConsoleVisibility.Shown);
         }
 
         /// <summary>
         /// Hides the console. Its session and any command windows keep running.
         /// </summary>
-        public void Hide()
+        private void Hide()
         {
             if (_overlay == null || !_visible) return;
 
@@ -111,21 +127,9 @@ namespace Bossy.Frontend
             // Release keyboard focus so the game's typing does not go into a hidden field
             FocusedElement?.Blur();
 
-            VisibilityChanged?.Invoke(false);
+            VisibilityChanged?.Invoke(ConsoleVisibility.Hidden);
         }
-
-        /// <summary>
-        /// Stops the runtime console and stops listening for the runtime to start.
-        /// </summary>
-        public void Dispose()
-        {
-#if UNITY_EDITOR
-            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-#else
-            SceneManager.sceneLoaded -= StartOnFirstScene;
-#endif
-            Stop();
-        }
+        
 
         private Focusable FocusedElement => _overlay.Root.focusController?.focusedElement;
 
@@ -155,7 +159,7 @@ namespace Bossy.Frontend
 
             _overlay = RuntimeOverlay.Create();
             _overlay.Updated += PollToggleKey;
-            _overlay.Root.RegisterCallback<KeyDownEvent>(SuppressToggleKey, TrickleDown.TrickleDown);
+            _overlay.Root.RegisterCallback<KeyDownEvent>(FilterToggleKey, TrickleDown.TrickleDown);
         }
 
         private void Stop()
@@ -187,7 +191,7 @@ namespace Bossy.Frontend
             Toggle();
         }
 
-        private void SuppressToggleKey(KeyDownEvent evt)
+        private void FilterToggleKey(KeyDownEvent evt)
         {
             // The key is acted on in PollToggleKey. This only stops it from also being typed.
             if (ToggleKey.Matches(evt) && !ToggleKey.ShouldType(FocusedElement))
@@ -200,16 +204,16 @@ namespace Bossy.Frontend
         {
             if (_overlay == null) return;
 
-            var view = _sessions.CreateCommandWindow(template, graph, OpenCommandWindow);
+            var view = _sessionFactory.CreateCommandWindow(template, graph, OpenCommandWindow);
 
             RuntimeCommandWindow window = null;
             window = new RuntimeCommandWindow(view, () => CloseCommandWindow(window));
-            window.MoveTo(FirstWindowPosition + Vector2.one * (WindowCascadeOffset * _commandWindows.Count));
+            window.MoveTo(FirstWindowPosition + Vector2.one * (NewWindowCascadeOffset * _commandWindows.Count));
 
             _commandWindows.Add(window);
             _overlay.WindowLayer.Add(window.Root);
 
-            view.Start(graph, reader, writer);
+            view.StartGraph(graph, reader, writer);
             view.Focus();
         }
 

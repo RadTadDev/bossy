@@ -45,7 +45,7 @@ namespace Bossy.Execution
             {
                 if (session.Host == null)
                 {
-                    (output ?? session.Frontend).Write(Format.Error("This frontend cannot open command windows."));
+                    (output ?? session.Endpoint).Write(Format.Error("This frontend cannot open command windows."));
                     return;
                 }
 
@@ -56,11 +56,11 @@ namespace Bossy.Execution
             var previousStatus = CommandStatus.Ok;
             var previousLink = CommandGraphLink.Then;
 
-            input ??= session.Frontend;
-            output ??= session.Frontend;
+            input ??= session.Endpoint;
+            output ??= session.Endpoint;
             
             var defaultContext = new CommandContext(session, _context, input, output, true, token);
-            defaultContext.SetCapabilitySourcer(() => session.Frontend);
+            defaultContext.SetCapabilitySourcer(() => session.Endpoint);
 
             var groups = GroupCommands(graph, defaultContext);
             
@@ -173,7 +173,7 @@ namespace Bossy.Execution
                         session.Host?.PopView();
                     }
                     
-                    session.Frontend?.ResetCapabilities();
+                    session.Endpoint?.ResetCapabilities();
                 }
             }
         }

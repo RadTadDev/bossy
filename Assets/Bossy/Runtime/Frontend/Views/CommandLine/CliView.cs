@@ -14,7 +14,7 @@ namespace Bossy.Frontend
     /// <summary>
     /// The default command line frontend.
     /// </summary>
-    internal class CliView : IVisualFrontend,
+    internal class CliView : IVisualEndpoint,
         IHistorical,
         IClearable,
         IModifiableOutputBuffer,

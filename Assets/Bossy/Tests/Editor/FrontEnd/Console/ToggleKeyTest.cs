@@ -45,13 +45,13 @@ namespace Bossy.Tests.FrontEnd.Console
         [Test]
         public void IsEditingText_EmptyTextField_True()
         {
-            Assert.That(ToggleKey.IsEditingText(new TextField()), Is.True);
+            Assert.That(ToggleKey.IsTextFieldFocused(new TextField()), Is.True);
         }
 
         [Test]
         public void IsEditingText_NonTextElement_False()
         {
-            Assert.That(ToggleKey.IsEditingText(new Label()), Is.False);
+            Assert.That(ToggleKey.IsTextFieldFocused(new Label()), Is.False);
         }
     }
 }
