@@ -76,6 +76,21 @@ namespace Bossy.Tests.FrontEnd.Console
         }
 
         [UnityTest]
+        public IEnumerator Show_InputTextUsesBossyFont()
+        {
+            _console.Show();
+            yield return null;
+            yield return null;
+
+            var window = EditorWindow.GetWindow<ConsoleWindow>();
+            var expected = window.rootVisualElement.resolvedStyle.unityFontDefinition.fontAsset;
+            var inputText = window.rootVisualElement.Q<TextField>("input-field").Q<TextElement>();
+
+            Assert.That(expected, Is.Not.Null);
+            Assert.That(inputText.resolvedStyle.unityFontDefinition.fontAsset, Is.SameAs(expected));
+        }
+
+        [UnityTest]
         public IEnumerator RecreatedWindow_KeepsSession()
         {
             _console.Show();

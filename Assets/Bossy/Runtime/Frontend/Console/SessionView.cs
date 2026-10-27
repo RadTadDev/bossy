@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Bossy.Execution;
 using Bossy.Settings;
 using Bossy.Utils;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
@@ -34,6 +33,9 @@ namespace Bossy.Frontend
         /// The title for a window or panel showing this view.
         /// </summary>
         public string Title { get; }
+
+        private const string CommandViewClass = "bossy-command-view";
+        private const string CommandViewEnteringClass = "bossy-command-view--entering";
 
         private readonly IVisualEndpoint _endpoint;
         private readonly CommandWindowOpener _openCommandWindow;
@@ -112,15 +114,9 @@ namespace Bossy.Frontend
 
             // Command views are placed on top of the frontend rather than replacing it, because removing
             // or hiding the frontend breaks UI Toolkit's focus tracking for it.
-            root.style.position = Position.Absolute;
-            root.style.top = 0;
-            root.style.left = 0;
-            root.style.right = 0;
-            root.style.bottom = 0;
+            root.AddToClassList(CommandViewClass);
             root.delegatesFocus = true;
-
-            const float value = 55f / 255;
-            root.style.backgroundColor = new Color(value, value, value, 1);
+            Animations.In(root, CommandViewEnteringClass);
 
             _commandViews.Push(root);
             Root.Add(root);
