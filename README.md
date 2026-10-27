@@ -29,6 +29,7 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
 - [Command Windows](#command-windows)
 - [Auto Complete](#auto-complete)
 - [Limitations and Known Bugs](#limitations-and-known-bugs)
+- [License](#license)
 ---
 
 ## Installation
@@ -711,3 +712,7 @@ In the example above, you can see that its simple enough to check which tokens h
 ## Limitations and Known Bugs
 - Due to a known UI Toolkit bug, on rare occasions the system font may become invisible. An editor restart will fix this.
 - Adding an event system will cause Bossy not to become focused the first time you open it in a runtime context. To fix this, add a `PanelInputConfiguration` component to the `EventSystem` GameObject and set its `Panel Input Redirection` field to `No input redirection`. 
+
+## License
+
+Bossy is released under the MIT License; see `LICENSE`. It includes the JetBrains Mono font, which is licensed separately under the SIL Open Font License 1.1; see `Runtime/Resources/Fonts/OFL.txt` in the package.

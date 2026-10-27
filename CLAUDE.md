@@ -46,6 +46,11 @@ Each PR description must contain:
 - Clean, readable, and easy to maintain is the top priority. Prefer simple code over clever or heavily optimized code. Do not trade clarity for performance unless there is a measured need.
 - Match the existing style of the file and folder you are working in: naming, brace style, XML doc comments, and region/section comments. Read neighboring files before writing new code.
 - Public types and members in `Runtime` have XML doc comments. Keep that convention for new public API.
+- Put each attribute on its own line, above the element it decorates, including test attributes:
+  ```csharp
+  [Test]
+  public void MyTest()
+  ```
 - Namespaces follow folder structure under `Bossy`. Note that most command library classes currently use `Bossy.Runtime.Command.Library`, while the command attributes and base types live in `Bossy.Command`. Do not spread the inconsistency further; new command classes should follow the existing command library convention until the user decides otherwise.
 - Do not introduce new static mutable state or global singletons without calling it out as a decision.
 - Do not add a dependency on a Unity package or third-party library without asking.
