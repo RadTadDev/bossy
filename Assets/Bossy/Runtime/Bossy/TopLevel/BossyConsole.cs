@@ -77,7 +77,10 @@ namespace Bossy
         public void Dispose()
         {
             _runtimeConsole?.Dispose();
+            
+#if UNITY_EDITOR
             _editorConsole?.Dispose();
+#endif
         }
     }
 }

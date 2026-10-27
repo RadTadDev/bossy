@@ -11,6 +11,7 @@ using Bossy.Settings;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
@@ -19,31 +20,51 @@ namespace Bossy.Tests.Runtime
     /// <summary>
     /// Tests the runtime console in play mode, driven by a simulated keyboard.
     /// </summary>
-    internal class RuntimeConsoleTest : InputTestFixture
+    /// <remarks>
+    /// This does not use <c>InputTestFixture</c>, because its save and restore of the editor's input state is suspected
+    /// of leaving Input System action states behind that error on later mouse events in the editor.
+    /// </remarks>
+    internal class RuntimeConsoleTest
     {
         private Keyboard _keyboard;
         private RuntimeConsole _console;
         private RuntimeOverlay _overlay;
+        private InputSettings.EditorInputBehaviorInPlayMode _previousEditorInputBehavior;
+        private InputSettings.BackgroundBehavior _previousBackgroundBehavior;
 
-        public override void Setup()
+        [SetUp]
+        public void Setup()
         {
-            base.Setup();
-            
+            // Without these, keys go to the editor when it has focus, and simulated keys are dropped when the game is not focused
+            _previousEditorInputBehavior = InputSystem.settings.editorInputBehaviorInPlayMode;
+            InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            _previousBackgroundBehavior = InputSystem.settings.backgroundBehavior;
+            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+
             // Destroying is deferred, so an earlier test's overlay can still exist
             foreach (var leftover in Object.FindObjectsByType<RuntimeOverlay>())
             {
                 Object.DestroyImmediate(leftover.gameObject);
             }
-            
+
             _keyboard = InputSystem.AddDevice<Keyboard>();
+
+            // The device can be left disabled when the game is not focused, and its events are then dropped
+            InputSystem.EnableDevice(_keyboard);
+
+            // Keyboard.current is the device the toggle key is read from, so the simulated keyboard must be it
+            _keyboard.MakeCurrent();
             _console = new RuntimeConsole(CreateSessionFactory());
             _overlay = Object.FindAnyObjectByType<RuntimeOverlay>();
         }
 
-        public override void TearDown()
+        [TearDown]
+        public void TearDown()
         {
             _console?.Dispose();
-            base.TearDown();
+            InputSystem.RemoveDevice(_keyboard);
+            InputSystem.settings.editorInputBehaviorInPlayMode = _previousEditorInputBehavior;
+            InputSystem.settings.backgroundBehavior = _previousBackgroundBehavior;
         }
 
         [UnityTest]
@@ -146,9 +167,10 @@ namespace Bossy.Tests.Runtime
         private IEnumerator PressToggleKey()
         {
             // Queued so the press is read in the next frame's update, as real input is
-            Press(_keyboard.slashKey, queueEventOnly: true);
+            // Must match ToggleKey.Key
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState(Key.Slash));
             yield return null;
-            Release(_keyboard.slashKey, queueEventOnly: true);
+            InputSystem.QueueStateEvent(_keyboard, new KeyboardState());
             yield return null;
         }
 
