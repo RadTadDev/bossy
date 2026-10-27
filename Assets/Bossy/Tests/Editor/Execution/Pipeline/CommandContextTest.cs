@@ -30,7 +30,7 @@ namespace Bossy.Tests.Shell
             _context = new BossyContext(null, _adapterRegistry, null, null, null, null);
             _permissions = new BossyPermissions("", new HashSet<CommandSchema>(), true);
             
-            _session = new Session(_context, new Bridge(_ => { }, _ => { }), _permissions, (_, _, _, _) => { }, SessionSpace.Edit);
+            _session = new Session(_context, _permissions, new MockEndpoint(), null);
         }
         
         [Test]

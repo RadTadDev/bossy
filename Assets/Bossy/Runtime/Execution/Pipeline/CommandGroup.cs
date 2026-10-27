@@ -16,14 +16,14 @@ namespace Bossy.Execution
         /// <summary>
         /// The view if the visible command defines one.
         /// </summary>
-        public IContentView View { get; }
+        public ICommandView View { get; }
         
         /// <summary>
         /// Creates a new command group.
         /// </summary>
         /// <param name="nodes">The commands to run.</param>
         /// <param name="view">The view if the visible command defines one.</param>
-        public CommandGroup(List<CommandGraphNode> nodes, IContentView view)
+        public CommandGroup(List<CommandGraphNode> nodes, ICommandView view)
         {
             Nodes = nodes;
             View = view;

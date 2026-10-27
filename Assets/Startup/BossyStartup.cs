@@ -1,6 +1,5 @@
 using Bossy;
 using JetBrains.Annotations;
-using UnityEngine;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -48,8 +47,6 @@ public static class CommonStartup
             .GetCommands()
             .Automatically()
             .Build();
-
-        console.OnConsoleToggle += (s, sh) => Debug.Log($"Space = {s}, shown = {sh}");
         
         return console;
     }

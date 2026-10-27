@@ -21,6 +21,7 @@ namespace Bossy.Tests.Shell
         private Session _session;
         private CommandExecutor _executor;
         private BossyPermissions _permissions;
+        private BossyContext _context;
         
         [OneTimeSetUp]
         public void Setup()
@@ -30,10 +31,9 @@ namespace Bossy.Tests.Shell
             _permissions = new BossyPermissions("", new HashSet<CommandSchema>(), true);
             
             
-            var context = new BossyContext(null, registry, null, null, null, null);
-            var bridge = new Bridge(_ => { }, _ => { });
-            _session = new Session(context, bridge, _permissions, (_, _, _, _) => { }, SessionSpace.Edit);
-            _executor = new CommandExecutor(_session, context, _permissions);
+            _context = new BossyContext(null, registry, null, null, null, null);
+            _session = new Session(_context, _permissions, new MockEndpoint(), null);
+            _executor = new CommandExecutor(_context, _permissions);
         }
         
         [Test]
@@ -545,6 +545,83 @@ namespace Bossy.Tests.Shell
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
         
             Assert.That(writer.Log, Is.Not.Empty);
+        }
+
+        [Test]
+        public async Task Test_CommandView_PushedAndPopped()
+        {
+            var host = new MockSessionHost();
+            var session = new Session(_context, _permissions, new MockEndpoint(), host);
+
+            var graph = CommandGraph
+                .Create(false)
+                .Execute(new ViewCommand(), null)
+                .Build();
+
+            await _executor.ExecuteAsync(graph, session, CancellationToken.None, new MockReadable(), new MockWriteable());
+
+            Assert.That(host.Calls, Is.EqualTo(new[] { "push", "pop" }));
+        }
+
+        [Test]
+        public async Task Test_Windowed_OpensCommandWindow()
+        {
+            var host = new MockSessionHost();
+            var session = new Session(_context, _permissions, new MockEndpoint(), host);
+
+            var graph = CommandGraph
+                .Create(true)
+                .Execute(new TrackingCommand(), null)
+                .Build();
+
+            await _executor.ExecuteAsync(graph, session, CancellationToken.None);
+
+            Assert.That(host.Calls, Is.EqualTo(new[] { "open" }));
+            Assert.That(host.OpenedGraph, Is.SameAs(graph));
+        }
+
+        [Test]
+        public async Task Test_Windowed_NoHost_WritesError()
+        {
+            var frontend = new MockEndpoint();
+            var session = new Session(_context, _permissions, frontend, null);
+            var tracker = new TrackingCommand();
+
+            var graph = CommandGraph
+                .Create(true)
+                .Execute(tracker, null)
+                .Build();
+
+            await _executor.ExecuteAsync(graph, session, CancellationToken.None);
+
+            Assert.That(tracker.WasCalled, Is.False);
+            Assert.That(frontend.Log, Is.Not.Empty);
+        }
+
+        [Test]
+        public async Task Test_ResetsFrontendCapabilitiesAfterCommand()
+        {
+            var frontend = new MockEndpoint();
+            var session = new Session(_context, _permissions, frontend, null);
+
+            var graph = CommandGraph
+                .Create(false)
+                .Execute(new SuccessfulCommand(), null)
+                .Build();
+
+            await _executor.ExecuteAsync(graph, session, CancellationToken.None);
+
+            Assert.That(frontend.ResetCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Test_ClosingFrontendAsWriter_WritesNothing()
+        {
+            var frontend = new MockEndpoint();
+
+            ((IWriteable)frontend).CloseWriter();
+
+            Assert.That(frontend.Log, Is.Empty);
         }
     }
 }
