@@ -12,20 +12,19 @@ namespace Bossy.Execution
     public class Session : IDisposable
     {
         /// <summary>
-        /// The bridge to the front end.
+        /// The frontend this session reads from and writes to.
         /// </summary>
-        public readonly Bridge Bridge;
-        
+        public readonly ISessionFrontend Frontend;
+
         /// <summary>
-        /// The space this session is running in.
+        /// Where this session's UI lives, or null if it has none.
         /// </summary>
-        public readonly SessionSpace Space;
-        
+        internal readonly ISessionHost Host;
+
         private readonly CommandExecutor _commandExecutor;
         private readonly BossyPermissions _permissions;
         private readonly BossyContext _context;
-        private readonly Action<Session, CommandGraph,  IReadable, IWriteable> _createCommandSession;
-        
+
         private CancellationTokenSource _commandSource;
         private readonly CancellationTokenSource _sessionSource = new();
 
@@ -33,25 +32,16 @@ namespace Bossy.Execution
         /// Creates a new session.
         /// </summary>
         /// <param name="context">The Bossy context.</param>
-        /// <param name="bridge">The bridge to the frontend.</param>
         /// <param name="permissions">The permissions manager.</param>
-        /// <param name="createCommandSession">An action to invoke when this session wants to create a new one.</param>
-        /// <param name="space">The space this session is running in.</param>
-        public Session
-        (
-            BossyContext context,
-            Bridge bridge,
-            BossyPermissions permissions,
-            Action<Session, CommandGraph, IReadable, IWriteable> createCommandSession,
-            SessionSpace space
-        )
+        /// <param name="frontend">The frontend to read from and write to.</param>
+        /// <param name="host">Where this session's UI lives, or null if it has none.</param>
+        internal Session(BossyContext context, BossyPermissions permissions, ISessionFrontend frontend, ISessionHost host)
         {
             _context = context;
-            Bridge = bridge;
             _permissions = permissions;
-            _commandExecutor = new CommandExecutor(this, context, permissions);
-            _createCommandSession = createCommandSession;
-            Space = space;
+            Frontend = frontend;
+            Host = host;
+            _commandExecutor = new CommandExecutor(context, permissions);
         }
 
         /// <summary>
@@ -67,7 +57,7 @@ namespace Bossy.Execution
 
             await _commandExecutor.ExecuteAsync(graph, this, linkedSource.Token, reader, writer);
         }
-        
+
         /// <summary>
         /// Starts the session execution REPL.
         /// </summary>
@@ -76,14 +66,14 @@ namespace Bossy.Execution
         {
             while (!_sessionSource.IsCancellationRequested)
             {
-                var response = await Bridge.ReadAsync(typeof(CommandGraph), _sessionSource.Token);
-                
+                var response = await Frontend.ReadAsync(typeof(CommandGraph), _sessionSource.Token);
+
                 // Require direct graphs from the front ends, no adapting here because the parser should be used
                 if (response is not CommandGraph graph)
                 {
                     throw new BossyNotAdaptableException("All front ends must return command graphs where queried for one.");
                 }
-                
+
                 _commandSource = new CancellationTokenSource();
                 var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandSource.Token, _sessionSource.Token);
 
@@ -92,24 +82,13 @@ namespace Bossy.Execution
         }
 
         /// <summary>
-        /// Creates a command session which simply rungs the command graph and nothing else.
-        /// </summary>
-        /// <param name="graph">The graph to run.</param>
-        /// <param name="reader">An override reader.</param>
-        /// <param name="writer">An override writer.</param>
-        public void CreateCommandSession(CommandGraph graph, IReadable reader, IWriteable writer)
-        {
-            _createCommandSession?.Invoke(this, graph, reader, writer);
-        }
-        
-        /// <summary>
         /// Cancels the current command.
         /// </summary>
         public void CancelCommand()
         {
             // No command is running
             if (_commandSource == null) return;
-            
+
             if (_commandSource.Token.CanBeCanceled)
             {
                 _commandSource.Cancel();
@@ -117,14 +96,14 @@ namespace Bossy.Execution
         }
 
         /// <summary>
-        /// Clones this session.
+        /// Creates a new session that shares this session's context and permissions.
         /// </summary>
-        /// <param name="bridge">The bridge to the new frontend.</param>
+        /// <param name="frontend">The frontend of the new session.</param>
+        /// <param name="host">Where the new session's UI lives.</param>
         /// <returns>The cloned session.</returns>
-        public Session Clone(Bridge bridge)
+        internal Session Clone(ISessionFrontend frontend, ISessionHost host)
         {
-            var session = new Session(_context, bridge, _permissions, _createCommandSession, Space);
-            return session;
+            return new Session(_context, _permissions, frontend, host);
         }
 
         /// <summary>
@@ -138,7 +117,7 @@ namespace Bossy.Execution
         {
             await _commandExecutor.ExecuteAsync(graph, this, token, input, output);
         }
-        
+
         /// <summary>
         /// Safely disposes this session's managed resources.
         /// </summary>

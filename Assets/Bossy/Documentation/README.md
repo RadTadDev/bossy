@@ -26,6 +26,7 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
 - [Piping](#piping)
 - [Type Adapting](#type-adapting)
 - [Custom Command UI](#custom-command-ui)
+- [Command Windows](#command-windows)
 - [Auto Complete](#auto-complete)
 - [Limitations and Known Bugs](#limitations-and-known-bugs)
 ---
@@ -90,6 +91,8 @@ public class BossyStartup
 ```
 
 **2. Press `/` to open the console.**
+
+Press it again to hide the console. While you are typing in the console, `/` types a slash unless the input is empty. In the editor you can rebind the key under `Edit -> Shortcuts -> Bossy`; at runtime it is always `/` for now.
 
 **3. Enter the command `help` to get information**
 
@@ -596,24 +599,28 @@ Note that any tokes used must be consumed from the stream. If parsing fails, ret
 
 ## Custom Command UI
 
-Commands can declare custom execution UI. To do this, have your command implement the `IContentView` interface:
+Commands can show their own UI while they run, which is useful for graphs, forms and live monitors. To do this, have your command implement the `ICommandView` interface:
 
 ```csharp
 [Command("mycommand", "Description.")]
-public class MyCommand : ICommand, IContentView
+public class MyCommand : ICommand, ICommandView
 {
     public VisualElement CreateView() { }
-        
-    public void SetSignaler(Signaler signaler) { }
-
-    public void OnFocus() { }
-
-    public void OnDefocus() { }
 }
 ```
-You must implement the methods shown above. Most can be no-ops unless needed. `CreateView()` must return the root of the command's UI using the UI Toolkit API. If you prefer you can use the `ContentViewUtility.GetRootFromUxml()` to load a UI document you created using the UI Toolkit Builder.
+`CreateView()` must return the root of the command's UI using the UI Toolkit API. If you prefer you can use the `ContentViewUtility.GetRootFromUxml()` to load a UI document you created using the UI Toolkit Builder. The view covers the console while the command runs and is removed when it finishes.
 
-The signaler is used to send signals that would otherwise be absorbed by your UI. An example is needing to send the toggle command while an input field is focused. You can use the signaler to respect the toggle input instead of typing a `/` in the input bar.
+The console takes care of focus, the toggle key and cancelling, so your view only needs to build its UI. Focus moves to the first focusable element in your view, `/` hides the console unless you are typing in a text field that is not empty, and `Ctrl + C` cancels the command.
+
+## Command Windows
+
+Start or end a command with `!` to run it in its own window, with its own session:
+
+```
+> !watch -i 0.5 get Player Transform position
+```
+
+In the editor the command opens in a separate editor window. At runtime it opens in a draggable, resizable window over the game that stays on screen after the console is hidden, which makes it useful for monitoring values. Closing the window ends the command.
 
 ---
 

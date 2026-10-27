@@ -15,19 +15,16 @@ namespace Bossy.Execution
     /// </summary>
     internal class CommandExecutor
     {
-        private readonly Session _session;
         private readonly BossyContext _context;
         private readonly BossyPermissions _permissions;
         
         /// <summary>
         /// Creates a new executor.
         /// </summary>
-        /// <param name="session">The session that owns this executor.</param>
         /// <param name="context">The Bossy context.</param>
         /// <param name="permissions">The current permissions.</param>
-        public CommandExecutor(Session session, BossyContext context, BossyPermissions permissions)
+        public CommandExecutor(BossyContext context, BossyPermissions permissions)
         {
-            _session = session;
             _context = context;
             _permissions = permissions;
         }
@@ -46,19 +43,24 @@ namespace Bossy.Execution
             
             if (graph.Windowed)
             {
-                _session.CreateCommandSession(graph, input, output);
+                if (session.Host == null)
+                {
+                    (output ?? session.Frontend).Write(Format.Error("This frontend cannot open command windows."));
+                    return;
+                }
+
+                session.Host.OpenCommandWindow(session, graph, input, output);
                 return;
             }
-            
 
             var previousStatus = CommandStatus.Ok;
             var previousLink = CommandGraphLink.Then;
 
-            input ??= session.Bridge;
-            output ??= session.Bridge;
+            input ??= session.Frontend;
+            output ??= session.Frontend;
             
             var defaultContext = new CommandContext(session, _context, input, output, true, token);
-            defaultContext.SetCapabilitySourcer(session.Bridge.GetCapabilities);
+            defaultContext.SetCapabilitySourcer(() => session.Frontend);
 
             var groups = GroupCommands(graph, defaultContext);
             
@@ -122,7 +124,7 @@ namespace Bossy.Execution
                     // 3. Create a view if needed
                     if (group.View != null)
                     {
-                        session.Bridge.PushContent(group.View);
+                        session.Host?.PushView(group.View);
                     }
                     
                     // 4. Execute
@@ -168,10 +170,10 @@ namespace Bossy.Execution
                     
                     if (group.View != null)
                     {
-                        session.Bridge.PopContent();
+                        session.Host?.PopView();
                     }
                     
-                    session.Bridge.UserInterface?.ResetCapabilities();
+                    session.Frontend?.ResetCapabilities();
                 }
             }
         }
@@ -284,13 +286,13 @@ namespace Bossy.Execution
 
                 if (node.Link is CommandGraphLink.Pipe) continue;
                 
-                groups.Add(new CommandGroup(current, node.Command as IContentView));
+                groups.Add(new CommandGroup(current, node.Command as ICommandView));
                 current = new List<CommandGraphNode>();
             }
             
             if (current.Count > 0)
             {
-                groups.Add(new CommandGroup(current, last?.Command as IContentView));
+                groups.Add(new CommandGroup(current, last?.Command as ICommandView));
             }
 
             return groups;

@@ -1,0 +1,13 @@
+{
+    "name": "Bossy.Tests.Runtime",
+    "references": [
+        "Bossy",
+        "Unity.InputSystem",
+        "Unity.InputSystem.TestFramework"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": []
+}

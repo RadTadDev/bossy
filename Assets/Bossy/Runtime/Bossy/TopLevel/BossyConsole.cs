@@ -1,10 +1,13 @@
 using System;
+using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
 using Bossy.Schema.Registry;
 using Bossy.Settings;
-using JetBrains.Annotations;
 using UnityEngine;
+
+#if BOSSY_SRP_CORE
 using UnityEngine.Rendering;
+#endif
 
 namespace Bossy
 {
@@ -17,19 +20,23 @@ namespace Bossy
         /// <summary>
         /// Fires when a console is toggled. Boolean means the console was shown when true, otherwise it was hidden.
         /// </summary>
-        public event Action<SessionSpace, bool> OnConsoleToggle;
-        
-        
-        [UsedImplicitly] private readonly LifecycleManager _lifecycleManager;
+        public event Action<ConsoleSpace, bool> OnConsoleToggle;
         
         private static readonly string SettingsPath = Application.persistentDataPath + "/bossy/settings.json";
+
+        private readonly BossyContext _context;
+        private readonly RuntimeConsole _runtimeConsole;
+#if UNITY_EDITOR
+        private readonly EditorConsole _editorConsole;
+#endif
 
         /// <summary>
         /// Creates a new Bossy top level object.
         /// </summary>
         /// <param name="schemaRegistry">The schema registry to attach.</param>
         /// <param name="typeAdapterRegistry">The type adapter registry to attach.</param>
-        /// <param name="binder">The binder </param>
+        /// <param name="binder">The binder for resolving objects in commands.</param>
+        /// <param name="permissions">The permissions controller.</param>
         internal BossyConsole
         (
             SchemaRegistry schemaRegistry,
@@ -38,14 +45,27 @@ namespace Bossy
             BossyPermissions permissions
         )
         {
+#if BOSSY_SRP_CORE
             // TODO: Make this annoying default a setting. This is disabled because it globally overrides ctrl + backspace input 
             DebugManager.instance.enableRuntimeUI = false;
+#endif
             
-            _lifecycleManager = new LifecycleManager(schemaRegistry, typeAdapterRegistry, new FileSource(SettingsPath), binder, permissions);
-
-            _lifecycleManager.ToggleConsole += OnToggleConsole;
+            var settings = new SettingsManager(new FileSource(SettingsPath));
+            settings.Load();
+            
+            var parser = new Parser(schemaRegistry, typeAdapterRegistry);
+            _context = new BossyContext(schemaRegistry, typeAdapterRegistry, settings, parser, binder, permissions);
+            
+            var sessions = new SessionFactory(_context, permissions);
+            
+            _runtimeConsole = new RuntimeConsole(sessions);
+            _runtimeConsole.VisibilityChanged += shown => OnConsoleToggle?.Invoke(ConsoleSpace.Runtime, shown);
+            
+#if UNITY_EDITOR
+            _editorConsole = new EditorConsole(sessions);
+            _editorConsole.VisibilityChanged += shown => OnConsoleToggle?.Invoke(ConsoleSpace.Editor, shown);
+#endif
         }
-
         
         /// <summary>
         /// Gets the Bossy context which holds a reference to key subsystems.
@@ -53,13 +73,7 @@ namespace Bossy
         /// <returns>The context.</returns>
         public BossyContext GetContext()
         {
-            return _lifecycleManager.GetContext();
-        }
-        
-        
-        private void OnToggleConsole(SessionSpace space, bool shown)
-        {
-            OnConsoleToggle?.Invoke(space, shown);
+            return _context;
         }
     }
 }
