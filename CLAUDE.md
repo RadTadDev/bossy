@@ -6,7 +6,7 @@ Bossy is a developer console (CLI) for Unity. It runs in the editor, in builds, 
 
 - Speed up Unity development workflows.
 - Improve debugging.
-- Give access to the whole codebase and Unity environment from the console.
+- Give access to the whole codebase and Unity environment from the console without excessive integration into project code.
 
 ## Project layout
 
