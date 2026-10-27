@@ -28,6 +28,7 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
 - [Custom Command UI](#custom-command-ui)
 - [Auto Complete](#auto-complete)
 - [Limitations and Known Bugs](#limitations-and-known-bugs)
+- [License](#license)
 ---
 
 ## Installation
@@ -703,3 +704,7 @@ In the example above, you can see that its simple enough to check which tokens h
 
 ## Limitations and Known Bugs
 - Due to a known UI Toolkit bug, on rare occasions the system font may become invisible. An editor restart will fix this
+
+## License
+
+Bossy is released under the MIT License; see `LICENSE`. It includes the JetBrains Mono font, which is licensed separately under the SIL Open Font License 1.1; see `Runtime/Resources/Fonts/OFL.txt` in the package.
