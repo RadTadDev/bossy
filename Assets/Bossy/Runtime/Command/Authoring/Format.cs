@@ -12,45 +12,52 @@ namespace Bossy.Command
     /// </summary>
     public static class Format
     {
+        // These mirror the colors in BossyTheme.uss so rich text output matches the console; keep them in sync.
+
         /// <summary>
         /// Bossy white.
         /// </summary>
-        public static Color White = new(0.95f, 0.95f, 0.95f);
-        
-        /// <summary>
-        /// Bossy blue.
-        /// </summary>
-        public static Color LightBlue = new(0.5f, 0.7f, 0.9f);
+        public static Color White = new(0.91f, 0.90f, 0.86f);
 
         /// <summary>
         /// Bossy blue.
         /// </summary>
-        public static Color DarkBlue = new(0.1f, 0.2f, 0.7f);
-        
+        public static Color LightBlue = new(0.56f, 0.72f, 0.87f);
+
+        /// <summary>
+        /// Bossy blue.
+        /// </summary>
+        public static Color DarkBlue = new(0.36f, 0.50f, 0.71f);
+
         /// <summary>
         /// Bossy green.
         /// </summary>
-        public static Color Green = new(0.1f, 0.8f, 0.1f);
-        
+        public static Color Green = new(0.62f, 0.79f, 0.55f);
+
         /// <summary>
         /// Bossy yellow.
         /// </summary>
-        public static Color Yellow = new(0.9f, 0.9f, 0.3f);
-        
+        public static Color Yellow = new(0.89f, 0.77f, 0.49f);
+
         /// <summary>
         /// Bossy red.
         /// </summary>
-        public static Color Red = new(0.8f, 0.2f, 0.2f);
-        
+        public static Color Red = new(0.90f, 0.54f, 0.52f);
+
         /// <summary>
         /// Bossy gray.
         /// </summary>
-        public static Color Gray = new(0.7f, 0.7f, 0.7f);
-        
+        public static Color Gray = new(0.64f, 0.63f, 0.59f);
+
         /// <summary>
         /// Bossy dark gray.
         /// </summary>
-        public static Color DarkGray = new(0.3f, 0.3f, 0.3f);
+        public static Color DarkGray = new(0.44f, 0.43f, 0.40f);
+
+        /// <summary>
+        /// Bossy accent, used for the prompt.
+        /// </summary>
+        public static Color Accent = new(0.85f, 0.47f, 0.34f);
         
         /// <summary>
         /// Prints an enumerated list by prepending numbers.

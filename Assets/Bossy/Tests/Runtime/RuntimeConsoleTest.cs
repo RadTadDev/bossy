@@ -151,6 +151,17 @@ namespace Bossy.Tests.Runtime
         }
 
         [UnityTest]
+        public IEnumerator Hide_PanelNotDisplayedAfterSlidingOut()
+        {
+            yield return PressToggleKey();
+            yield return PressToggleKey();
+
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            Assert.That(_overlay.ConsolePanel.resolvedStyle.display, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [UnityTest]
         public IEnumerator Dispose_DestroysOverlay()
         {
             _console.Dispose();
@@ -160,9 +171,9 @@ namespace Bossy.Tests.Runtime
             Assert.That(_overlay == null, Is.True);
         }
 
-        private bool IsConsoleVisible => _overlay.ConsoleLayer.resolvedStyle.display == DisplayStyle.Flex;
+        private bool IsConsoleVisible => _console.IsVisible;
 
-        private TextField Input => _overlay.ConsoleLayer.Q<TextField>("input-field");
+        private TextField Input => _overlay.ConsolePanel.Q<TextField>("input-field");
 
         private IEnumerator PressToggleKey()
         {

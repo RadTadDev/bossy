@@ -35,7 +35,7 @@ namespace Bossy.Frontend
 
         protected virtual void CreateGUI()
         {
-            BossyFont.ApplyTo(rootVisualElement);
+            BossyTheme.ApplyTo(rootVisualElement);
             rootVisualElement.RegisterCallback<KeyDownEvent>(OnKeyDown, TrickleDown.TrickleDown);
         }
 

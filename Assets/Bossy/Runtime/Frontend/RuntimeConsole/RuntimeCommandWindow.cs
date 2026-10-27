@@ -12,6 +12,10 @@ namespace Bossy.Frontend
     {
         private const float MinWidth = 200f;
         private const float MinHeight = 150f;
+        
+        // Matches the window's transition in BossyTheme.uss
+        private const string EnteringClass = "bossy-window--entering";
+        private const long FadeDurationMs = 140;
 
         /// <summary>
         /// The root of the window.
@@ -30,6 +34,8 @@ namespace Bossy.Frontend
             _view = view;
 
             Root = ContentViewUtility.GetRootFromUxml("BossyRuntimeCommandWindow");
+            Root.RemoveFromClassList(EnteringClass);
+            Animations.In(Root, EnteringClass);
             Root.Q<Label>("title").text = view.Title;
             Root.Q<Button>("button-close").clicked += closeRequested;
             Root.Q("content-area").Add(view.Root);
@@ -52,12 +58,21 @@ namespace Bossy.Frontend
         }
 
         /// <summary>
-        /// Ends the window's session and removes it.
+        /// Ends the window's session and fades the window out.
         /// </summary>
         public void Dispose()
         {
             _view.Dispose();
-            Root.RemoveFromHierarchy();
+            
+            // Without a panel the fade cannot run, so remove it straight away
+            if (Root.panel == null)
+            {
+                Root.RemoveFromHierarchy();
+                return;
+            }
+            
+            Root.pickingMode = PickingMode.Ignore;
+            Animations.Out(Root, EnteringClass, FadeDurationMs, Root.RemoveFromHierarchy);
         }
 
         private void WireDrag(VisualElement titleBar)
@@ -68,6 +83,9 @@ namespace Bossy.Frontend
 
             titleBar.RegisterCallback<PointerDownEvent>(evt =>
             {
+                // The close button sits in the title bar and needs the pointer for its click
+                if (evt.target is Button) return;
+                
                 dragging = true;
                 startPointer = evt.position;
                 startPosition = new Vector2(Root.resolvedStyle.left, Root.resolvedStyle.top);

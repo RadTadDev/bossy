@@ -21,6 +21,10 @@ namespace Bossy.Frontend
     {
         // Each new command window opens this far below and to the right of the previous one
         private const float NewWindowCascadeOffset = 24f;
+
+        // Matches the console's transition in BossyTheme.uss
+        private const string HiddenClass = "bossy-runtime-console--hidden";
+        private const long SlideDurationMs = 160;
         private static readonly Vector2 FirstWindowPosition = new(40f, 40f);
 
         /// <summary>
@@ -28,12 +32,20 @@ namespace Bossy.Frontend
         /// </summary>
         public event Action<ConsoleVisibility> VisibilityChanged;
 
+        /// <summary>
+        /// True while the console is shown or sliding in.
+        /// </summary>
+        public bool IsVisible => _visible;
+
         private readonly SessionFactory _sessionFactory;
         private readonly List<RuntimeCommandWindow> _commandWindows = new();
 
         private RuntimeOverlay _overlay;
         private SessionView _consoleView;
         private bool _visible;
+        
+        // The panel stays displayed while it slides out, so this can be true while hidden
+        private bool _panelDisplayed;
 
         /// <summary>
         /// Creates the runtime console. It starts now if the runtime is already running, otherwise when it starts.
@@ -103,11 +115,23 @@ namespace Bossy.Frontend
             if (_consoleView == null)
             {
                 _consoleView = _sessionFactory.CreateConsole(OpenCommandWindow);
-                _overlay.ConsoleLayer.Add(_consoleView.Root);
+                _overlay.ConsolePanel.Add(_consoleView.Root);
                 _consoleView.Start();
             }
 
-            _overlay.ConsoleLayer.style.display = DisplayStyle.Flex;
+            var panel = _overlay.ConsolePanel;
+            if (!_panelDisplayed)
+            {
+                _panelDisplayed = true;
+                panel.style.display = DisplayStyle.Flex;
+                Animations.In(panel, HiddenClass);
+            }
+            else
+            {
+                // Shown again while sliding out, so slide straight back in
+                panel.RemoveFromClassList(HiddenClass);
+            }
+            
             _visible = true;
             _consoleView.Focus();
 
@@ -121,8 +145,18 @@ namespace Bossy.Frontend
         {
             if (_overlay == null || !_visible) return;
 
-            _overlay.ConsoleLayer.style.display = DisplayStyle.None;
             _visible = false;
+            
+            var panel = _overlay.ConsolePanel;
+            Animations.Out(panel, HiddenClass, SlideDurationMs, () =>
+            {
+                // Unless it was shown again while sliding out
+                if (!_visible)
+                {
+                    _panelDisplayed = false;
+                    panel.style.display = DisplayStyle.None;
+                }
+            });
 
             // Release keyboard focus so the game's typing does not go into a hidden field
             FocusedElement?.Blur();
@@ -173,6 +207,7 @@ namespace Bossy.Frontend
             _consoleView?.Dispose();
             _consoleView = null;
             _visible = false;
+            _panelDisplayed = false;
 
             if (_overlay != null)
             {

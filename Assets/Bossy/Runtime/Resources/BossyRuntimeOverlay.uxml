@@ -1,6 +1,8 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
-    <ui:VisualElement name="overlay-root" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
-        <ui:VisualElement name="console-layer" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; display: none; background-color: rgb(23, 29, 51);"/>
-        <ui:VisualElement name="window-layer" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;"/>
+    <ui:VisualElement name="overlay-root" picking-mode="Ignore" class="bossy-overlay__layer">
+        <ui:VisualElement name="console-layer" picking-mode="Ignore" class="bossy-overlay__layer">
+            <ui:VisualElement name="console-panel" class="bossy-runtime-console bossy-runtime-console--hidden" style="display: none;"/>
+        </ui:VisualElement>
+        <ui:VisualElement name="window-layer" picking-mode="Ignore" class="bossy-overlay__layer"/>
     </ui:VisualElement>
 </ui:UXML>

@@ -613,6 +613,8 @@ public class MyCommand : ICommand, ICommandView
 
 The console takes care of focus, the toggle key and cancelling, so your view only needs to build its UI. Focus moves to the first focusable element in your view, `/` hides the console unless you are typing in a text field that is not empty, and `Ctrl + C` cancels the command.
 
+Your view sits inside the Bossy theme, so its USS can use the theme's colors to match the console, for example `color: var(--bossy-text);` or `border-color: var(--bossy-accent);`. The variables are listed at the top of `Runtime/Resources/BossyTheme.uss`.
+
 ## Command Windows
 
 Start or end a command with `!` to run it in its own window, with its own session:

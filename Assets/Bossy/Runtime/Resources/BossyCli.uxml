@@ -1,10 +1,10 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <ui:VisualElement name="cli-root" style="width: 100%; height: 100%; flex-direction: column;">
-        <ui:ListView name="output-list" style="flex-grow: 1; background-color: rgb(56, 56, 56);"/>
-        <ui:VisualElement name="input-row" style="flex-direction: row; align-items: center; border-top-width: 1px; padding: 4px; flex-shrink: 0;">
-            <ui:Label name="prompt-label" text="&gt;" style="margin-right: 4px; background-color: rgba(0, 0, 0, 0); color: rgb(255, 255, 255);"/>
-            <ui:TextField name="input-field" label="" value="" class="unity-text-element unity-text-element__selectable unity-text-element--inner-input-field-component" style="flex-grow: 1; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; padding-right: 2px; padding-left: 2px; min-height: 0; font-size: 13.5px;"/>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="cli-root" class="bossy-cli">
+        <ui:ListView name="output-list" class="bossy-cli__output"/>
+        <ui:VisualElement name="input-row" class="bossy-cli__input-row">
+            <ui:VisualElement name="auto-complete" class="bossy-cli__suggestions"/>
+            <ui:Label name="prompt-label" text="&gt;" class="bossy-cli__prompt"/>
+            <ui:TextField name="input-field" class="bossy-cli__input"/>
         </ui:VisualElement>
-        <ui:VisualElement name="auto-complete" style="flex-grow: 1; position: absolute; top: auto; left: 23px; right: 8px; bottom: 34px; background-color: rgb(0, 0, 0);"/>
     </ui:VisualElement>
 </ui:UXML>

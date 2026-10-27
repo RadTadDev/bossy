@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Execution;
 using Bossy.Frontend.Autocomplete;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
@@ -38,6 +37,14 @@ namespace Bossy.Frontend
         }
 
         public VisualElement Root { get; }
+
+        private const string LineClass = "bossy-cli__line";
+        private const string InputRowFocusedClass = "bossy-cli__input-row--focused";
+        private const string SuggestionsVisibleClass = "bossy-cli__suggestions--visible";
+        private const string SuggestionClass = "bossy-cli__suggestion";
+        private const string SelectedSuggestionClass = "bossy-cli__suggestion--selected";
+        private const string HintSuggestionClass = "bossy-cli__suggestion--hint";
+        private const string ErrorSuggestionClass = "bossy-cli__suggestion--error";
 
         private readonly BossyContext _context;
         private readonly InputVisibility _inputVisibility;
@@ -193,16 +200,12 @@ namespace Bossy.Frontend
 
         private void SetUpInput()
         {
-            var textInput = _input.Q<VisualElement>("unity-text-input");
-            textInput.style.paddingTop = 0;
-            textInput.style.paddingBottom = 0;
-            textInput.style.paddingLeft = 0;
-            textInput.style.paddingRight = 0;
-
-            _input.style.fontSize = 14f;
             _input.selectAllOnFocus = false;
             _input.selectAllOnMouseUp = false;
             _inputRow.focusable = true;
+
+            _input.RegisterCallback<FocusInEvent>(_ => _inputRow.AddToClassList(InputRowFocusedClass));
+            _input.RegisterCallback<FocusOutEvent>(_ => _inputRow.RemoveFromClassList(InputRowFocusedClass));
 
             var input = _context.Settings.BossyInputSettings;
             _input.RegisterCallback<KeyDownEvent>(evt =>
@@ -237,16 +240,13 @@ namespace Bossy.Frontend
         private void SetUpOutput()
         {
             _output.itemsSource = _outputBuffer;
+            _output.selectionType = SelectionType.None;
             _output.virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight;
-            _output.makeItem = () => new Label
+            _output.makeItem = () =>
             {
-                style =
-                {
-                    color = Color.white,
-                    whiteSpace = WhiteSpace.Normal,
-                    fontSize = 15
-                },
-                pickingMode = PickingMode.Ignore,
+                var line = new Label { pickingMode = PickingMode.Ignore };
+                line.AddToClassList(LineClass);
+                return line;
             };
             _output.bindItem = (element, i) => ((Label)element).text = _outputBuffer[i];
         }
@@ -279,7 +279,7 @@ namespace Bossy.Frontend
         {
             var line = _input.value;
 
-            Write($"{_promptHeader}> {line}");
+            Write($"{Format.Color($"{_promptHeader}>", Format.Accent)} {line}");
 
             object result = line;
 
@@ -392,30 +392,32 @@ namespace Bossy.Frontend
                 return;
             }
 
+            _autocompleteContainer.AddToClassList(SuggestionsVisibleClass);
+
             // If the first suggestion is a hint or error, that's all we show
             if (first.IsHint || first.IsError)
             {
-                _autocompleteContainer.Add(MakeSuggestionLabel(first, first.IsHint ? Format.LightBlue : Format.Red));
+                _autocompleteContainer.Add(MakeSuggestionLabel(first, first.IsHint ? HintSuggestionClass : ErrorSuggestionClass));
                 return;
             }
 
             foreach (var suggestion in all)
             {
-                _autocompleteContainer.Add(MakeSuggestionLabel(suggestion, Format.White));
+                _autocompleteContainer.Add(MakeSuggestionLabel(suggestion, null));
             }
         }
 
-        private static Label MakeSuggestionLabel(Suggestion suggestion, Color color)
+        private static Label MakeSuggestionLabel(Suggestion suggestion, string modifierClass)
         {
-            return new Label(suggestion.DisplayText)
+            var label = new Label(suggestion.DisplayText) { userData = suggestion };
+            label.AddToClassList(SuggestionClass);
+
+            if (modifierClass != null)
             {
-                userData = suggestion,
-                style =
-                {
-                    fontSize = 13.5f,
-                    color = color
-                }
-            };
+                label.AddToClassList(modifierClass);
+            }
+
+            return label;
         }
 
         private void CycleSuggestions()
@@ -435,12 +437,11 @@ namespace Bossy.Frontend
             }
 
             var count = _autocompleteContainer.childCount;
-            var previous = (Label)_autocompleteContainer[(_suggestionIndex - 1 + count) % count];
-            previous.style.backgroundColor = StyleKeyword.Null;
-            previous.style.color = Color.white;
+            var previous = _autocompleteContainer[(_suggestionIndex - 1 + count) % count];
+            previous.RemoveFromClassList(SelectedSuggestionClass);
 
-            var current = (Label)_autocompleteContainer[_suggestionIndex];
-            current.style.backgroundColor = Format.DarkBlue;
+            var current = _autocompleteContainer[_suggestionIndex];
+            current.AddToClassList(SelectedSuggestionClass);
 
             // Changing the input would otherwise recompute the suggestions being cycled. The change event
             // can arrive after this key event finishes, so the flag is cleared on the next tick.
@@ -453,6 +454,7 @@ namespace Bossy.Frontend
 
         private void ClearAutocomplete()
         {
+            _autocompleteContainer.RemoveFromClassList(SuggestionsVisibleClass);
             _autocompleteContainer.Clear();
             _suggestionIndex = 0;
         }

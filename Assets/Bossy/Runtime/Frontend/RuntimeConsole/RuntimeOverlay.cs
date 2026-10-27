@@ -5,13 +5,16 @@ using UnityEngine.UIElements;
 namespace Bossy.Frontend
 {
     /// <summary>
-    /// The runtime UI: one UI document drawn above the game, with a layer for the console and a layer
+    /// The runtime UI: one UI document drawn above the game, with the console panel under a layer
     /// for command windows. Command windows stay visible while the console is hidden.
     /// </summary>
     internal sealed class RuntimeOverlay : MonoBehaviour
     {
         // High enough to draw above most game UI
         private const int SortingOrder = 9999;
+        
+        // Keeps the UI the same physical size on high and low DPI screens
+        private const float ReferenceDpi = 96f;
 
         /// <summary>
         /// Invoked every frame.
@@ -24,9 +27,9 @@ namespace Bossy.Frontend
         public VisualElement Root => _document.rootVisualElement;
 
         /// <summary>
-        /// The layer that holds the console.
+        /// The panel that holds the console. It slides down from the top of the screen.
         /// </summary>
-        public VisualElement ConsoleLayer { get; private set; }
+        public VisualElement ConsolePanel { get; private set; }
 
         /// <summary>
         /// The layer that holds command windows, drawn above the console.
@@ -54,7 +57,9 @@ namespace Bossy.Frontend
         {
             _panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
             _panelSettings.sortingOrder = SortingOrder;
-            _panelSettings.scaleMode = PanelScaleMode.ConstantPixelSize;
+            _panelSettings.scaleMode = PanelScaleMode.ConstantPhysicalSize;
+            _panelSettings.referenceDpi = ReferenceDpi;
+            _panelSettings.fallbackDpi = ReferenceDpi;
             _panelSettings.themeStyleSheet = Resources.Load<ThemeStyleSheet>("UnityDefaultRuntimeTheme");
 
             _document = gameObject.AddComponent<UIDocument>();
@@ -63,9 +68,10 @@ namespace Bossy.Frontend
 
             // Let clicks reach the game wherever the overlay draws nothing
             Root.pickingMode = PickingMode.Ignore;
-            BossyFont.ApplyTo(Root);
+            BossyTheme.ApplyTo(Root);
+            Root.AddToClassList("bossy-overlay");
 
-            ConsoleLayer = Root.Q("console-layer");
+            ConsolePanel = Root.Q("console-panel");
             WindowLayer = Root.Q("window-layer");
         }
 
