@@ -1,29 +1,36 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Utils;
 
 namespace Bossy.Execution
 {
     /// <summary>
-    /// A session container with state and a single front end.
+    /// A session container with state and a single endpoint.
     /// </summary>
     public class Session : IDisposable
     {
         /// <summary>
-        /// The frontend this session reads from and writes to.
+        /// The endpoint this session reads from and writes to.
         /// </summary>
-        public readonly ISessionEndpoint Endpoint;
+        public readonly IEndpoint Endpoint;
 
         /// <summary>
-        /// Where this session's UI lives, or null if it has none.
+        /// The command lines this session has entered. Command windows opened by this session share it.
         /// </summary>
-        internal readonly ISessionHost Host;
+        public CommandHistory History { get; }
+
+        /// <summary>
+        /// The aliases expanded before a command line is parsed. Command windows opened by this session share them.
+        /// </summary>
+        public Dictionary<string, string> Aliases { get; }
 
         private readonly BossyContext _context;
         private readonly BossyPermissions _permissions;
-        private readonly CommandExecutor _commandExecutor;
+        private readonly ExecutionProxy _executionProxy;
 
         private CancellationTokenSource _commandCancellationSource;
         private readonly CancellationTokenSource _sessionCancellationSource = new();
@@ -33,15 +40,18 @@ namespace Bossy.Execution
         /// </summary>
         /// <param name="context">The Bossy context.</param>
         /// <param name="permissions">The permissions manager.</param>
-        /// <param name="endpoint">The frontend to read from and write to.</param>
+        /// <param name="endpoint">The endpoint to read from and write to.</param>
         /// <param name="host">Where this session's UI lives, or null if it has none.</param>
-        internal Session(BossyContext context, BossyPermissions permissions, ISessionEndpoint endpoint, ISessionHost host)
+        /// <param name="history">The command history to record into.</param>
+        /// <param name="aliases">The aliases to expand before parsing.</param>
+        internal Session(BossyContext context, BossyPermissions permissions, IEndpoint endpoint, ISessionHost host, CommandHistory history, Dictionary<string, string> aliases)
         {
             _context = context;
             _permissions = permissions;
             Endpoint = endpoint;
-            Host = host;
-            _commandExecutor = new CommandExecutor(context, permissions);
+            History = history;
+            Aliases = aliases;
+            _executionProxy = new ExecutionProxy(context, permissions, endpoint, host);
         }
 
         /// <summary>
@@ -55,29 +65,49 @@ namespace Bossy.Execution
             _commandCancellationSource = new CancellationTokenSource();
             var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandCancellationSource.Token, _sessionCancellationSource.Token);
 
-            await _commandExecutor.ExecuteAsync(graph, this, linkedSource.Token, reader, writer);
+            await _executionProxy.ExecuteAsync(graph, this, linkedSource.Token, reader, writer);
         }
 
         /// <summary>
         /// Starts the session execution REPL.
         /// </summary>
-        /// <exception cref="BossyNotAdaptableException">Throws when a front end fails to give a command graph after one is requested.</exception>
+        /// <exception cref="BossyNotAdaptableException">Throws when an endpoint gives something other than a command line or graph after one is requested.</exception>
         public async Task RunAsync()
         {
             while (!_sessionCancellationSource.IsCancellationRequested)
             {
                 var response = await Endpoint.ReadAsync(typeof(CommandGraph), _sessionCancellationSource.Token);
 
-                // Require direct graphs from the front ends, no adapting here because the parser should be used
-                if (response is not CommandGraph graph)
+                // Command lines are parsed here so aliases apply to every endpoint. Graphs are accepted as is.
+                CommandGraph graph;
+                switch (response)
                 {
-                    throw new BossyNotAdaptableException("All front ends must return command graphs where queried for one.");
+                    case CommandGraph direct:
+                        graph = direct;
+                        break;
+
+                    case string line:
+                        var parseResult = _context.Parser.Parse(line, _context.Settings.BossyCliSettings.ToOperatorList(), Aliases);
+
+                        if (parseResult.IsEmpty) continue;
+
+                        if (!parseResult.TryGetGraph(out graph))
+                        {
+                            Endpoint.Write(Format.Error(parseResult.Message));
+                            continue;
+                        }
+
+                        History.Add(line);
+                        break;
+
+                    default:
+                        throw new BossyNotAdaptableException("All endpoints must return a command line or command graph when queried for one.");
                 }
 
                 _commandCancellationSource = new CancellationTokenSource();
                 var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandCancellationSource.Token, _sessionCancellationSource.Token);
 
-                await _commandExecutor.ExecuteAsync(graph, this, linkedSource.Token);
+                await _executionProxy.ExecuteAsync(graph, this, linkedSource.Token);
             }
         }
 
@@ -96,14 +126,14 @@ namespace Bossy.Execution
         }
 
         /// <summary>
-        /// Creates a new session that shares this session's context and permissions.
+        /// Creates a new session that shares this session's context, permissions, history and aliases.
         /// </summary>
-        /// <param name="endpoint">The frontend of the new session.</param>
+        /// <param name="endpoint">The endpoint of the new session.</param>
         /// <param name="host">Where the new session's UI lives.</param>
         /// <returns>The cloned session.</returns>
-        internal Session Clone(ISessionEndpoint endpoint, ISessionHost host)
+        internal Session Clone(IEndpoint endpoint, ISessionHost host)
         {
-            return new Session(_context, _permissions, endpoint, host);
+            return new Session(_context, _permissions, endpoint, host, History, Aliases);
         }
 
         /// <summary>
@@ -115,7 +145,7 @@ namespace Bossy.Execution
         /// <param name="output">An output source.</param>
         public async Task ExecuteAsync(CommandGraph graph, CancellationToken token, IReadable input = null, IWriteable output = null)
         {
-            await _commandExecutor.ExecuteAsync(graph, this, token, input, output);
+            await _executionProxy.ExecuteAsync(graph, this, token, input, output);
         }
 
         /// <summary>

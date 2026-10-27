@@ -17,7 +17,7 @@ namespace Bossy.Frontend
     /// The console at runtime, in builds and in play mode: one console session in the overlay, plus any command windows.
     /// Everything is created when the runtime starts and destroyed when play mode ends.
     /// </summary>
-    internal sealed class RuntimeHost : IDisposable
+    internal sealed class RuntimeConsole : IDisposable
     {
         // Each new command window opens this far below and to the right of the previous one
         private const float NewWindowCascadeOffset = 24f;
@@ -51,7 +51,7 @@ namespace Bossy.Frontend
         /// Creates the runtime console. It starts now if the runtime is already running, otherwise when it starts.
         /// </summary>
         /// <param name="sessionFactory">Creates sessions for the console and command windows.</param>
-        public RuntimeHost(SessionFactory sessionFactory)
+        public RuntimeConsole(SessionFactory sessionFactory)
         {
             _sessionFactory = sessionFactory;
 

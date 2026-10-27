@@ -15,9 +15,8 @@ namespace Bossy.Command
     public sealed class CommandContext : SimpleContext
     {
         private IReadable _reader;
-        private Session _session;
 
-        private List<Task> _tasks = new List<Task>();
+        private List<Task> _tasks = new();
         
         private readonly bool _allowRetry;
         private readonly CancellationToken _token;
@@ -41,7 +40,7 @@ namespace Bossy.Command
             CancellationToken token
         ) : base(writer, context)
         {
-            _session = session;
+            Session = session;
             _reader = reader;
             _allowRetry = allowRetry;
             _token = token;
@@ -186,7 +185,7 @@ namespace Bossy.Command
                 return;
             }
             
-            await _session.ExecuteAsync(graph, _token);
+            await Session.ExecuteAsync(graph, _token);
         }
 
         /// <summary>
@@ -206,7 +205,7 @@ namespace Bossy.Command
                 return result;
             }
             
-            var task = _session.ExecuteAsync(graph, _token, input, output);
+            var task = Session.ExecuteAsync(graph, _token, input, output);
             
             // We just add this so the task isn't GCed, it's already canceled by the token.
             _tasks.Add(task);

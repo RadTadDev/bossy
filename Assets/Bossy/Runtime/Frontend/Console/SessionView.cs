@@ -37,7 +37,7 @@ namespace Bossy.Frontend
         private const string CommandViewClass = "bossy-command-view";
         private const string CommandViewEnteringClass = "bossy-command-view--entering";
 
-        private readonly IToolkitEndpoint _endpoint;
+        private readonly IVisualEndpointEndpoint _capabilities;
         private readonly CommandWindowOpener _openCommandWindow;
         private readonly Stack<VisualElement> _commandViews = new();
         private bool _disposed;
@@ -46,26 +46,26 @@ namespace Bossy.Frontend
         /// Creates a new session view.
         /// </summary>
         /// <param name="title">The title for a window or panel showing this view.</param>
-        /// <param name="endpoint">The frontend to show.</param>
+        /// <param name="capabilities">The frontend to show.</param>
         /// <param name="createSession">Creates the session given this view as its host.</param>
         /// <param name="openCommandWindow">Opens command windows for this session.</param>
         /// <param name="inputSettings">The input settings.</param>
-        public SessionView(string title, IToolkitEndpoint endpoint,Func<ISessionHost, Session> createSession, CommandWindowOpener openCommandWindow, BossyInputSettings inputSettings)
+        public SessionView(string title, IVisualEndpointEndpoint capabilities,Func<ISessionHost, Session> createSession, CommandWindowOpener openCommandWindow, BossyInputSettings inputSettings)
         {
             Title = title;
-            _endpoint = endpoint;
+            _capabilities = capabilities;
             _openCommandWindow = openCommandWindow;
 
             Root = new VisualElement { name = "session-view" };
             Root.style.flexGrow = 1;
-            Root.Add(endpoint.Root);
+            Root.Add(capabilities.Root);
 
             Root.RegisterCallback<KeyDownEvent>(evt =>
             {
                 if (!inputSettings.CancelCommand.IsAsserted(evt)) return;
 
                 Session?.CancelCommand();
-                _endpoint?.OnCancelPressed();
+                _capabilities?.OnCancelPressed();
                 evt?.StopImmediatePropagation();
             }, TrickleDown.TrickleDown);
 
@@ -104,7 +104,7 @@ namespace Bossy.Frontend
             }
             else
             {
-                _endpoint.Focus();
+                _capabilities.Focus();
             }
         }
 

@@ -7,27 +7,36 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-namespace Bossy.Frontend
+namespace Bossy.Execution
 {
     /// <summary>
-    /// Command line history shared by every CLI. Loaded from disk on first use and saved when Unity quits or reloads scripts.
+    /// The command lines a session has entered, oldest first. When created with a file path, the history is
+    /// loaded from that file on first use and saved when Unity quits or reloads scripts.
     /// </summary>
-    internal static class CliHistory
+    public class CommandHistory
     {
-        private const string FileName = "bossy_cli_history.txt";
+        private readonly string _filePath;
+        private List<string> _lines;
 
-        private static List<string> _lines;
+        /// <summary>
+        /// Creates a new history.
+        /// </summary>
+        /// <param name="filePath">The file to persist to, or null to keep the history in memory only.</param>
+        public CommandHistory(string filePath)
+        {
+            _filePath = filePath;
+        }
 
         /// <summary>
         /// The history, oldest first.
         /// </summary>
-        public static IReadOnlyList<string> Lines => Load();
+        public IReadOnlyList<string> Lines => Load();
 
         /// <summary>
         /// Adds a line unless it is blank or repeats the last line.
         /// </summary>
         /// <param name="line">The line to add.</param>
-        public static void Add(string line)
+        public void Add(string line)
         {
             var lines = Load();
 
@@ -42,30 +51,32 @@ namespace Bossy.Frontend
         /// <summary>
         /// Clears the history.
         /// </summary>
-        public static void Clear() => Load().Clear();
+        public void Clear() => Load().Clear();
 
-        private static string FilePath => Path.Combine(Application.persistentDataPath, FileName);
-
-        private static List<string> Load()
+        private List<string> Load()
         {
             if (_lines != null)
             {
                 return _lines;
             }
 
-            _lines = File.Exists(FilePath) ? File.ReadAllLines(FilePath).ToList() : new List<string>();
+            _lines = _filePath != null && File.Exists(_filePath) ? File.ReadAllLines(_filePath).ToList() : new List<string>();
 
-            Application.quitting += Save;
+            if (_filePath != null)
+            {
+                Application.quitting += Save;
 #if UNITY_EDITOR
-            AssemblyReloadEvents.beforeAssemblyReload += Save;
-            EditorApplication.quitting += Save;
+                AssemblyReloadEvents.beforeAssemblyReload += Save;
+                EditorApplication.quitting += Save;
 #endif
+            }
+
             return _lines;
         }
 
-        private static void Save()
+        private void Save()
         {
-            File.WriteAllLines(FilePath, _lines);
+            File.WriteAllLines(_filePath, _lines);
         }
     }
 }

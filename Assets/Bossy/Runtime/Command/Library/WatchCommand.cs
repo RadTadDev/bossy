@@ -34,7 +34,7 @@ namespace Bossy.Runtime.Command.Library
             IModifiableOutputBuffer buffer = null;
             if (_overwrite)
             {
-                if (ctx.Capabilities is IModifiableOutputBuffer b)
+                if (ctx.Endpoint is IModifiableOutputBuffer b)
                 {
                     buffer = b;
                 }

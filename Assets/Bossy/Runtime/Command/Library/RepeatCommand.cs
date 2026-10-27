@@ -9,7 +9,7 @@ namespace Bossy.Runtime.Command.Library
     {
         public async Task<CommandStatus> ExecuteAsync(CommandContext ctx)
         {
-            if (ctx.Capabilities is IModifiablePromptHeader prompt)
+            if (ctx.Endpoint is IModifiablePromptHeader prompt)
             {
                 prompt.SetPromptHeader("Repeat");   
             }

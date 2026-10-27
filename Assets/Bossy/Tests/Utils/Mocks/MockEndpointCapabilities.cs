@@ -9,7 +9,7 @@ namespace Bossy.Tests.Utils
     /// <summary>
     /// A session frontend that records what is written to it and never provides input.
     /// </summary>
-    internal class MockCapabilities : IVisualCapabilities
+    internal class MockEndpointCapabilities : IVisualEndpointCapabilities
     {
         /// <summary>
         /// The output log.

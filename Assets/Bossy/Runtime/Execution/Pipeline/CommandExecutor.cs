@@ -17,50 +17,37 @@ namespace Bossy.Execution
     {
         private readonly BossyContext _context;
         private readonly BossyPermissions _permissions;
-        
+        private readonly IExecutionListener _listener;
+
         /// <summary>
         /// Creates a new executor.
         /// </summary>
         /// <param name="context">The Bossy context.</param>
         /// <param name="permissions">The current permissions.</param>
-        public CommandExecutor(BossyContext context, BossyPermissions permissions)
+        /// <param name="listener">Notified as each command group starts and finishes.</param>
+        public CommandExecutor(BossyContext context, BossyPermissions permissions, IExecutionListener listener)
         {
             _context = context;
             _permissions = permissions;
+            _listener = listener;
         }
 
         /// <summary>
         /// Executes a command graph.
-        /// </summary>  
+        /// </summary>
         /// <param name="graph">The graph to execute.</param>
         /// <param name="session">The session executing this.</param>
         /// <param name="token">The token controlling cancellation.</param>
         /// <param name="input">The default input stream.</param>
         /// <param name="output">The default output stream.</param>
-        public async Task ExecuteAsync(CommandGraph graph, Session session, CancellationToken token, IReadable input = null, IWriteable output = null)
+        public async Task ExecuteAsync(CommandGraph graph, Session session, CancellationToken token, IReadable input, IWriteable output)
         {
             if (graph.IsEmpty) return;
-            
-            if (graph.Windowed)
-            {
-                if (session.Host == null)
-                {
-                    (output ?? session.Endpoint).Write(Format.Error("This frontend cannot open command windows."));
-                    return;
-                }
-
-                session.Host.OpenCommandWindow(session, graph, input, output);
-                return;
-            }
 
             var previousStatus = CommandStatus.Ok;
             var previousLink = CommandGraphLink.Then;
 
-            input ??= session.Endpoint;
-            output ??= session.Endpoint;
-            
             var defaultContext = new CommandContext(session, _context, input, output, true, token);
-            defaultContext.SetCapabilitySourcer(() => session.Endpoint);
 
             var groups = GroupCommands(graph, defaultContext);
             
@@ -121,18 +108,14 @@ namespace Bossy.Execution
                         continue;
                     }
                     
-                    // 3. Create a view if needed
-                    if (group.View != null)
-                    {
-                        session.Host?.PushView(group.View);
-                    }
-                    
-                    // 4. Execute
+                    _listener.OnGroupStarted(group);
+
+                    // 3. Execute
                     var task = group.Nodes.Count == 1
                         ? group.Nodes[0].Command.ExecuteAsync(defaultContext)
                         : BuildPipeline(group.Nodes, session, defaultContext);
 
-                    // 5. Update bookkeeping
+                    // 4. Update bookkeeping
                     previousLink = group.Nodes.Last().Link;
                     previousStatus = await task;
                 }
@@ -168,12 +151,7 @@ namespace Bossy.Execution
                         output.Write("Task cancelled");
                     }
                     
-                    if (group.View != null)
-                    {
-                        session.Host?.PopView();
-                    }
-                    
-                    session.Endpoint?.ResetCapabilities();
+                    _listener.OnGroupFinished(group);
                 }
             }
         }

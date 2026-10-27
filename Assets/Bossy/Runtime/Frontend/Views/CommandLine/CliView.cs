@@ -13,11 +13,9 @@ namespace Bossy.Frontend
     /// <summary>
     /// The default command line frontend.
     /// </summary>
-    internal class CliView : IVisualEndpoint,
-        IHistorical,
+    internal class CliView : IVisualEndpointEndpoint,
         IClearable,
         IModifiableOutputBuffer,
-        IAliasCapability,
         IModifiablePromptHeader
     {
         /// <summary>
@@ -49,7 +47,6 @@ namespace Bossy.Frontend
         private readonly BossyContext _context;
         private readonly InputVisibility _inputVisibility;
 
-        private readonly Dictionary<string, string> _aliases = new();
         private readonly Dictionary<Type, ICliDisplayAdapter> _displayAdapters = new();
 
         // Output
@@ -65,6 +62,7 @@ namespace Bossy.Frontend
         private ICliDisplayAdapter _currentReadOwner;
 
         // History
+        private readonly CommandHistory _history;
         private int _historyIndex;
 
         // Autocomplete
@@ -82,11 +80,13 @@ namespace Bossy.Frontend
         /// </summary>
         /// <param name="context">The Bossy context.</param>
         /// <param name="inputVisibility">When the input line is shown.</param>
-        public CliView(BossyContext context, InputVisibility inputVisibility)
+        /// <param name="history">The history to browse with the history keys.</param>
+        public CliView(BossyContext context, InputVisibility inputVisibility, CommandHistory history)
         {
             _context = context;
             _inputVisibility = inputVisibility;
-            _historyIndex = CliHistory.Lines.Count;
+            _history = history;
+            _historyIndex = _history.Lines.Count;
             _autocomplete = new AutocompleteEngine(_context, context.Settings.BossyCliSettings.ToOperatorList());
             _displayAdapters[typeof(OptionsPrompt)] = new OptionsPromptDisplayAdapter();
 
@@ -134,6 +134,9 @@ namespace Bossy.Frontend
             _requestingCommand = requestedType == typeof(CommandGraph);
             _readSource = new TaskCompletionSource<object>();
 
+            // Start browsing from the end, after anything the last command added to the history
+            _historyIndex = _history.Lines.Count;
+
             SetInputEnabled(true);
             FocusInput();
 
@@ -145,14 +148,6 @@ namespace Bossy.Frontend
         public void ResetCapabilities()
         {
             ResetHeader();
-        }
-
-        public IEnumerable<string> GetHistory() => CliHistory.Lines;
-
-        public void ClearHistory()
-        {
-            CliHistory.Clear();
-            _historyIndex = 0;
         }
 
         public void Clear()
@@ -168,22 +163,6 @@ namespace Bossy.Frontend
             _outputBuffer[^1] = Format.Render(value.ToString());
             _output.RefreshItems();
             _output.ScrollToItem(_outputBuffer.Count - 1);
-        }
-
-        public Dictionary<string, string> GetAliases() => _aliases;
-
-        public bool AssignAlias(string alias, string value)
-        {
-            alias = alias.Trim();
-
-            if (alias.Any(c => !char.IsLetter(c))) return false;
-            _aliases[alias] = value;
-            return true;
-        }
-
-        public bool DeleteAlias(string alias)
-        {
-            return _aliases.Remove(alias);
         }
 
         public void SetPromptHeader(string header)
@@ -230,7 +209,7 @@ namespace Bossy.Frontend
                 else
                 {
                     // Reset the history index on any normal character press
-                    _historyIndex = CliHistory.Lines.Count;
+                    _historyIndex = _history.Lines.Count;
                 }
             }, TrickleDown.TrickleDown);
 
@@ -289,33 +268,16 @@ namespace Bossy.Frontend
                 _currentReadOwner = null;
             }
 
-            CliHistory.Add(line);
-            _historyIndex = CliHistory.Lines.Count;
-
             SetInput(string.Empty);
             ClearAutocomplete();
 
-            if (_requestingCommand)
+            // Nothing runs, so keep reading. Unity's text field can end editing on enter, so focus it again.
+            // Other lines are handed over as typed; the session parses them.
+            if (_requestingCommand && string.IsNullOrWhiteSpace(line))
             {
-                // Read the operators each time so changed settings apply
-                var operators = _context.Settings.BossyCliSettings.ToOperatorList();
-                var parseResult = _context.Parser.Parse(line, operators, _aliases);
-
-                // Nothing runs, so keep reading. Unity's text field can end editing on enter, so focus it again.
-                if (parseResult.IsEmpty)
-                {
-                    Write(string.Empty);
-                    FocusInput();
-                    return;
-                }
-                if (!parseResult.TryGetGraph(out var graph))
-                {
-                    Write(Format.Error(parseResult.Message));
-                    FocusInput();
-                    return;
-                }
-
-                result = graph;
+                Write(string.Empty);
+                FocusInput();
+                return;
             }
 
             SetInputEnabled(false);
@@ -347,24 +309,24 @@ namespace Bossy.Frontend
 
         private void HistoryBack()
         {
-            if (_historyIndex == 0 || CliHistory.Lines.Count == 0) return;
+            if (_historyIndex == 0 || _history.Lines.Count == 0) return;
 
             ClearAutocomplete();
 
             _historyIndex--;
 
-            SetInput(CliHistory.Lines[_historyIndex]);
+            SetInput(_history.Lines[_historyIndex]);
         }
 
         private void HistoryForward()
         {
-            if (_historyIndex >= CliHistory.Lines.Count - 1 || CliHistory.Lines.Count == 0) return;
+            if (_historyIndex >= _history.Lines.Count - 1 || _history.Lines.Count == 0) return;
 
             ClearAutocomplete();
 
             _historyIndex++;
 
-            SetInput(CliHistory.Lines[_historyIndex]);
+            SetInput(_history.Lines[_historyIndex]);
         }
 
         private void OnValueUpdated(ChangeEvent<string> evt)

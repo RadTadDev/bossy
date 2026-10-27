@@ -1,5 +1,5 @@
+using System.Linq;
 using Bossy.Command;
-using Bossy.Frontend;
 
 namespace Bossy.Runtime.Command.Library
 {
@@ -14,12 +14,7 @@ namespace Bossy.Runtime.Command.Library
         
         protected override CommandStatus Execute(SimpleContext ctx)
         {
-            if (ctx.Capabilities is not IAliasCapability aliases)
-            {
-                ctx.WriteError("This frontend does not support aliasing.");
-                return CommandStatus.Error;
-            }
-
+            var alias = _alias.Trim();
             var value = string.Join(" ", _expansion);
 
             if (string.IsNullOrWhiteSpace(value))
@@ -27,14 +22,16 @@ namespace Bossy.Runtime.Command.Library
                 ctx.WriteError("Value was null or whitespace.");
                 return CommandStatus.Error;
             }
-            
-            if (!aliases.AssignAlias(_alias, value))
+
+            // Aliases must contain only letters so they never match part of a longer word
+            if (alias.Any(c => !char.IsLetter(c)))
             {
                 ctx.WriteError("Alias invalid, not assigned.");
                 return CommandStatus.Error;
             }
             
-            ctx.Write($"Added alias {_alias} = {value}.");
+            ctx.Session.Aliases[alias] = value;
+            ctx.Write($"Added alias {alias} = {value}.");
             return CommandStatus.Ok;
         }
     }
@@ -47,13 +44,7 @@ namespace Bossy.Runtime.Command.Library
 
         protected override CommandStatus Execute(SimpleContext ctx)
         {
-            if (ctx.Capabilities is not IAliasCapability aliases)
-            {
-                ctx.WriteError("This frontend does not support aliasing.");
-                return CommandStatus.Error;
-            }
-
-            if (aliases.DeleteAlias(_alias))
+            if (ctx.Session.Aliases.Remove(_alias))
             {
                 ctx.Write($"Removed alias {_alias}.");
             }

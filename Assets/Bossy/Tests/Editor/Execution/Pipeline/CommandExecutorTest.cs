@@ -32,8 +32,8 @@ namespace Bossy.Tests.Shell
             
             
             _context = new BossyContext(null, registry, null, null, null, null);
-            _session = new Session(_context, _permissions, new MockEndpoint(), null);
-            _executor = new CommandExecutor(_context, _permissions);
+            _session = MockSession.Create(_context, _permissions, new MockEndpointCapabilities());
+            _executor = new CommandExecutor(_context, _permissions, new MockExecutionListener());
         }
         
         [Test]
@@ -548,76 +548,25 @@ namespace Bossy.Tests.Shell
         }
 
         [Test]
-        public async Task Test_CommandView_PushedAndPopped()
+        public async Task Test_GroupsNotifyListenerAroundExecution()
         {
-            var host = new MockSessionHost();
-            var session = new Session(_context, _permissions, new MockEndpoint(), host);
+            var listener = new MockExecutionListener();
+            var executor = new CommandExecutor(_context, _permissions, listener);
 
             var graph = CommandGraph
                 .Create(false)
                 .Execute(new ViewCommand(), null)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, session, CancellationToken.None, new MockReadable(), new MockWriteable());
+            await executor.ExecuteAsync(graph, _session, CancellationToken.None, new MockReadable(), new MockWriteable());
 
-            Assert.That(host.Calls, Is.EqualTo(new[] { "push", "pop" }));
-        }
-
-        [Test]
-        public async Task Test_Windowed_OpensCommandWindow()
-        {
-            var host = new MockSessionHost();
-            var session = new Session(_context, _permissions, new MockEndpoint(), host);
-
-            var graph = CommandGraph
-                .Create(true)
-                .Execute(new TrackingCommand(), null)
-                .Build();
-
-            await _executor.ExecuteAsync(graph, session, CancellationToken.None);
-
-            Assert.That(host.Calls, Is.EqualTo(new[] { "open" }));
-            Assert.That(host.OpenedGraph, Is.SameAs(graph));
-        }
-
-        [Test]
-        public async Task Test_Windowed_NoHost_WritesError()
-        {
-            var frontend = new MockEndpoint();
-            var session = new Session(_context, _permissions, frontend, null);
-            var tracker = new TrackingCommand();
-
-            var graph = CommandGraph
-                .Create(true)
-                .Execute(tracker, null)
-                .Build();
-
-            await _executor.ExecuteAsync(graph, session, CancellationToken.None);
-
-            Assert.That(tracker.WasCalled, Is.False);
-            Assert.That(frontend.Log, Is.Not.Empty);
-        }
-
-        [Test]
-        public async Task Test_ResetsFrontendCapabilitiesAfterCommand()
-        {
-            var frontend = new MockEndpoint();
-            var session = new Session(_context, _permissions, frontend, null);
-
-            var graph = CommandGraph
-                .Create(false)
-                .Execute(new SuccessfulCommand(), null)
-                .Build();
-
-            await _executor.ExecuteAsync(graph, session, CancellationToken.None);
-
-            Assert.That(frontend.ResetCount, Is.EqualTo(1));
+            Assert.That(listener.Calls, Is.EqualTo(new[] { "start", "finish" }));
         }
 
         [Test]
         public void Test_ClosingFrontendAsWriter_WritesNothing()
         {
-            var frontend = new MockEndpoint();
+            var frontend = new MockEndpointCapabilities();
 
             ((IWriteable)frontend).CloseWriter();
 

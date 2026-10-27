@@ -1,4 +1,3 @@
-using System;
 using Bossy.Frontend;
 using Bossy.Execution;
 using UnityEngine;
@@ -16,17 +15,20 @@ namespace Bossy.Command
         public readonly BossyContext Bossy;
         
         /// <summary>
-        /// The user interface that spawned this command.
-        /// Use this to test for specific front end capabilities.
+        /// The session running this command. Gives access to its history and aliases.
         /// </summary>
-        public IFrontEndCapabilities Capabilities => _capabilitiesSourcer?.Invoke();
-        
+        public Session Session { get; internal set; }
+
+        /// <summary>
+        /// The endpoint this command reads from and writes to.
+        /// Use this to test for optional capabilities, such as <see cref="IClearable"/>, by casting it.
+        /// </summary>
+        public IEndpoint Endpoint => Session?.Endpoint;
+
         /// <summary>
         /// The output writer
         /// </summary>
         protected IWriteable Writer;
-        
-        private Func<IFrontEndCapabilities> _capabilitiesSourcer;
 
         /// <summary>
         /// Creates a new simple context.
@@ -57,15 +59,6 @@ namespace Bossy.Command
             Writer.Write(" ");
         }
         
-        /// <summary>
-        /// Sets the capabilities sourcer.
-        /// </summary>
-        /// <param name="sourcer">The sourcer.</param>
-        public void SetCapabilitySourcer(Func<IFrontEndCapabilities> sourcer)
-        {
-            _capabilitiesSourcer = sourcer;
-        }
-
         /// <summary>
         /// Writes a warning.
         /// </summary>
