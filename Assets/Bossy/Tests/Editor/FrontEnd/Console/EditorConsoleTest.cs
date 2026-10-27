@@ -47,7 +47,8 @@ namespace Bossy.Tests.FrontEnd.Console
             CloseConsoleWindows();
         }
 
-        [UnityTest] public IEnumerator Show_OpensWindowWithSession()
+        [UnityTest]
+        public IEnumerator Show_OpensWindowWithSession()
         {
             _console.Show();
             yield return null;
@@ -56,7 +57,8 @@ namespace Bossy.Tests.FrontEnd.Console
             Assert.That(window.rootVisualElement.Q("session-view"), Is.Not.Null);
         }
 
-        [UnityTest] public IEnumerator UnknownCommand_InputKeepsFocus()
+        [UnityTest]
+        public IEnumerator UnknownCommand_InputKeepsFocus()
         {
             _console.Show();
             for (var i = 0; i < 5; i++) yield return null;
@@ -73,7 +75,8 @@ namespace Bossy.Tests.FrontEnd.Console
             Assert.That(ToggleKey.IsEditingText(window.rootVisualElement.focusController.focusedElement), Is.True);
         }
 
-        [UnityTest] public IEnumerator RecreatedWindow_KeepsSession()
+        [UnityTest]
+        public IEnumerator RecreatedWindow_KeepsSession()
         {
             _console.Show();
             yield return null;
@@ -92,7 +95,8 @@ namespace Bossy.Tests.FrontEnd.Console
             second.Close();
         }
 
-        [UnityTest] public IEnumerator ClosedWindow_NewWindowGetsNewSession()
+        [UnityTest]
+        public IEnumerator ClosedWindow_NewWindowGetsNewSession()
         {
             _console.Show();
             yield return null;

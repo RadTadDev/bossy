@@ -43,7 +43,8 @@ namespace Bossy.Tests.FrontEnd.Console
             _views.Clear();
         }
 
-        [Test] public void CreateConsole_BuildsCliInsideRoot()
+        [Test]
+        public void CreateConsole_BuildsCliInsideRoot()
         {
             var view = Track(_factory.CreateConsole((_, _, _, _) => { }));
 
@@ -52,14 +53,16 @@ namespace Bossy.Tests.FrontEnd.Console
             Assert.That(view.Session.Host, Is.SameAs(view));
         }
 
-        [Test] public void CreateConsole_InputRowShown()
+        [Test]
+        public void CreateConsole_InputRowShown()
         {
             var view = Track(_factory.CreateConsole((_, _, _, _) => { }));
 
             Assert.That(view.Root.Q("input-row").style.display.value, Is.EqualTo(DisplayStyle.Flex));
         }
 
-        [Test] public void CreateCommandWindow_InputRowHiddenUntilRead()
+        [Test]
+        public void CreateCommandWindow_InputRowHiddenUntilRead()
         {
             var console = Track(_factory.CreateConsole((_, _, _, _) => { }));
             var graph = CommandGraph.Create(true).Execute(new SuccessfulCommand(), null).Build();
@@ -69,7 +72,8 @@ namespace Bossy.Tests.FrontEnd.Console
             Assert.That(view.Root.Q("input-row").style.display.value, Is.EqualTo(DisplayStyle.None));
         }
 
-        [Test] public void PushView_AddsOnTopAndPopRemoves()
+        [Test]
+        public void PushView_AddsOnTopAndPopRemoves()
         {
             var view = Track(_factory.CreateConsole((_, _, _, _) => { }));
             var childCount = view.Root.childCount;
@@ -81,7 +85,8 @@ namespace Bossy.Tests.FrontEnd.Console
             Assert.That(view.Root.childCount, Is.EqualTo(childCount));
         }
 
-        [Test] public void OpenCommandWindow_UsesOpener()
+        [Test]
+        public void OpenCommandWindow_UsesOpener()
         {
             CommandGraph opened = null;
             var view = Track(_factory.CreateConsole((_, graph, _, _) => opened = graph));

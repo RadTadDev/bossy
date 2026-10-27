@@ -46,7 +46,8 @@ namespace Bossy.Tests.Runtime
             base.TearDown();
         }
 
-        [UnityTest] public IEnumerator Starts_Hidden()
+        [UnityTest]
+        public IEnumerator Starts_Hidden()
         {
             yield return null;
 
@@ -54,7 +55,8 @@ namespace Bossy.Tests.Runtime
             Assert.That(IsConsoleVisible, Is.False);
         }
 
-        [UnityTest] public IEnumerator ToggleKey_ShowsThenHides()
+        [UnityTest]
+        public IEnumerator ToggleKey_ShowsThenHides()
         {
             yield return PressToggleKey();
             Assert.That(IsConsoleVisible, Is.True);
@@ -63,7 +65,8 @@ namespace Bossy.Tests.Runtime
             Assert.That(IsConsoleVisible, Is.False);
         }
 
-        [UnityTest] public IEnumerator ToggleKey_TypesWhileEditingText()
+        [UnityTest]
+        public IEnumerator ToggleKey_TypesWhileEditingText()
         {
             yield return PressToggleKey();
             yield return WaitForInputFocus();
@@ -74,7 +77,8 @@ namespace Bossy.Tests.Runtime
             Assert.That(IsConsoleVisible, Is.True);
         }
 
-        [UnityTest] public IEnumerator UnknownCommand_InputKeepsFocus()
+        [UnityTest]
+        public IEnumerator UnknownCommand_InputKeepsFocus()
         {
             yield return PressToggleKey();
             yield return WaitForInputFocus();
@@ -85,7 +89,8 @@ namespace Bossy.Tests.Runtime
             Assert.That(ToggleKey.IsEditingText(_overlay.Root.focusController.focusedElement), Is.True);
         }
 
-        [UnityTest] public IEnumerator EmptyLine_InputKeepsFocus()
+        [UnityTest]
+        public IEnumerator EmptyLine_InputKeepsFocus()
         {
             yield return PressToggleKey();
             yield return WaitForInputFocus();
@@ -96,7 +101,8 @@ namespace Bossy.Tests.Runtime
             Assert.That(ToggleKey.IsEditingText(_overlay.Root.focusController.focusedElement), Is.True);
         }
 
-        [UnityTest] public IEnumerator CommandWindow_StaysOpenWhenConsoleHidden()
+        [UnityTest]
+        public IEnumerator CommandWindow_StaysOpenWhenConsoleHidden()
         {
             yield return PressToggleKey();
             yield return WaitForInputFocus();
@@ -110,7 +116,8 @@ namespace Bossy.Tests.Runtime
             Assert.That(_overlay.WindowLayer.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex));
         }
 
-        [UnityTest] public IEnumerator CommandWindow_ShowsCommandOutput()
+        [UnityTest]
+        public IEnumerator CommandWindow_ShowsCommandOutput()
         {
             yield return PressToggleKey();
             yield return WaitForInputFocus();
@@ -122,7 +129,8 @@ namespace Bossy.Tests.Runtime
             Assert.That(lines, Has.Some.Contains("hello"));
         }
 
-        [UnityTest] public IEnumerator Dispose_DestroysOverlay()
+        [UnityTest]
+        public IEnumerator Dispose_DestroysOverlay()
         {
             _console.Dispose();
             _console = null;
