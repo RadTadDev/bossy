@@ -16,7 +16,8 @@ namespace Bossy.Tests.FrontEnd.Styling
     /// </summary>
     public class BossyFontTest
     {
-        [Test] public void ApplyTo_SetsFontAsset()
+        [Test]
+        public void ApplyTo_SetsFontAsset()
         {
             var element = new VisualElement();
 
@@ -25,7 +26,8 @@ namespace Bossy.Tests.FrontEnd.Styling
             Assert.That(element.style.unityFontDefinition.value.fontAsset, Is.Not.Null);
         }
 
-        [Test] public void ApplyTo_FontAssetIsNotStoredOnDisk()
+        [Test]
+        public void ApplyTo_FontAssetIsNotStoredOnDisk()
         {
             var element = new VisualElement();
 
@@ -35,7 +37,8 @@ namespace Bossy.Tests.FrontEnd.Styling
             Assert.That(AssetDatabase.Contains(asset), Is.False);
         }
 
-        [Test] public void FontAssets_SurviveUnloadingUnusedAssets()
+        [Test]
+        public void FontAssets_SurviveUnloadingUnusedAssets()
         {
             var element = new VisualElement();
             BossyFont.ApplyTo(element);
@@ -50,7 +53,8 @@ namespace Bossy.Tests.FrontEnd.Styling
             Assert.That(asset.fontWeightTable[4].italicTypeface != null, Is.True, "Italic font asset was destroyed.");
         }
 
-        [UnityTest] public IEnumerator FontAssets_CreatedInPlayMode_SurviveExitingPlayMode()
+        [UnityTest]
+        public IEnumerator FontAssets_CreatedInPlayMode_SurviveExitingPlayMode()
         {
             // Keep this test's state alive across play mode instead of reloading scripts
             var optionsEnabled = EditorSettings.enterPlayModeOptionsEnabled;
@@ -81,7 +85,8 @@ namespace Bossy.Tests.FrontEnd.Styling
             Assert.That(asset.fontWeightTable[7].regularTypeface != null, Is.True, "Bold font asset was destroyed.");
         }
 
-        [Test] public void ApplyTo_HasBoldAndItalicTypefaces()
+        [Test]
+        public void ApplyTo_HasBoldAndItalicTypefaces()
         {
             var element = new VisualElement();
 
