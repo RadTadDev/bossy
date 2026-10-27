@@ -74,6 +74,28 @@ namespace Bossy.Tests.Runtime
             Assert.That(IsConsoleVisible, Is.True);
         }
 
+        [UnityTest] public IEnumerator UnknownCommand_InputKeepsFocus()
+        {
+            yield return PressToggleKey();
+            yield return WaitForInputFocus();
+
+            yield return Submit("notacommand");
+            for (var i = 0; i < 5; i++) yield return null;
+
+            Assert.That(ToggleKey.IsEditingText(_overlay.Root.focusController.focusedElement), Is.True);
+        }
+
+        [UnityTest] public IEnumerator EmptyLine_InputKeepsFocus()
+        {
+            yield return PressToggleKey();
+            yield return WaitForInputFocus();
+
+            yield return Submit(string.Empty);
+            for (var i = 0; i < 5; i++) yield return null;
+
+            Assert.That(ToggleKey.IsEditingText(_overlay.Root.focusController.focusedElement), Is.True);
+        }
+
         [UnityTest] public IEnumerator CommandWindow_StaysOpenWhenConsoleHidden()
         {
             yield return PressToggleKey();

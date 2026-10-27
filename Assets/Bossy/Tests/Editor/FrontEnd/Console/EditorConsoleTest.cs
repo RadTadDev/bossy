@@ -56,6 +56,23 @@ namespace Bossy.Tests.FrontEnd.Console
             Assert.That(window.rootVisualElement.Q("session-view"), Is.Not.Null);
         }
 
+        [UnityTest] public IEnumerator UnknownCommand_InputKeepsFocus()
+        {
+            _console.Show();
+            for (var i = 0; i < 5; i++) yield return null;
+
+            var window = EditorWindow.GetWindow<ConsoleWindow>();
+            var input = window.rootVisualElement.Q<TextField>("input-field");
+            Assert.That(ToggleKey.IsEditingText(window.rootVisualElement.focusController.focusedElement), Is.True, "Input was not focused to begin with.");
+
+            input.value = "notacommand";
+            window.SendEvent(Event.KeyboardEvent("return"));
+            for (var i = 0; i < 5; i++) yield return null;
+
+            Assert.That(input.value, Is.Empty, "The line was not submitted.");
+            Assert.That(ToggleKey.IsEditingText(window.rootVisualElement.focusController.focusedElement), Is.True);
+        }
+
         [UnityTest] public IEnumerator RecreatedWindow_KeepsSession()
         {
             _console.Show();

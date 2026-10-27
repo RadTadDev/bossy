@@ -301,14 +301,17 @@ namespace Bossy.Frontend
                 var operators = _context.Settings.BossyCliSettings.ToOperatorList();
                 var parseResult = _context.Parser.Parse(line, operators, _aliases);
 
+                // Nothing runs, so keep reading. Unity's text field can end editing on enter, so focus it again.
                 if (parseResult.IsEmpty)
                 {
                     Write(string.Empty);
+                    FocusInput();
                     return;
                 }
                 if (!parseResult.TryGetGraph(out var graph))
                 {
                     Write(Format.Error(parseResult.Message));
+                    FocusInput();
                     return;
                 }
 
