@@ -21,15 +21,39 @@ namespace Bossy.Tests.FrontEnd.Console
     internal class EditorConsoleTest
     {
         private EditorConsole _console;
+        private bool _createdConsole;
 
         [SetUp]
         public void Setup()
         {
             // Editor windows cannot open without a graphics device, such as in -nographics batch mode
             Assume.That(SystemInfo.graphicsDeviceType, Is.Not.EqualTo(GraphicsDeviceType.Null));
-            
+
             CloseConsoleWindows();
 
+            // There is one editor console. A running one, such as the one a startup script builds, is used as is.
+            // A test only builds its own when none is running, and disposes it afterwards.
+            _console = EditorConsole.Active;
+            _createdConsole = _console == null;
+            if (_createdConsole)
+            {
+                _console = new EditorConsole(CreateSessionFactory());
+            }
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            CloseConsoleWindows();
+
+            if (_createdConsole)
+            {
+                _console.Dispose();
+            }
+        }
+
+        private static SessionFactory CreateSessionFactory()
+        {
             var schemas = new SchemaRegistry(new List<CommandSchema>());
             var adapters = new TypeAdapterRegistry();
             var settings = new SettingsManager(new MockSettingsSource(string.Empty));
@@ -37,14 +61,7 @@ namespace Bossy.Tests.FrontEnd.Console
             var context = new BossyContext(schemas, adapters, settings, parser, null, null);
             var permissions = new BossyPermissions("", new HashSet<CommandSchema>(), true);
 
-            _console = new EditorConsole(new SessionFactory(context, permissions));
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            _console?.Dispose();
-            CloseConsoleWindows();
+            return new SessionFactory(context, permissions);
         }
 
         [UnityTest]
