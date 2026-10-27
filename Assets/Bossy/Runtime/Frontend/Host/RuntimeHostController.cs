@@ -3,7 +3,6 @@ using System.Linq;
 using System.Collections.Generic;
 using Bossy.Settings;
 using UnityEngine;
-using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
@@ -32,7 +31,7 @@ namespace Bossy.Frontend
             document.visualTreeAsset = hostTree;
             
             var root = document.rootVisualElement;
-            root.style.unityFontDefinition = new StyleFontDefinition(Resources.Load<FontAsset>("Font/JetBrainsMono-Regular"));
+            BossyFont.ApplyTo(root);
             
             _rect = root.Q<VisualElement>("content-area");
             _rect.RegisterCallback<KeyDownEvent>(evt =>

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Bossy.Settings;
 using UnityEngine;
-using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
 namespace Bossy.Frontend
@@ -25,7 +24,7 @@ namespace Bossy.Frontend
 
             // This is needed when reconnecting existing editor views
             root.Clear();
-            root.style.unityFontDefinition = new StyleFontDefinition(Resources.Load<FontAsset>("Font/JetBrainsMono-Regular"));
+            BossyFont.ApplyTo(root);
             
             tree.CloneTree(root);
             root.Q<Button>("button-close").clicked += () => NoSessionRemains?.Invoke();
