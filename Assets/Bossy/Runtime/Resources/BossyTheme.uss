@@ -12,8 +12,8 @@
     --bossy-text: #e8e6dc;
     --bossy-text-muted: #a3a197;
     --bossy-text-faint: #6f6d66;
-    --bossy-accent: #5798d9;
-    --bossy-accent-soft: rgba(87, 152, 217, 0.2);
+    --bossy-accent: #d97757;
+    --bossy-accent-soft: rgba(217, 119, 87, 0.2);
     --bossy-blue: #8fb8de;
     --bossy-green: #9fca8b;
     --bossy-yellow: #e3c47e;
