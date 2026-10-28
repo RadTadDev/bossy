@@ -39,11 +39,16 @@ namespace Bossy.Frontend.Autocomplete
         public readonly string Suffix;
 
         /// <summary>
+        /// The cursor position in the line.
+        /// </summary>
+        public readonly int Cursor;
+
+        /// <summary>
         /// True if the token at the cursor names a switch.
         /// </summary>
         public bool IsSwitch => !IsEmpty && new Token(Typed, isQuoted: IsQuoted).IsSwitch;
 
-        private CompletionSlot(int start, int end, string typed, bool isQuoted, bool isEmpty, string suffix)
+        private CompletionSlot(int start, int end, string typed, bool isQuoted, bool isEmpty, string suffix, int cursor)
         {
             Start = start;
             End = end;
@@ -51,6 +56,7 @@ namespace Bossy.Frontend.Autocomplete
             IsQuoted = isQuoted;
             IsEmpty = isEmpty;
             Suffix = suffix;
+            Cursor = cursor;
         }
 
         /// <summary>
@@ -58,10 +64,11 @@ namespace Bossy.Frontend.Autocomplete
         /// </summary>
         /// <param name="token">The token at the cursor.</param>
         /// <param name="typed">The unquoted text of the token before the cursor.</param>
+        /// <param name="cursor">The cursor position.</param>
         /// <returns>The slot.</returns>
-        public static CompletionSlot ForToken(Token token, string typed)
+        public static CompletionSlot ForToken(Token token, string typed, int cursor)
         {
-            return new CompletionSlot(token.Start, token.End, typed, token.IsQuoted, false, string.Empty);
+            return new CompletionSlot(token.Start, token.End, typed, token.IsQuoted, false, string.Empty, cursor);
         }
 
         /// <summary>
@@ -72,7 +79,7 @@ namespace Bossy.Frontend.Autocomplete
         /// <returns>The slot.</returns>
         public static CompletionSlot At(int cursor, bool beforeToken)
         {
-            return new CompletionSlot(cursor, cursor, string.Empty, false, true, beforeToken ? " " : string.Empty);
+            return new CompletionSlot(cursor, cursor, string.Empty, false, true, beforeToken ? " " : string.Empty, cursor);
         }
     }
 }

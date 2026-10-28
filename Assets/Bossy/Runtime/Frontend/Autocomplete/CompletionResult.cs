@@ -102,15 +102,27 @@ namespace Bossy.Frontend.Autocomplete
         }
 
         /// <summary>
-        /// Makes a copy of this result whose completions carry the runs of their display text that match a query.
+        /// Makes a copy of this result whose completions for a slot carry the runs of their display text that match
+        /// the text typed in it. Completions for other spans, such as those inside a quoted command, are kept as they are.
         /// </summary>
-        /// <param name="query">The typed text.</param>
+        /// <param name="slot">The slot.</param>
         /// <returns>The new result.</returns>
-        internal CompletionResult WithMatches(string query)
+        internal CompletionResult WithMatches(CompletionSlot slot)
         {
-            if (string.IsNullOrEmpty(query) || Completions.Count == 0) return this;
+            if (string.IsNullOrEmpty(slot.Typed) || Completions.Count == 0) return this;
 
-            return new CompletionResult(Message, MessageKind, Completions.Select(c => c.WithMatches(query)).ToList(), Argument, SuggestionFailure);
+            var completions = Completions.Select(c => c.Start == slot.Start ? c.WithMatches(slot.Typed) : c).ToList();
+            return WithCompletions(completions);
+        }
+
+        /// <summary>
+        /// Makes a copy of this result with other completions.
+        /// </summary>
+        /// <param name="completions">The completions, best first.</param>
+        /// <returns>The new result.</returns>
+        internal CompletionResult WithCompletions(IReadOnlyList<Completion> completions)
+        {
+            return new CompletionResult(Message, MessageKind, completions, Argument, SuggestionFailure);
         }
 
         /// <summary>
