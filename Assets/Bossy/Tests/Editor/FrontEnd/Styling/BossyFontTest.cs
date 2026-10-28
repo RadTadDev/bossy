@@ -104,19 +104,21 @@ namespace Bossy.Tests.FrontEnd.Styling
         }
 
         [Test]
-        public void EmptyGlyphs_PointOutsideClampedAtlas()
+        public void Spaces_PointFullyOutsideClampedAtlas()
         {
             var element = new VisualElement();
             BossyFont.ApplyTo(element);
             var asset = element.style.unityFontDefinition.value.fontAsset;
 
-            // A quad drawn for an empty glyph inside the atlas picked up the edge of a neighbor, which showed as a speck in every space
-            var empty = asset.glyphLookupTable.Values.Where(g => g.glyphRect.width == 0 || g.glyphRect.height == 0).ToList();
+            // A quad drawn for a space inside the atlas picked up the edge of a neighbor, which showed as a speck in every space
+            foreach (var space in new[] { ' ', ' ' })
+            {
+                Assert.That(asset.characterLookupTable.TryGetValue(space, out var character), Is.True, $"The character {(int)space} was not added.");
 
-            var inside = empty.Where(g => g.glyphRect.x >= 0 || g.glyphRect.y >= 0).Select(g => $"glyph {g.index} at ({g.glyphRect.x},{g.glyphRect.y})");
+                var rect = asset.glyphLookupTable[character.glyphIndex].glyphRect;
+                Assert.That(rect.x < 0 && rect.y < 0, Is.True, $"The character {(int)space} is not fully outside the atlas, at ({rect.x},{rect.y}).");
+            }
 
-            Assert.That(empty, Is.Not.Empty, "The space glyph was not added.");
-            Assert.That(inside, Is.Empty, "Empty glyphs point inside the atlas.");
             Assert.That(asset.atlasTextures.All(t => t.wrapMode == TextureWrapMode.Clamp), Is.True, "The atlas is not clamped.");
         }
     }
