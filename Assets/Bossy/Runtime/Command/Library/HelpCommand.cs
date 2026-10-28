@@ -157,23 +157,18 @@ public class HelpCommand : SimpleCommand
         };
     }
 
-    private static string[] Suggest(SuggestionContext ctx)
+    private static Suggestion[] Suggest(SuggestionContext ctx)
     {
-        var commandPath = ctx.AutocompleteContext.TokensSoFar.Skip(1).Where(t => t != "-r" && t != "--recursive").ToList();
-
-        var parent = commandPath.FirstOrDefault();
-        var rest = commandPath.Skip(1);
-
-        if (parent == null)
+        if (!ctx.TryGet<string[]>(nameof(_command), out var commandPath))
         {
-            return ctx.BossyContext.SchemaRegistry.GetValidSchemas().Select(s => s.Name).ToArray();
+            return ctx.Bossy.SchemaRegistry.GetValidSchemas().Select(s => new Suggestion(s.Name, s.Description)).ToArray();
         }
-        
-        if (ctx.BossyContext.SchemaRegistry.TryResolveSchema(parent, rest, out var schema) is SchemaQueryStatus.Found)
+
+        if (ctx.Bossy.SchemaRegistry.TryResolveSchema(commandPath[0], commandPath.Skip(1), out var schema) is SchemaQueryStatus.Found)
         {
-            return schema.ChildSchemas.Select(s => s.Name).ToArray();
+            return schema.ChildSchemas.Select(s => new Suggestion(s.Name, s.Description)).ToArray();
         }
-        
-        return Array.Empty<string>();
+
+        return Array.Empty<Suggestion>();
     }
 }

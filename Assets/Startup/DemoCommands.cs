@@ -225,8 +225,7 @@ namespace Startup
 
         private static string[] ThingsOfKind(SuggestionContext ctx)
         {
-            // Tokens so far are [root name, subcommand, kind, ...]
-            var kind = ctx.AutocompleteContext.TokensSoFar.ElementAtOrDefault(2);
+            ctx.TryGet<string>(nameof(_kind), out var kind);
 
             return kind switch
             {
