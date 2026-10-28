@@ -381,7 +381,7 @@ namespace Bossy.Command
 
         private static bool IsChoice<T>(T value, IReadOnlyList<ReadChoice> choices)
         {
-            return choices.Any(choice => object.Equals(choice.Value, value));
+            return choices.Any(choice => Equals(choice.Value, value));
         }
 
         private static async IAsyncEnumerable<T> Empty<T>()
