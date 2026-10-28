@@ -635,9 +635,13 @@ In the editor the command opens in a separate editor window. At runtime it opens
 
 ## Auto Complete
 
-The autocomplete system will suggest values and give hints and errors based on what you have typed into the terminal. If whats being suggested is a value, you can cycle between options using the `tab` key. If the autocomplete is not showing, you can also bring it up using the `tab` key. If a hint or error is showing, you will not have the option to apply this to your input line, but you should note information.
+The autocomplete system suggests command names, aliases, subcommands, switches and values based on what you have typed before the cursor. Above the suggestions, a status line describes the argument you are typing (for example `scene <string> positional — The scene to load`), or shows an error if the line will not parse. Cycle through the suggestions with the `tab` key; if the list is not showing, `tab` also brings it up. A suggestion replaces the whole word at the cursor and keeps anything you typed after it.
 
-Note that the autocomplete system uses several heuristics to guess at your intentions. These may not be perfect and it is possible to enter values not being suggested. Furthermore, if a hint is telling you something is invalid, that's a guess and can sometimes be ignored, but if it's an error telling you that, the command will not pass parsing. Finally, the system will note that a command is `Ready to execute` when all avaiable ordered arguments are consumed but you may submit before this or include switches after this and still run a valid command.
+Suggestions are ranked: exact matches first, then prefixes, then matches at the start of a word segment (`ul` finds `unity-log`), then matches anywhere in the name, and finally close misspellings. A misspelled command still gets suggestions for the closest command, and the fix is offered as the first suggestion.
+
+Hints are a guide, and you can type values that are not suggested. Errors come from the same checks the parser runs, so a line with an error will not run. Once every positional argument is filled, the status line says `Ready to execute` and lists the optional arguments and switches you can still add.
+
+Values that contain spaces, quotes or operators, or that start with `-`, are quoted for you when a suggestion is applied. If you start typing inside a quote, suggestions keep the quote and close it.
 
 The autocomplete system is fully automated based on your command definitions. However, sometimes you may prefer to suggest values that you know are relevant. Consider the way the `open` command works:
 
@@ -670,6 +674,8 @@ From this example you can see that you have the ability to register suggestion f
 where `MySuggesters.MyFunction` is a public static method on `MySuggesters`.
 
 All suggestion functions must be <b>static</b> and return a collection of strings from which `IEnumerable<string>` is assignable (`List<string>`, `string[]`, and others are valid).
+
+A suggestion function runs once when you start typing a value, and its results are reused while you type that value, so it can do expensive work such as searching the project. It runs again when anything typed before the value changes. If it throws, the status line shows `Suggestions failed:` with the exception message, and the exception is logged once.
 
 This method is fine for simple cases where the suggestion does not depend on the state of the input or need additional resources. However, you have the option to take in a context object for more complex cases. The single argument allowed must be of type `SuggestionContext`. Consider the following example from the `help` command:
 
