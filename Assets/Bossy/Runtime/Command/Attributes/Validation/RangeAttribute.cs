@@ -36,7 +36,7 @@ namespace Bossy.Command
 
         public override string Describe()
         {
-            return $"range {Bound(Min)}..{Bound(Max)}";
+            return $"range [{Bound(Min)}, {Bound(Max)}]";
         }
 
         private static string Bound(float value)
