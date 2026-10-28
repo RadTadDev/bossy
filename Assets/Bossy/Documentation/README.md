@@ -635,11 +635,11 @@ In the editor the command opens in a separate editor window. At runtime it opens
 
 ## Auto Complete
 
-The autocomplete system suggests command names, aliases, subcommands, switches and values based on what you have typed before the cursor. Above the suggestions, a status line describes the argument you are typing (for example `scene <string> positional — The scene to load`), or shows an error if the line will not parse. Cycle through the suggestions with the `tab` key; if the list is not showing, `tab` also brings it up. A suggestion replaces the whole word at the cursor and keeps anything you typed after it.
+The autocomplete system suggests command names, aliases, subcommands, switches and values based on what you have typed before the cursor. Above the suggestions, a status line describes the argument you are typing (for example `scene <string>` followed by its description, or `position <Vector3> 2/3` while typing a value that takes several words), or shows an error if the line will not parse. Cycle through the suggestions with the `tab` key; if the list is not showing, `tab` also brings it up. A suggestion replaces the whole word at the cursor and keeps anything you typed after it.
 
 Suggestions are ranked: exact matches first, then prefixes, then matches at the start of a word segment (`ul` finds `unity-log`), then matches anywhere in the name, and finally close misspellings. A misspelled command still gets suggestions for the closest command, and the fix is offered as the first suggestion.
 
-Hints are a guide, and you can type values that are not suggested. Errors come from the same checks the parser runs, so a line with an error will not run. Once every positional argument is filled, the status line says `Ready to execute` and lists the optional arguments and switches you can still add.
+Hints are a guide, and you can type values that are not suggested. Errors come from the same checks the parser runs, so a line with an error will not run. Once every positional argument is filled, the status line says `Ready` and lists the optional arguments and switches you can still add.
 
 Values that contain spaces, quotes or operators, or that start with `-`, are quoted for you when a suggestion is applied. If you start typing inside a quote, suggestions keep the quote and close it.
 

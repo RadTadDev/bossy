@@ -348,7 +348,11 @@ namespace Bossy.Frontend
                 var modifier = result.MessageKind == CompletionMessageKind.Error
                     ? BossyTheme.CliSuggestionErrorClass
                     : BossyTheme.CliSuggestionHintClass;
-                _autocompleteContainer.Add(MakeSuggestionLabel(result.Message, modifier));
+                var description = result.Argument?.Argument.Description;
+                var message = string.IsNullOrWhiteSpace(description)
+                    ? result.Message
+                    : $"{result.Message}  {Format.Color(description, Format.Gray)}";
+                _autocompleteContainer.Add(MakeSuggestionLabel(message, modifier));
             }
 
             foreach (var completion in result.Completions)

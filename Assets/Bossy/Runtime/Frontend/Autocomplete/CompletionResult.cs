@@ -29,15 +29,21 @@ namespace Bossy.Frontend.Autocomplete
         public readonly IReadOnlyList<Completion> Completions;
 
         /// <summary>
+        /// Details about the argument being typed when the message is a hint about it, otherwise null.
+        /// </summary>
+        public readonly ArgumentHint Argument;
+
+        /// <summary>
         /// True if there is nothing to show.
         /// </summary>
         public bool IsEmpty => MessageKind == CompletionMessageKind.None && Completions.Count == 0;
 
-        private CompletionResult(string message, CompletionMessageKind messageKind, IReadOnlyList<Completion> completions)
+        private CompletionResult(string message, CompletionMessageKind messageKind, IReadOnlyList<Completion> completions, ArgumentHint argument = null)
         {
             Message = message;
             MessageKind = messageKind;
             Completions = completions;
+            Argument = argument;
         }
 
         /// <summary>
@@ -55,10 +61,11 @@ namespace Bossy.Frontend.Autocomplete
         /// </summary>
         /// <param name="message">The hint.</param>
         /// <param name="completions">The completions, best first.</param>
+        /// <param name="argument">Details about the argument the hint is about, if any.</param>
         /// <returns>The result.</returns>
-        public static CompletionResult Hint(string message, IReadOnlyList<Completion> completions = null)
+        public static CompletionResult Hint(string message, IReadOnlyList<Completion> completions = null, ArgumentHint argument = null)
         {
-            return new CompletionResult(message, CompletionMessageKind.Hint, completions ?? Array.Empty<Completion>());
+            return new CompletionResult(message, CompletionMessageKind.Hint, completions ?? Array.Empty<Completion>(), argument);
         }
 
         /// <summary>
@@ -93,7 +100,7 @@ namespace Bossy.Frontend.Autocomplete
 
             var completions = new List<Completion> { completion };
             completions.AddRange(Completions);
-            return new CompletionResult(Message, MessageKind, completions);
+            return new CompletionResult(Message, MessageKind, completions, Argument);
         }
     }
 }

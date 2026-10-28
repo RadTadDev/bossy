@@ -245,13 +245,13 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         public void Complete_LeadingWindowOperator_IsSkipped()
         {
             Assert.That(Applied("!wa", Complete("!wa"))[0], Is.EqualTo("!wait"));
-            AssertReady(Complete("!wait 2 "), "Ready to execute");
+            AssertReady(Complete("!wait 2 "), "Ready");
         }
 
         [Test]
         public void Complete_QuotedWindowOperator_IsPlainValue()
         {
-            AssertReady(Complete("load \"!\" "), "Ready to execute");
+            AssertReady(Complete("load \"!\" "), "Ready");
         }
 
         // --- Quotes (proposal 5, B2) ---
@@ -314,7 +314,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         [Test]
         public void Complete_DashTokenAfterSwitchSurrender_IsValue()
         {
-            AssertReady(Complete("load -- -x "), "Ready to execute");
+            AssertReady(Complete("load -- -x "), "Ready");
         }
 
         [Test]
@@ -373,7 +373,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         [Test]
         public void Complete_NegativeNumber_IsValueNotSwitch()
         {
-            AssertReady(Complete("wait -5 "), "Ready to execute");
+            AssertReady(Complete("wait -5 "), "Ready");
         }
 
         // --- Switch values (R16 to R18) ---
@@ -387,7 +387,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         [Test]
         public void Complete_AfterValueSwitch_HintsItsType()
         {
-            AssertHint(Complete("load --count "), "count <int> switch");
+            AssertHint(Complete("load --count "), "count <int>");
         }
 
         [Test]
@@ -399,7 +399,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         [Test]
         public void Complete_InvalidSwitchValueAtCursor_HintsInvalidValue()
         {
-            AssertHint(Complete("load --count abc"), "current value 'abc' is invalid");
+            AssertInvalid(Complete("load --count abc"), "count", "abc");
         }
 
         [Test]
@@ -416,7 +416,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
             var result = Complete("load ");
 
             Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Hint));
-            Assert.That(result.Message, Does.Contain("scene <string> positional"));
+            Assert.That(result.Message, Does.Contain("scene <string>"));
             Assert.That(Applied("load ", result), Is.EqualTo(new[] { "load \"Main Menu\"", "load Level1", "load Level2" }));
             Assert.That(result.Completions[1].DisplayText, Is.EqualTo("Level1"));
             Assert.That(result.Completions[1].Kind, Is.EqualTo(CompletionKind.Value));
@@ -436,7 +436,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         {
             var result = Complete("wait ");
 
-            AssertHint(result, "seconds <float> positional");
+            AssertHint(result, "seconds <float>");
             Assert.That(result.Completions, Is.Empty);
         }
 
@@ -449,7 +449,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         [Test]
         public void Complete_InvalidPositionalAtCursor_HintsInvalidValue()
         {
-            AssertHint(Complete("wait abc"), "current value 'abc' is invalid");
+            AssertInvalid(Complete("wait abc"), "seconds", "abc");
         }
 
         [Test]
@@ -457,15 +457,28 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         {
             var result = Complete("vec 1 2");
 
-            AssertHint(result, "pos <Vector3> (2/3)");
-            Assert.That(result.Message, Does.Not.Contain("invalid"));
-            AssertHint(Complete("vec 1 2 "), "(3/3)");
+            AssertHint(result, "pos <Vector3> 2/3");
+            Assert.That(result.Argument.TokenNumber, Is.EqualTo(2));
+            Assert.That(result.Argument.TokensDesired, Is.EqualTo(3));
+            Assert.That(result.Argument.InvalidValue, Is.Null);
+            AssertHint(Complete("vec 1 2 "), "pos <Vector3> 3/3");
+            AssertHint(Complete("vec "), "pos <Vector3> 1/3");
+        }
+
+        [Test]
+        public void Complete_ArgumentHint_IsShortAndCarriesTheArgument()
+        {
+            var result = Complete("load ");
+
+            Assert.That(result.Message, Is.EqualTo("scene <string>"));
+            Assert.That(result.Argument.Argument.Name, Is.EqualTo("scene"));
+            Assert.That(result.Argument.HasProgress, Is.False);
         }
 
         [Test]
         public void Complete_MultiTokenValueInvalid_HintsInvalidValue()
         {
-            AssertHint(Complete("vec 1 2 x"), "current value '1 2 x' is invalid");
+            AssertInvalid(Complete("vec 1 2 x"), "pos", "1 2 x");
         }
 
         [Test]
@@ -478,14 +491,14 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         [Test]
         public void Complete_SwitchAfterMultiTokenValue_IsAllowed()
         {
-            AssertReady(Complete("vec -f 1 2 3 "), "Ready to execute");
-            AssertReady(Complete("vec 1 2 3 -f "), "Ready to execute");
+            AssertReady(Complete("vec -f 1 2 3 "), "Ready");
+            AssertReady(Complete("vec 1 2 3 -f "), "Ready");
         }
 
         [Test]
         public void Complete_AllArgumentsFilled_IsReadyToExecute()
         {
-            AssertReady(Complete("wait 2 "), "Ready to execute");
+            AssertReady(Complete("wait 2 "), "Ready");
         }
 
         [Test]
@@ -493,7 +506,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         {
             var result = Complete("load Level1 --force ");
 
-            AssertReady(result, "2 switches available");
+            AssertReady(result, "Ready · 2 switches");
             Assert.That(Applied("load Level1 --force ", result), Is.EquivalentTo(new[]
             {
                 "load Level1 --force --verbose",
@@ -565,7 +578,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         {
             var result = Complete("level foo ");
 
-            AssertReady(result, "Ready to execute");
+            AssertReady(result, "Ready");
             Assert.That(result.Completions, Is.Empty);
         }
 
@@ -585,6 +598,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
 
             Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Hint));
             Assert.That(result.Message, Does.Contain("Suggestions failed: Broken on purpose"));
+            Assert.That(result.Argument.SuggestionError, Is.EqualTo("Broken on purpose"));
         }
 
         [Test]
@@ -613,6 +627,13 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         {
             Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Hint));
             Assert.That(result.Message, Does.Contain(expectedText));
+        }
+
+        private static void AssertInvalid(CompletionResult result, string argumentName, string invalidValue)
+        {
+            AssertHint(result, "· invalid");
+            Assert.That(result.Argument.Argument.Name, Is.EqualTo(argumentName));
+            Assert.That(result.Argument.InvalidValue, Is.EqualTo(invalidValue));
         }
 
         private static void AssertReady(CompletionResult result, string expectedText)

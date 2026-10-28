@@ -244,22 +244,24 @@ namespace Bossy.Frontend.Autocomplete
         private CompletionResult CompleteNext()
         {
             // R26: suggest subcommands and the next value together
-            var completions = SubcommandCompletions();
-
             if (_cursor.Positionals.Count > 0)
             {
                 var positional = _cursor.Positionals[0];
-                var hint = ArgumentHint(positional, null);
-                completions.AddRange(ValueCompletions(positional, ref hint));
-                return CompletionResult.Hint(hint, Distinct(completions));
+                return CompleteValue(positional, ReadValue(positional.Type, true, true));
             }
 
             // Every positional is filled, so the line can run. The optional parts stay discoverable.
+            var completions = SubcommandCompletions();
             var readyMessage = ReadyMessage();
             var next = _cursor.TryGetNextOrdered(out var optional, out _) ? optional : _cursor.Variadic;
             if (next != null)
             {
-                completions.AddRange(ValueCompletions(next, ref readyMessage));
+                completions.AddRange(ValueCompletions(next, out var error));
+
+                if (error != null)
+                {
+                    readyMessage += $" · Suggestions failed: {error}";
+                }
             }
 
             if (!_cursor.Surrendered)
@@ -272,24 +274,20 @@ namespace Bossy.Frontend.Autocomplete
 
         private CompletionResult CompleteValue(ArgumentSchema argument, ValueRead read)
         {
-            var progress = read.TokensDesired > 1 ? (read.TokenNumber, read.TokensDesired) : ((int, int)?)null;
-            var hint = ArgumentHint(argument, progress);
-
-            // R17, R23: the value has all its tokens but does not parse
-            if (read.IsCompleteAndInvalid)
-            {
-                hint += $" · current value '{read.Text}' is invalid";
-            }
-
             var completions = SubcommandCompletions();
+            string suggestionError = null;
 
             // Suggested values are whole values, so they only apply to the first token of a value
             if (read.TokenNumber == 1)
             {
-                completions.AddRange(ValueCompletions(argument, ref hint));
+                completions.AddRange(ValueCompletions(argument, out suggestionError));
             }
 
-            return CompletionResult.Hint(hint, Rank(completions));
+            // R17, R23: the value has all its tokens but does not parse
+            var invalidValue = read.IsCompleteAndInvalid ? read.Text : null;
+            var hint = new ArgumentHint(argument, read.TokenNumber, read.TokensDesired, invalidValue, suggestionError);
+
+            return CompletionResult.Hint(HintText(hint), Rank(completions), hint);
         }
 
         private CompletionResult CompleteSwitchName()
@@ -323,7 +321,7 @@ namespace Bossy.Frontend.Autocomplete
             var letters = typed[1..];
             if (letters.All(c => _cursor.Schema.TryFindSwitch(c, out var s) && s.Type == typeof(bool)))
             {
-                return CompletionResult.Hint($"<bool> Aggregate flags: {string.Join(", ", letters.Select(c => $"-{c}"))}");
+                return CompletionResult.Hint($"Aggregate flags: {string.Join(", ", letters.Select(c => $"-{c}"))}");
             }
 
             // R13: a long name typed with one dash
@@ -401,16 +399,11 @@ namespace Bossy.Frontend.Autocomplete
             return ValueRead.AtSlot(false, complete, available + 1, desired, valueText);
         }
 
-        private List<Completion> ValueCompletions(ArgumentSchema argument, ref string hint)
+        private List<Completion> ValueCompletions(ArgumentSchema argument, out string error)
         {
+            // Proposal 14: a failing suggestion function is reported through the error, never thrown
             var key = string.Join("\u001f", _tokens.Take(_index).Select(t => t.Text).Prepend(_cursor.Schema.Name));
-            var values = _userSuggestions.Get(argument, _cursor.Schema.CommandType, key, MakeSuggestionContext, out var error);
-
-            // Proposal 14: a failing suggestion function is reported in the status line
-            if (error != null)
-            {
-                hint += $" · Suggestions failed: {error}";
-            }
+            var values = _userSuggestions.Get(argument, _cursor.Schema.CommandType, key, MakeSuggestionContext, out error);
 
             return values.Select(v => MakeCompletion(Quote(v, _slot.IsQuoted), v, string.Empty, CompletionKind.Value)).ToList();
         }
@@ -480,15 +473,30 @@ namespace Bossy.Frontend.Autocomplete
         // --- Messages ---
 
         /*
-         * Proposal 4: the status line for the argument being typed, such as
-         * "pos <Vector3> (2/3) positional — The position".
+         * Proposal 4: a short plain status line for the argument being typed, such as "pos <Vector3> 2/3 · invalid".
+         * The description and the argument's kind are left out to keep it short; views that want them read the
+         * ArgumentHint instead.
          */
-        private static string ArgumentHint(ArgumentSchema argument, (int Number, int Desired)? progress)
+        private static string HintText(ArgumentHint hint)
         {
-            var progressText = progress.HasValue ? $" ({progress.Value.Number}/{progress.Value.Desired})" : string.Empty;
-            var description = string.IsNullOrWhiteSpace(argument.Description) ? string.Empty : $" — {argument.Description}";
+            var text = $"{hint.Argument.Name} <{hint.Argument.Type.GetFriendlyName()}>";
 
-            return $"{argument.Name} <{argument.Type.GetFriendlyName()}>{progressText} {RoleName(argument)}{description}";
+            if (hint.HasProgress)
+            {
+                text += $" {hint.TokenNumber}/{hint.TokensDesired}";
+            }
+
+            if (hint.InvalidValue != null)
+            {
+                text += " · invalid";
+            }
+
+            if (hint.SuggestionError != null)
+            {
+                text += $" · Suggestions failed: {hint.SuggestionError}";
+            }
+
+            return text;
         }
 
         private string ReadyMessage()
@@ -507,19 +515,7 @@ namespace Bossy.Frontend.Autocomplete
                 parts.Add(switchCount == 1 ? "1 switch" : $"{switchCount} switches");
             }
 
-            return parts.Count == 0 ? "Ready to execute" : $"Ready to execute · {string.Join(", ", parts)} available";
-        }
-
-        private static string RoleName(ArgumentSchema argument)
-        {
-            return argument.ArgumentAttribute switch
-            {
-                PositionalAttribute => "positional",
-                OptionalAttribute   => "optional",
-                SwitchAttribute     => "switch",
-                VariadicAttribute   => "variadic",
-                _                   => "argument",
-            };
+            return parts.Count == 0 ? "Ready" : $"Ready · {string.Join(", ", parts)}";
         }
 
         private static char ShortName(ArgumentSchema argument)

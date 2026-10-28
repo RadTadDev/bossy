@@ -90,7 +90,7 @@ namespace Bossy.Frontend.Autocomplete
                     return CompletionResult.Error(new BadWindowOperatorError().Message);
                 }
 
-                return CheckBefore(line, before[window]) ?? CompletionResult.Ready("Ready to execute (in window)");
+                return CheckBefore(line, before[window]) ?? CompletionResult.Ready("Ready (in window)");
             }
 
             // R8, proposal 1: the commands before the last operator must parse before the next one is completed
