@@ -4,12 +4,6 @@ This is the rule catalogue for the autocomplete engine (`Runtime/Frontend/Autoco
 
 The rule numbers are cited in comments in `AutocompleteEngine` and `CompletionWalker`, and each rule is pinned by a test in `AutocompleteEngineTest`, whose sections are headed with the same numbers. When you change a rule, update this file, the comment, and the test together.
 
-The numbering has three parts:
-
-- **R1 to R31**: the rules the original engine encoded. Some were replaced; the entry says by what.
-- **B1 to B9**: behaviors of the original engine that were bugs, and how each was resolved.
-- **P1 to P17**: the proposals adopted during the autocomplete overhaul. Code comments call them "proposal N".
-
 Notation: `|` is the cursor. "At the cursor" means the token is still being typed (no space after it). "Moved on" means a space or more tokens follow it.
 
 ---
@@ -78,54 +72,6 @@ Ordered arguments are subcommands, positionals, optionals, and the variadic.
 - **R31.** *Replaced by P4.* Originally, a hint or error was the only row shown.
 
 See also the suggestion function rules below.
-
----
-
-## Bugs in the original engine
-
-| Bug | Behavior | Resolution |
-|-----|----------|------------|
-| B1 | A leading `!` (as in `!watch …`) gave no suggestions. | Fixed by P2: a leading window operator is skipped. |
-| B2 | Applying a suggestion rebuilt the line from tokens, losing quotes and the text after the cursor. | Fixed: completions replace a span of the line (P6). |
-| B3 | Extra tokens after every argument were accepted and then `Ready` was shown, but the parser rejected them. | Fixed by R25: it is the parser's error. |
-| B4 | Aliases were not expanded, so an alias got no suggestions. | Fixed: aliases are expanded the way the parser expands them, and are suggested next to commands (R5). |
-| B5 | `string[]` variadic values with spaces were not quoted. | Fixed by P12. |
-| B6 | Variadic values (R24) and ordered values (R21) handled an invalid value at the cursor differently. | Fixed: R24 now works the same way as R21. |
-| B7 | The parser reads switches from the whole line, so a nested command's switches are taken by the outer command (`watch get -n foo …`). | Open: planned for the `CommandLine` work, where an inner command is a single quoted argument. |
-| B8 | Dash tokens after `--` were skipped by the engine but bound as values by the parser. | Fixed: after `--`, every token is a value (R10). |
-| B9 | A quoted operator (`load "!"`) was treated as an operator. | Fixed: quoted text is never an operator or a switch. |
-
----
-
-## Proposals adopted in the overhaul
-
-- **P1.** The commands before an operator are checked with the parser's binding step (no command is constructed). If they fail, the parser's error is shown instead of suggestions for the next command (R8).
-- **P2.** The window operator `!`:
-  - At the start of the line it is skipped, and completion carries on (fixes B1).
-  - At the end it gives `Ready (in window)` if the command before it parses, otherwise the parser's error.
-  - Anywhere else it is the parser's error, since it must be first or last.
-- **P3.** Once every positional is filled, the status line says `Ready`, followed by what can still be added, such as `Ready  1 optional, 3 switches`. The next optional's or variadic's values and the unused switches are listed as rows.
-- **P4.** A status line describes the argument being typed, with the list of values under it. `CompletionResult.Message` is a short plain form, such as `pos <Vector3> 2/3  invalid`. `ArgumentHint` gives a view the separate pieces: name and type, progress, kind, constraints, whether the value is invalid, and the description. Errors replace the list; hints and `Ready` show with it.
-- **P5.** Completing inside an unfinished quote: `"My Sc|` filters on `My Sc` and inserts `"My Scene"`, keeping the quote and closing it (replaces R9).
-- **P6.** A completion replaces the whole token at the cursor and keeps the text after it. Before a token that starts right at the cursor, a space is added after the inserted text.
-- **P7.** A misspelled command resolves to its closest match (R6), and the correction is offered as the first row.
-- **P8.** An unknown command shows `No command matches 'x'` while typing, and is an error once moved on (replaces R4's silence).
-- **P9.** Ranking in tiers, with no cap on the number of rows:
-  1. exact match;
-  2. prefix;
-  3. start of a segment: a word inside the name (`log` in `unity-log`), or the initials of its segments (`ul` finds `unity-log`, `sa` finds `SetActive`);
-  4. substring;
-  5. fuzzy, by trigram and Levenshtein score above a 0.4 threshold.
-
-  Matching ignores case. Ties keep the order the candidates were given in, and duplicates are removed. The matched characters are reported as `Completion.MatchRanges` for highlighting; a fuzzy match has none.
-- **P10.** A value row shows the value and its description. The argument's name moves to the status line, and the row's kind (`CompletionKind`) is shown by color.
-- **P11.** Switch rows show both names, the type, and the description: `-i, --interval <float>`. Bool switches show no type. Accepting inserts the long name, unless the user typed a short name (R14).
-- **P12.** One quoting rule for every inserted value. A value is quoted if it is empty or contains whitespace, a quote, a backslash or an operator, or if it would read as a switch. Inner quotes and backslashes are escaped (fixes B5).
-- **P13.** A value that takes several tokens shows its progress, such as `position <Vector3> 2/3`. A switch typed inside such a value is the parser's error.
-- **P14.** A suggestion function that throws is reported apart from the hint, in `CompletionResult.SuggestionFailure`. The view shows it in a red tab above the list, and nothing is written to the Unity console.
-- **P15.** Only bool switches may be grouped (`-abc`). The parser rejects a group with a non-bool switch, and autocomplete matches it.
-- **P16.** `-<number>` is a negative number, not a switch, in both the parser and autocomplete.
-- **P17.** The fuzzy threshold, and whether `-` lists short or long names, have a TODO to become Bossy settings once settings exist.
 
 ---
 

@@ -23,7 +23,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
 
             Assert.That(hint.Constraints, Is.EqualTo(new[]
             {
-                "range 0.5..∞", "ends with .cs", "starts with Assets", "path", "existing path"
+                "range [0.5, ∞]", "ends with .cs", "starts with Assets", "path", "existing path"
             }));
         }
 
