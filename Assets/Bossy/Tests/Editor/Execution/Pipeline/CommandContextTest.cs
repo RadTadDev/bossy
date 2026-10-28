@@ -130,7 +130,7 @@ namespace Bossy.Tests.Shell
         }
 
         [Test]
-        public async Task Test_ReadAsync_RejectsTrailingInput()
+        public void Test_ReadAsync_RejectsTrailingInput()
         {
             var reader = new MockReadable(new List<object> { "3 4" });
             var writer = new MockWriteable();

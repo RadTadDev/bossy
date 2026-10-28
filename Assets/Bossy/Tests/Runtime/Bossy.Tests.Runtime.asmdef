@@ -2,6 +2,7 @@
     "name": "Bossy.Tests.Runtime",
     "references": [
         "Bossy",
+        "Bossy.Tests.Utils",
         "Unity.InputSystem",
         "Unity.InputSystem.TestFramework"
     ],
