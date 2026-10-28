@@ -99,14 +99,14 @@ namespace Bossy.Tests.Shell
         }
 
         [Test]
-        public async Task RunAsync_RecordsOnlyLinesThatParse()
+        public async Task RunAsync_RecordsLinesThatFailToParseButNotBlankLines()
         {
             var endpoint = new MockEndpoint(CommandName, "notacommand", "   ");
             var session = MockSession.Create(_context, _permissions, endpoint);
 
             await RunUntilInputEnds(session);
 
-            Assert.That(session.History.Lines, Is.EqualTo(new[] { CommandName }));
+            Assert.That(session.History.Lines, Is.EqualTo(new[] { CommandName, "notacommand" }));
         }
 
         [Test]

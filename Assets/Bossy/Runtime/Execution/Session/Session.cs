@@ -99,13 +99,15 @@ namespace Bossy.Execution
 
                         if (parseResult.IsEmpty) continue;
 
+                        // Lines that fail to parse are kept too, so a typo can be fixed from history
+                        History.Add(line);
+
                         if (!parseResult.TryGetGraph(out graph))
                         {
                             Endpoint.Write(Format.Error(parseResult.Message));
                             continue;
                         }
 
-                        History.Add(line);
                         break;
 
                     default:
