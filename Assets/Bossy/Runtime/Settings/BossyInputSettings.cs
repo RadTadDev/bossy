@@ -20,7 +20,16 @@ namespace Bossy.Settings
         [Setting("The key used to go forward in history on the CLI.")]
         public readonly KeyCombination HistoryForward = new(KeyCode.DownArrow);
         
-        [Setting("The key used to cycle through suggestions.")]
-        public readonly KeyCombination CycleSuggestions = new(KeyCode.Tab);
+        [Setting("The key used to highlight the next suggestion while suggestions are shown.")]
+        public readonly KeyCombination NextSuggestion = new(KeyCode.DownArrow);
+
+        [Setting("The key used to highlight the previous suggestion while suggestions are shown.")]
+        public readonly KeyCombination PreviousSuggestion = new(KeyCode.UpArrow);
+
+        [Setting("The key used to accept the highlighted suggestion, or to show suggestions if they are hidden.")]
+        public readonly KeyCombination AcceptSuggestion = new(KeyCode.Tab);
+
+        [Setting("The key used to hide suggestions.")]
+        public readonly KeyCombination CloseSuggestions = new(KeyCode.Escape);
     }
 }

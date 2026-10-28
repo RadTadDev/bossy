@@ -92,13 +92,12 @@
     opacity: 0.4;
 }
 
-/* Suggestions float just above the input row */
+/* Suggestions float just above the input row and span its width, so long text is clipped to the console */
 .bossy-cli__suggestions {
     position: absolute;
     left: 0;
+    right: 0;
     bottom: 100%;
-    min-width: 240px;
-    max-width: 100%;
     margin-bottom: 6px;
     padding: 4px;
     background-color: var(--bossy-surface-raised);
@@ -116,9 +115,60 @@
     visibility: visible;
 }
 
-.bossy-cli__suggestion {
-    margin: 0;
+/* The status line describes the argument being typed, or says the line is ready, or shows an error */
+.bossy-cli__status {
+    flex-direction: row;
+    align-items: center;
     padding: 3px 8px;
+    overflow: hidden;
+}
+
+.bossy-cli__status-part {
+    flex-shrink: 0;
+    margin: 0 8px 0 0;
+    padding: 0;
+    color: var(--bossy-text);
+    white-space: nowrap;
+}
+
+.bossy-cli__status-part--hint {
+    color: var(--bossy-blue);
+}
+
+.bossy-cli__status-part--ready {
+    color: var(--bossy-green);
+}
+
+.bossy-cli__status-part--error {
+    color: var(--bossy-red);
+}
+
+.bossy-cli__status-part--warning {
+    color: var(--bossy-yellow);
+}
+
+.bossy-cli__status-part--muted {
+    color: var(--bossy-text-faint);
+}
+
+.bossy-cli__status-part--clip {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bossy-cli__suggestion-list {
+    flex-shrink: 0;
+}
+
+/* The list is virtualized with a fixed row height, set in CliView to match these paddings */
+.bossy-cli__suggestion {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    margin: 0;
+    padding: 0 8px;
     border-radius: 4px;
     color: var(--bossy-text);
 }
@@ -127,34 +177,67 @@
     background-color: var(--bossy-accent-soft);
 }
 
-.bossy-cli__suggestion--hint {
+.bossy-cli__suggestion-value {
+    flex-shrink: 0;
+    max-width: 70%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.bossy-cli__suggestion--switch > .bossy-cli__suggestion-value {
+    color: var(--bossy-yellow);
+}
+
+.bossy-cli__suggestion--alias > .bossy-cli__suggestion-value {
     color: var(--bossy-blue);
 }
 
-.bossy-cli__suggestion--error {
-    color: var(--bossy-red);
+.bossy-cli__suggestion-description {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin: 0 0 0 16px;
+    padding: 0;
+    color: var(--bossy-text-faint);
+    -unity-text-align: middle-right;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
-/* Thin scrollbar without arrow buttons */
-.bossy-cli__output .unity-scroller--vertical {
+.bossy-cli__suggestion--selected > .bossy-cli__suggestion-description {
+    color: var(--bossy-text-muted);
+}
+
+/* Thin scrollbars without arrow buttons */
+.bossy-cli__output .unity-scroller--vertical,
+.bossy-cli__suggestion-list .unity-scroller--vertical {
     width: 8px;
 }
 
 .bossy-cli__output .unity-scroller__low-button,
-.bossy-cli__output .unity-scroller__high-button {
+.bossy-cli__output .unity-scroller__high-button,
+.bossy-cli__suggestion-list .unity-scroller__low-button,
+.bossy-cli__suggestion-list .unity-scroller__high-button {
     display: none;
 }
 
-.bossy-cli__output .unity-scroller__slider {
+.bossy-cli__output .unity-scroller__slider,
+.bossy-cli__suggestion-list .unity-scroller__slider {
     margin: 0;
 }
 
-.bossy-cli__output .unity-base-slider__tracker {
+.bossy-cli__output .unity-base-slider__tracker,
+.bossy-cli__suggestion-list .unity-base-slider__tracker {
     background-color: transparent;
     border-width: 0;
 }
 
-.bossy-cli__output .unity-base-slider__dragger {
+.bossy-cli__output .unity-base-slider__dragger,
+.bossy-cli__suggestion-list .unity-base-slider__dragger {
     background-color: var(--bossy-border);
     border-width: 0;
     border-radius: 4px;

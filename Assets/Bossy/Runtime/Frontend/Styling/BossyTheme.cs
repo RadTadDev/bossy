@@ -56,24 +56,69 @@ namespace Bossy.Frontend
         public const string CliSuggestionsVisibleClass = "bossy-cli__suggestions--visible";
 
         /// <summary>
-        /// An autocomplete suggestion.
+        /// A row in the autocomplete list.
         /// </summary>
         public const string CliSuggestionClass = "bossy-cli__suggestion";
 
         /// <summary>
-        /// The autocomplete suggestion currently selected by cycling.
+        /// The highlighted row in the autocomplete list, which the accept key applies.
         /// </summary>
         public const string CliSuggestionSelectedClass = "bossy-cli__suggestion--selected";
 
         /// <summary>
-        /// An autocomplete suggestion that is a hint rather than a completion.
+        /// An autocomplete row that completes a switch name.
         /// </summary>
-        public const string CliSuggestionHintClass = "bossy-cli__suggestion--hint";
+        public const string CliSuggestionSwitchClass = "bossy-cli__suggestion--switch";
 
         /// <summary>
-        /// An autocomplete suggestion that reports an error.
+        /// An autocomplete row that completes an alias.
         /// </summary>
-        public const string CliSuggestionErrorClass = "bossy-cli__suggestion--error";
+        public const string CliSuggestionAliasClass = "bossy-cli__suggestion--alias";
+
+        /// <summary>
+        /// The value shown in an autocomplete row.
+        /// </summary>
+        public const string CliSuggestionValueClass = "bossy-cli__suggestion-value";
+
+        /// <summary>
+        /// The dimmed description on the right of an autocomplete row.
+        /// </summary>
+        public const string CliSuggestionDescriptionClass = "bossy-cli__suggestion-description";
+
+        /// <summary>
+        /// A piece of the autocomplete status line, above the list.
+        /// </summary>
+        public const string CliStatusPartClass = "bossy-cli__status-part";
+
+        /// <summary>
+        /// A status line piece showing a hint.
+        /// </summary>
+        public const string CliStatusHintClass = "bossy-cli__status-part--hint";
+
+        /// <summary>
+        /// A status line piece saying the line is ready to run.
+        /// </summary>
+        public const string CliStatusReadyClass = "bossy-cli__status-part--ready";
+
+        /// <summary>
+        /// A status line piece showing an error.
+        /// </summary>
+        public const string CliStatusErrorClass = "bossy-cli__status-part--error";
+
+        /// <summary>
+        /// A status line piece warning that the typed value is invalid.
+        /// </summary>
+        public const string CliStatusWarningClass = "bossy-cli__status-part--warning";
+
+        /// <summary>
+        /// A dimmed status line piece, such as value progress or the argument kind.
+        /// </summary>
+        public const string CliStatusMutedClass = "bossy-cli__status-part--muted";
+
+        /// <summary>
+        /// A status line piece that shrinks and ends in an ellipsis when the line runs out of room.
+        /// </summary>
+        public const string CliStatusClipClass = "bossy-cli__status-part--clip";
 
         private const string StyleSheetPath = "BossyTheme";
 
