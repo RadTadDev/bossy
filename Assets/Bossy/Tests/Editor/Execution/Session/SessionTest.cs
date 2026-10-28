@@ -16,17 +16,25 @@ namespace Bossy.Tests.Shell
     /// <summary>
     /// Tests how <see cref="Session.RunAsync"/> turns what its endpoint reads into commands.
     /// </summary>
+    /// <remarks>
+    /// The parser creates its own command instances, so a run is observed through the endpoint instead: it is reset
+    /// once for every command group that starts, and a line that fails to parse writes an error to it.
+    /// </remarks>
     internal class SessionTest
     {
+        private const string CommandName = "ping";
+
         private BossyContext _context;
         private BossyPermissions _permissions;
 
-        [SetUp]
+        [OneTimeSetUp]
         public void Setup()
         {
+            // A generated type, because a [Command] class in this assembly would be discovered by the real console
+            var commandType = CommandGenerator.WithName(CommandName).Generate().GetType();
             var schemas = new SchemaRegistry(new List<CommandSchema>
             {
-                new("ping", "description", typeof(PingCommand), null)
+                new(CommandName, "description", commandType, null)
             });
             var adapters = new TypeAdapterRegistry();
             var settings = new SettingsManager(new MockSettingsSource(string.Empty));
@@ -39,13 +47,14 @@ namespace Bossy.Tests.Shell
         [Test]
         public async Task RunAsync_CommandLine_ParsesAndRuns()
         {
-            var endpoint = new MockEndpoint("ping");
+            var endpoint = new MockEndpoint(CommandName);
             var session = MockSession.Create(_context, _permissions, endpoint);
 
             var error = await RunUntilInputEnds(session);
 
             Assert.That(error, Is.Null);
-            Assert.That(endpoint.Log, Is.EqualTo(new[] { PingCommand.Reply }));
+            Assert.That(endpoint.Log, Is.Empty);
+            Assert.That(endpoint.ResetCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -53,49 +62,51 @@ namespace Bossy.Tests.Shell
         {
             var endpoint = new MockEndpoint("p");
             var session = MockSession.Create(_context, _permissions, endpoint);
-            session.Aliases["p"] = "ping";
+            session.Aliases["p"] = CommandName;
 
             var error = await RunUntilInputEnds(session);
 
             Assert.That(error, Is.Null);
-            Assert.That(endpoint.Log, Is.EqualTo(new[] { PingCommand.Reply }));
+            Assert.That(endpoint.Log, Is.Empty);
+            Assert.That(endpoint.ResetCount, Is.EqualTo(1));
         }
 
         [Test]
         public async Task RunAsync_UnparsableLine_WritesErrorAndKeepsReading()
         {
-            var endpoint = new MockEndpoint("notacommand", "ping");
+            var endpoint = new MockEndpoint("notacommand", CommandName);
             var session = MockSession.Create(_context, _permissions, endpoint);
 
             var error = await RunUntilInputEnds(session);
 
             Assert.That(error, Is.Null);
-            Assert.That(endpoint.Log, Has.Count.EqualTo(2));
+            Assert.That(endpoint.Log, Has.Count.EqualTo(1));
             Assert.That(endpoint.Log[0] as string, Does.Contain("Error:"));
-            Assert.That(endpoint.Log[1], Is.EqualTo(PingCommand.Reply));
+            Assert.That(endpoint.ResetCount, Is.EqualTo(1));
         }
 
         [Test]
         public async Task RunAsync_BlankLine_IsSkipped()
         {
-            var endpoint = new MockEndpoint("   ", "ping");
+            var endpoint = new MockEndpoint("   ", CommandName);
             var session = MockSession.Create(_context, _permissions, endpoint);
 
             var error = await RunUntilInputEnds(session);
 
             Assert.That(error, Is.Null);
-            Assert.That(endpoint.Log, Is.EqualTo(new[] { PingCommand.Reply }));
+            Assert.That(endpoint.Log, Is.Empty);
+            Assert.That(endpoint.ResetCount, Is.EqualTo(1));
         }
 
         [Test]
         public async Task RunAsync_RecordsOnlyLinesThatParse()
         {
-            var endpoint = new MockEndpoint("ping", "notacommand", "   ");
+            var endpoint = new MockEndpoint(CommandName, "notacommand", "   ");
             var session = MockSession.Create(_context, _permissions, endpoint);
 
             await RunUntilInputEnds(session);
 
-            Assert.That(session.History.Lines, Is.EqualTo(new[] { "ping" }));
+            Assert.That(session.History.Lines, Is.EqualTo(new[] { CommandName }));
         }
 
         [Test]
