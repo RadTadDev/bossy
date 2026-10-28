@@ -457,6 +457,8 @@ In addition to having typed arguments, you can also apply validators to further 
 private int repeat;
 ```
 
+On a variadic argument, validators check each element on its own, so `[EndsWith(".cs")]` on a `string[]` variadic requires every file to end with `.cs`. An empty variadic always passes. Every other argument is validated as a whole value, even when its type is an array.
+
 To make your own validators, inherit from the `ArgumentValidationAttribute` class. Below is an example of the `Range` attribute:
 
 ```csharp
@@ -654,7 +656,9 @@ Hints are a guide, and you can type values that are not suggested. Errors come f
 
 Values that contain spaces, quotes or operators, or that start with `-`, are quoted for you when a suggestion is applied. If you start typing inside a quote, suggestions keep the quote and close it.
 
-The autocomplete system is fully automated based on your command definitions. Enum arguments suggest their names and bool arguments suggest `true` and `false` without any extra code. Validation attributes describe themselves in the status line, for example `ends with .cs` or `range 0..10`; if you write your own `ArgumentValidationAttribute`, override `Describe()` to return a few words, or leave it returning null to show nothing.
+The autocomplete system is fully automated based on your command definitions. Enum arguments suggest their names and bool arguments suggest `true` and `false` without any extra code. Validation attributes describe themselves in the status line, for example `ends with .cs` or `range [0, 10]`; if you write your own `ArgumentValidationAttribute`, override `Describe()` to return a few words, or leave it returning null to show nothing.
+
+Validators run as you type. While you are still typing a value that fails one, only that constraint turns red (typing `Fo` on the way to `Foo.cs` fails `ends with .cs`), and the rest of the line keeps its color. A validator that does not describe itself shows its failure message in red instead. Once you move past the value, a failing validator is an error, just as it is when the line runs. For a variadic argument, each element is checked on its own. Validators run on every keystroke, so keep them fast; `IsExistingPath` checks the disk each time.
 
 Sometimes you may prefer to suggest values that you know are relevant. Consider the way the `open` command works:
 
@@ -739,7 +743,7 @@ public class GetCommand : SimpleCommand
 
 Results are cached. The engine remembers which values your function read through `TryGet` and `Current`, and runs it again only when one of those values changes. A function that reads nothing runs once when you start typing a value, and later keystrokes only re-rank its results, so it can do expensive work such as searching the project. A function that reads `Current` runs on every keystroke, so only read it when the suggestions depend on it, such as when completing file paths. Moving to another part of the line and back runs the function again, so its results stay fresh.
 
-If a suggestion function throws, a small red tab slides up above the suggestions saying which argument's suggestions failed and the exception message. The status line and the rest of the suggestions are unaffected, and nothing is written to the Unity console.
+If a suggestion function throws, a small red tab slides up above the suggestions saying which argument's suggestions failed and the exception message. The status line and the rest of the suggestions are unaffected, and nothing is written to the Unity console. A validator that throws is reported in the same tab, and autocomplete treats the value as passing it.
 
 The `help` command shows how a variadic argument reads its own earlier elements:
 

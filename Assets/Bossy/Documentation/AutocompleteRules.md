@@ -85,3 +85,14 @@ These cover the values that come from a `[Suggest]` function or are produced aut
 - Suggested values apply only to the first token of a value that takes several tokens.
 - Results are cached. The function runs again only if a value it read through `TryGet` or `Current` changed, or if it is asked about a different argument. The cache is dropped when a completion asks for no suggestions, so leaving the value and coming back runs the function again.
 - No command is ever constructed for autocomplete, so constructors and field initializers never run, and default values are never shown.
+
+---
+
+## Validators
+
+These cover arguments with `ArgumentValidationAttribute`s, such as `Range` and `EndsWith`. The tests are in the Validators section of `AutocompleteEngineTest`.
+
+- A value that parses but fails a validator, once moved on, is the parser's `ArgumentValidationError`, like a value that does not parse.
+- At the cursor, a value that parses but fails a validator is not an error, since partial input fails most validators on the way. `ArgumentHint.ValidationError` holds the message, `ArgumentHint.FailedConstraint` indexes the failed constraint in `Constraints`, and only that constraint is shown in red. A validator that does not describe itself has no constraint, so its message is shown in red instead.
+- A variadic's validators apply to each element, in the walker and in the parser. An empty variadic passes. Every other argument is validated as a whole value, even when its type is an array.
+- A validator that throws is reported like a failing suggestion function (P14), with `SuggestionFailure.IsValidator` set, and the value is treated as passing it.
