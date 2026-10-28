@@ -169,18 +169,18 @@ namespace Bossy.Command
         }
 
         /// <summary>
-        /// Execute another command.
+        /// Execute another command. A command that does not parse is reported as an error.
         /// </summary>
-        /// <param name="command">The command to run.</param>
-        /// <returns></returns>
-        public async Task ExecuteAsync(string command)
+        /// <param name="command">The command to run. Aliases in it are expanded.</param>
+        public async Task ExecuteAsync(CommandString command)
         {
             _token.ThrowIfCancellationRequested();
             
-            var result = Bossy.Parser.Parse(command, Bossy.Settings.BossyCliSettings.ToOperatorList());
+            var result = Parse(command);
 
             if (!result.TryGetGraph(out var graph))
             {
+                if (!result.IsEmpty) WriteError(result.Message);
                 return;
             }
             
@@ -190,14 +190,14 @@ namespace Bossy.Command
         /// <summary>
         /// Execute a new command and link its lifetime to this one.
         /// </summary>
-        /// <param name="command">The command to run.</param>
+        /// <param name="command">The command to run. Aliases in it are expanded.</param>
         /// <param name="input">The stream to take input from.</param>
         /// <param name="output">The stream to send output to.</param>
-        public ParseResult ExecuteAndLink(string command, AsyncPipe input, AsyncPipe output)
+        public ParseResult ExecuteAndLink(CommandString command, AsyncPipe input, AsyncPipe output)
         {
             _token.ThrowIfCancellationRequested();
             
-            var result = Bossy.Parser.Parse(command, Bossy.Settings.BossyCliSettings.ToOperatorList());
+            var result = Parse(command);
 
             if (!result.TryGetGraph(out var graph))
             {
@@ -215,10 +215,10 @@ namespace Bossy.Command
         /// <summary>
         /// Execute a command and read from it.
         /// </summary>
-        /// <param name="command">The command to execute.</param>
+        /// <param name="command">The command to execute. Aliases in it are expanded.</param>
         /// <typeparam name="T">The type to read.</typeparam>
         /// <returns>Each item from the output stream.</returns>
-        public IAsyncEnumerable<T> ExecuteAndRead<T>(string command)
+        public IAsyncEnumerable<T> ExecuteAndRead<T>(CommandString command)
         {
             var pipe = new AsyncPipe();
             var dummyInput = new AsyncPipe();
@@ -264,6 +264,11 @@ namespace Bossy.Command
             Write(prompt ?? "Chose one of the following options:");
 
             return await ReadInternalAsync<T>(_reader, choices);
+        }
+
+        private ParseResult Parse(CommandString command)
+        {
+            return Bossy.Parser.Parse(command.Text, Bossy.Settings.BossyCliSettings.ToOperatorList(), Aliases);
         }
 
         private async Task<T> ReadInternalAsync<T>(IReadable input, IReadOnlyList<ReadChoice> choices = null)

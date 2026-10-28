@@ -16,6 +16,7 @@ A developer console for Unity. Run commands in the editor, in builds, and at run
     - [Optional](#optional)
     - [Switch](#switch)
     - [Variadic](#variadic)
+    - [Command Strings](#command-strings)
     - [Command Context](#command-context)
     - [Return Values](#return-values)
     - [Argument Validation](#argument-validation)
@@ -344,6 +345,36 @@ private string[] _files;
 
 ---
 
+### Command Strings
+
+To take another command as an argument, as `watch` does, declare the argument as a `CommandString`. It works with `Positional`, `Optional`, `Switch` and `Variadic` (as `CommandString[]`), and converts to and from `string`.
+
+```csharp
+[Positional(0, "The command to repeat.")]
+private CommandString _command;
+
+public async Task<CommandStatus> ExecuteAsync(CommandContext ctx)
+{
+    await ctx.ExecuteAsync(_command);
+    return CommandStatus.Ok;
+}
+```
+
+A command string is a single word, so quote it to give the inner command arguments, switches or operators. Inside the quotes, use the other kind of quote (or escapes) for values with spaces:
+
+```
+> watch ping
+> watch -i 0.5 "get -n hp Player Transform position"
+> watch "scene load 'My Scene'"
+> watch "watch 'get Player'"
+```
+
+The inner command is checked when the line is parsed, using the same operators and aliases, so `watch "nope"` is an error before anything runs. An unquoted command that needs arguments, such as `watch get`, is an error too: quote the whole command instead. The inner command is not created until it runs.
+
+Aliases inside quotes are left alone by the outer line and expanded when the inner command is parsed. An alias typed unquoted as an argument of a command that takes a `CommandString` stays one value holding its whole expansion, so with `alias health get -n hp Player`, `watch health` repeats `get -n hp Player`.
+
+---
+
 ### Command Context
 
 `CommandContext` (exposed as a limited `SimpleContext` in synchronous commands) is the sole API surface available during execution.
@@ -362,12 +393,13 @@ private string[] _files;
 | `ctx.Yield()`                                                     | Yields execution contorl. Useful to break tight loops without a delay.                                          |
 | `ctx.Prompt(string)`                                              | Prompts the user by outputting a string then doing a read.                                                      |
 | `ctx.PromptWithOptions(IEnumerable options, string = null)`       | Prompts the user by outputting a string then reading for one of several listed options.                         |
-| `ctx.ExecuteAsync(string command)`                                | Executes another command. You should always await this.                                                         |
-| `ctx.ExecuteAndLink(string command, AsyncPipe in, AsyncPipe out)` | Executes another command and connects its in and out streams to the pipes you pass in.                          |
-| `ctx.ExecuteAndRead<T>(string command)`                           | Executes another command and streams its output to the spawning command. See below.                             |
+| `ctx.ExecuteAsync(CommandString command)`                                | Executes another command. You should always await this. A command that does not parse is written as an error. |
+| `ctx.ExecuteAndLink(CommandString command, AsyncPipe in, AsyncPipe out)` | Executes another command and connects its in and out streams to the pipes you pass in.                          |
+| `ctx.ExecuteAndRead<T>(CommandString command)`                           | Executes another command and streams its output to the spawning command. See below.                             |
 
+These take a `CommandString`, and a `string` converts to one, so you can pass either. The session's aliases are expanded in the command.
 
-Note: When using `ctx.ReadAllAsync<T>(IReadable input)` or `ctx.ExecuteAndRead<T>(string command)`, you should should use it in a loop like so:
+Note: When using `ctx.ReadAllAsync<T>(IReadable input)` or `ctx.ExecuteAndRead<T>(CommandString command)`, you should should use it in a loop like so:
 ```csharp
 await foreach (T obj in ctx.ReadAllAsync<T>())
 {
@@ -628,7 +660,7 @@ Your view sits inside the Bossy theme, so its USS can use the theme's colors to 
 Start or end a command with `!` to run it in its own window, with its own session:
 
 ```
-> !watch -i 0.5 get Player Transform position
+> !watch -i 0.5 "get Player Transform position"
 ```
 
 In the editor the command opens in a separate editor window. At runtime it opens in a draggable, resizable window over the game that stays on screen after the console is hidden, which makes it useful for monitoring values. Closing the window ends the command.
@@ -655,6 +687,8 @@ Suggestions are ranked: exact matches first, then prefixes, then matches at the 
 Hints are a guide, and you can type values that are not suggested. Errors come from the same checks the parser runs, so a line with an error will not run. Once every positional argument is filled, the status line says `Ready` and lists the optional arguments and switches you can still add.
 
 Values that contain spaces, quotes or operators, or that start with `-`, are quoted for you when a suggestion is applied. If you start typing inside a quote, suggestions keep the quote and close it.
+
+A `CommandString` argument suggests command names and aliases. Typed unquoted, it is one word, so a command that needs arguments is marked invalid. Open a quote and the whole inner command completes as if it were its own line: its name, subcommands, switches and values, at any depth. Values inside are quoted with the other kind of quote, as in `watch "scene load 'My Scene'"`.
 
 The autocomplete system is fully automated based on your command definitions. Enum arguments suggest their names and bool arguments suggest `true` and `false` without any extra code. Validation attributes describe themselves in the status line, for example `ends with .cs` or `range [0, 10]`; if you write your own `ArgumentValidationAttribute`, override `Describe()` to return a few words, or leave it returning null to show nothing.
 
