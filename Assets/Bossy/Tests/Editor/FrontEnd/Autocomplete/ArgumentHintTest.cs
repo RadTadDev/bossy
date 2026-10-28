@@ -41,13 +41,48 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
             Assert.That(HintWith().Constraints, Is.Empty);
         }
 
+        [Test]
+        public void FailedConstraint_IndexesDescribedConstraints()
+        {
+            var endsWith = new EndsWithAttribute(".cs");
+            var argument = ArgumentWith(new SilentValidator(), new StartsWithAttribute("Assets"), endsWith);
+
+            var hint = new ArgumentHint(argument, 1, 1, null, endsWith, "'x' must end with '.cs'.");
+
+            Assert.That(hint.FailedConstraint, Is.EqualTo(1));
+            Assert.That(hint.ValidationError, Is.EqualTo("'x' must end with '.cs'."));
+        }
+
+        [Test]
+        public void FailedConstraint_UndescribedValidator_IsMinusOne()
+        {
+            var silent = new SilentValidator();
+
+            var hint = new ArgumentHint(ArgumentWith(silent, new EndsWithAttribute(".cs")), 1, 1, null, silent, "Nope.");
+
+            Assert.That(hint.FailedConstraint, Is.EqualTo(-1));
+            Assert.That(hint.ValidationError, Is.EqualTo("Nope."));
+        }
+
+        [Test]
+        public void FailedConstraint_NoFailure_IsMinusOne()
+        {
+            var hint = HintWith(new EndsWithAttribute(".cs"));
+
+            Assert.That(hint.FailedConstraint, Is.EqualTo(-1));
+            Assert.That(hint.ValidationError, Is.Null);
+        }
+
         private static ArgumentHint HintWith(params ArgumentValidationAttribute[] validators)
         {
-            var field = typeof(HintTarget).GetField(nameof(HintTarget.Value));
-            var argument = new ArgumentSchema("value", "A value.", field, new PositionalAttribute(0, "A value."),
-                new List<ArgumentValidationAttribute>(validators));
+            return new ArgumentHint(ArgumentWith(validators), 1, 1, null);
+        }
 
-            return new ArgumentHint(argument, 1, 1, null);
+        private static ArgumentSchema ArgumentWith(params ArgumentValidationAttribute[] validators)
+        {
+            var field = typeof(HintTarget).GetField(nameof(HintTarget.Value));
+            return new ArgumentSchema("value", "A value.", field, new PositionalAttribute(0, "A value."),
+                new List<ArgumentValidationAttribute>(validators));
         }
 
         private class HintTarget

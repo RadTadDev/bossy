@@ -23,6 +23,7 @@ namespace Bossy.Tests.Utils
 
         private List<ArgumentFieldRecord> _arguments = new();
         private readonly Dictionary<string, (string FunctionName, Type ProviderType)> _suggestions = new();
+        private readonly Dictionary<string, List<CustomAttributeBuilder>> _validators = new();
         private string _output;
         private MethodInfo _constructorCall;
 
@@ -241,6 +242,43 @@ namespace Bossy.Tests.Utils
         }
 
         /// <summary>
+        /// Adds an <see cref="ArgumentValidationAttribute"/> to the most recently added argument.
+        /// </summary>
+        /// <param name="validatorType">The validator attribute type.</param>
+        /// <param name="args">The arguments of the validator's constructor.</param>
+        /// <returns>The generator.</returns>
+        /// <exception cref="InvalidOperationException">Throws when no argument has been added yet.</exception>
+        /// <exception cref="ArgumentException">Throws when the type is not a validator or has no matching constructor.</exception>
+        public CommandGenerator WithValidator(Type validatorType, params object[] args)
+        {
+            if (_arguments.Count == 0)
+            {
+                throw new InvalidOperationException("Add an argument before adding validators to it.");
+            }
+
+            if (!typeof(ArgumentValidationAttribute).IsAssignableFrom(validatorType))
+            {
+                throw new ArgumentException($"The type must derive from {nameof(ArgumentValidationAttribute)}.", nameof(validatorType));
+            }
+
+            var constructorInfo = validatorType.GetConstructor(args.Select(a => a.GetType()).ToArray());
+            if (constructorInfo == null)
+            {
+                throw new ArgumentException($"{validatorType.Name} has no constructor for these arguments.", nameof(args));
+            }
+
+            var name = _arguments[^1].Name;
+            if (!_validators.TryGetValue(name, out var builders))
+            {
+                builders = new List<CustomAttributeBuilder>();
+                _validators[name] = builders;
+            }
+
+            builders.Add(new CustomAttributeBuilder(constructorInfo, args));
+            return this;
+        }
+
+        /// <summary>
         /// Makes the command write text to its output when it runs.
         /// </summary>
         /// <param name="text">The text to write.</param>
@@ -299,6 +337,14 @@ namespace Bossy.Tests.Utils
                 if (_suggestions.TryGetValue(argRecord.Name, out var suggestion))
                 {
                     fieldBuilder.SetCustomAttribute(BuildSuggestAttribute(suggestion.FunctionName, suggestion.ProviderType));
+                }
+
+                if (_validators.TryGetValue(argRecord.Name, out var validators))
+                {
+                    foreach (var validator in validators)
+                    {
+                        fieldBuilder.SetCustomAttribute(validator);
+                    }
                 }
             }
         }

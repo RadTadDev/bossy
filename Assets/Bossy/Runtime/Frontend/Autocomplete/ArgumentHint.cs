@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Linq;
+using Bossy.Command;
 using Bossy.Schema;
 
 namespace Bossy.Frontend.Autocomplete
@@ -37,6 +37,18 @@ namespace Bossy.Frontend.Autocomplete
         public readonly IReadOnlyList<string> Constraints;
 
         /// <summary>
+        /// The message of the validator the value at the cursor fails, or null if it passes them all or does not
+        /// parse yet. The value is still being typed, so this is not an error yet.
+        /// </summary>
+        public readonly string ValidationError;
+
+        /// <summary>
+        /// The index in <see cref="Constraints"/> of the constraint the value fails, or -1 if it fails none, or
+        /// fails a validator that does not describe itself.
+        /// </summary>
+        public readonly int FailedConstraint;
+
+        /// <summary>
         /// True if the value takes more than one token, so <see cref="TokenNumber"/> shows progress.
         /// </summary>
         public bool HasProgress => TokensDesired > 1;
@@ -48,16 +60,33 @@ namespace Bossy.Frontend.Autocomplete
         /// <param name="tokenNumber">Which token of the value is being typed, from 1.</param>
         /// <param name="tokensDesired">How many tokens the value takes.</param>
         /// <param name="invalidValue">The typed value if it is complete but does not parse, otherwise null.</param>
-        public ArgumentHint(ArgumentSchema argument, int tokenNumber, int tokensDesired, string invalidValue)
+        /// <param name="failedValidator">The validator the value fails, if any.</param>
+        /// <param name="validationError">The message of the failed validator, if any.</param>
+        public ArgumentHint(ArgumentSchema argument, int tokenNumber, int tokensDesired, string invalidValue,
+            ArgumentValidationAttribute failedValidator = null, string validationError = null)
         {
             Argument = argument;
             TokenNumber = tokenNumber;
             TokensDesired = tokensDesired;
             InvalidValue = invalidValue;
-            Constraints = argument.Validators
-                .Select(v => v.Describe())
-                .Where(d => !string.IsNullOrWhiteSpace(d))
-                .ToList();
+            ValidationError = validationError;
+            FailedConstraint = -1;
+
+            var constraints = new List<string>();
+            foreach (var validator in argument.Validators)
+            {
+                var description = validator.Describe();
+                if (string.IsNullOrWhiteSpace(description)) continue;
+
+                if (validator == failedValidator)
+                {
+                    FailedConstraint = constraints.Count;
+                }
+
+                constraints.Add(description);
+            }
+
+            Constraints = constraints;
         }
     }
 }

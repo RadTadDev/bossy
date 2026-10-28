@@ -35,8 +35,8 @@ namespace Bossy.Frontend.Autocomplete
         public readonly ArgumentHint Argument;
 
         /// <summary>
-        /// The failure of the suggestion function of the argument being completed, otherwise null. It is kept out
-        /// of <see cref="Message"/>, since the rest of the result is still valid.
+        /// The failure of the suggestion function of the argument being completed, or of a validator that threw,
+        /// otherwise null. It is kept out of <see cref="Message"/>, since the rest of the result is still valid.
         /// </summary>
         public readonly SuggestionFailure SuggestionFailure;
 
@@ -111,6 +111,18 @@ namespace Bossy.Frontend.Autocomplete
             if (string.IsNullOrEmpty(query) || Completions.Count == 0) return this;
 
             return new CompletionResult(Message, MessageKind, Completions.Select(c => c.WithMatches(query)).ToList(), Argument, SuggestionFailure);
+        }
+
+        /// <summary>
+        /// Makes a copy of this result that reports a failure, unless it already reports one.
+        /// </summary>
+        /// <param name="failure">The failure.</param>
+        /// <returns>The new result.</returns>
+        internal CompletionResult WithFailure(SuggestionFailure failure)
+        {
+            if (SuggestionFailure != null) return this;
+
+            return new CompletionResult(Message, MessageKind, Completions, Argument, failure);
         }
 
         /// <summary>

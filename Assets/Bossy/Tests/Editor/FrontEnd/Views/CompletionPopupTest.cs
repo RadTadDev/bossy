@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Frontend.Autocomplete;
@@ -45,6 +46,40 @@ namespace Bossy.Tests.FrontEnd.Views
             var text = CompletionPopup.FailureText(new SuggestionFailure(argument, "No <assets>"));
 
             Assert.That(text, Is.EqualTo($"Suggestions for {Format.Bold("<noparse>scene</noparse>")} failed: <noparse>No <assets></noparse>"));
+        }
+
+        [Test]
+        public void FailureText_Validator_SaysValidator()
+        {
+            var argument = new ArgumentSchema("scene", "", null, new PositionalAttribute(0, ""), null);
+
+            var text = CompletionPopup.FailureText(new SuggestionFailure(argument, "Broken", true));
+
+            Assert.That(text, Is.EqualTo($"A validator for {Format.Bold("<noparse>scene</noparse>")} failed: <noparse>Broken</noparse>"));
+        }
+
+        [Test]
+        public void ConstraintsText_ColorsOnlyTheFailedConstraint()
+        {
+            var endsWith = new EndsWithAttribute(".cs");
+            var argument = new ArgumentSchema("file", "", null, new PositionalAttribute(0, ""),
+                new List<ArgumentValidationAttribute> { new StartsWithAttribute("Assets"), endsWith });
+
+            var text = CompletionPopup.ConstraintsText(new ArgumentHint(argument, 1, 1, null, endsWith, "Nope."));
+
+            var failed = Format.Color("<noparse>ends with .cs</noparse>", Format.Red);
+            Assert.That(text, Is.EqualTo($"<noparse>starts with Assets</noparse>, {failed}"));
+        }
+
+        [Test]
+        public void ConstraintsText_NoFailure_IsPlain()
+        {
+            var argument = new ArgumentSchema("file", "", null, new PositionalAttribute(0, ""),
+                new List<ArgumentValidationAttribute> { new StartsWithAttribute("Assets"), new EndsWithAttribute(".cs") });
+
+            var text = CompletionPopup.ConstraintsText(new ArgumentHint(argument, 1, 1, null));
+
+            Assert.That(text, Is.EqualTo("<noparse>starts with Assets</noparse>, <noparse>ends with .cs</noparse>"));
         }
 
         [Test]
