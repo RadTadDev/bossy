@@ -30,7 +30,7 @@ namespace Bossy.Execution
 
         private readonly BossyContext _context;
         private readonly BossyPermissions _permissions;
-        private readonly ExecutionProxy _executionProxy;
+        private readonly GraphDispatcher _dispatcher;
 
         private CancellationTokenSource _commandCancellationSource;
         private readonly CancellationTokenSource _sessionCancellationSource = new();
@@ -51,7 +51,7 @@ namespace Bossy.Execution
             Endpoint = endpoint;
             History = history;
             Aliases = aliases;
-            _executionProxy = new ExecutionProxy(context, permissions, endpoint, host);
+            _dispatcher = new GraphDispatcher(context, permissions, endpoint, host);
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace Bossy.Execution
             _commandCancellationSource = new CancellationTokenSource();
             var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandCancellationSource.Token, _sessionCancellationSource.Token);
 
-            await _executionProxy.ExecuteAsync(graph, this, linkedSource.Token, reader, writer);
+            await _dispatcher.ExecuteAsync(graph, this, linkedSource.Token, reader, writer);
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace Bossy.Execution
                 _commandCancellationSource = new CancellationTokenSource();
                 var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(_commandCancellationSource.Token, _sessionCancellationSource.Token);
 
-                await _executionProxy.ExecuteAsync(graph, this, linkedSource.Token);
+                await _dispatcher.ExecuteAsync(graph, this, linkedSource.Token);
             }
         }
 
@@ -145,7 +145,7 @@ namespace Bossy.Execution
         /// <param name="output">An output source.</param>
         public async Task ExecuteAsync(CommandGraph graph, CancellationToken token, IReadable input = null, IWriteable output = null)
         {
-            await _executionProxy.ExecuteAsync(graph, this, token, input, output);
+            await _dispatcher.ExecuteAsync(graph, this, token, input, output);
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.TextCore;
 using UnityEngine.TextCore.LowLevel;
 using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
@@ -34,6 +35,14 @@ namespace Bossy.Frontend
         private const int SamplingPointSize = 36;
         private const int AtlasPadding = 4;
         private const int AtlasSize = 1024;
+
+        // The space and non-breaking space, whose glyphs are empty. They are added when the font is created so they
+        // can be moved off the atlas.
+        private static readonly string EmptyGlyphCharacters = " " + (char)0x00A0;
+
+        // Outside the atlas, past the bottom left corner, so that a quad drawn for an empty glyph samples only the
+        // clamped edge texel. No glyph writes that texel, because glyphs are packed at least one texel in.
+        private static readonly GlyphRect OffAtlasRect = new(-2 * AtlasPadding - 2, -2 * AtlasPadding - 2, 0, 0);
 
         private static FontAsset _regular;
 
@@ -92,6 +101,8 @@ namespace Bossy.Frontend
                 AtlasSize, AtlasSize, AtlasPopulationMode.Dynamic, enableMultiAtlasSupport: false);
             asset.name = AssetName(resourcePath);
 
+            MoveEmptyGlyphsOffAtlas(asset);
+
             // Unity destroys objects created in play mode when play mode ends, and unloads objects nothing
             // serialized refers to, including when unused assets are unloaded explicitly. Either would leave
             // the console drawing with a destroyed font. Only DontUnloadUnusedAsset stops the unloading, because
@@ -105,6 +116,32 @@ namespace Bossy.Frontend
             }
 
             return asset;
+        }
+
+        /// <summary>
+        /// Points empty glyphs, such as the space, at a rect outside the atlas.
+        /// </summary>
+        /// <remarks>
+        /// Empty glyphs get a zero size rect at the atlas origin. UI Toolkit still draws a quad for them, padded on
+        /// every side, which reached the edge of the first packed glyph and showed as a speck in every space.
+        /// Outside the atlas, with the atlas clamped, the quad samples only the blank edge texel.
+        /// </remarks>
+        private static void MoveEmptyGlyphsOffAtlas(FontAsset asset)
+        {
+            foreach (var atlas in asset.atlasTextures)
+            {
+                atlas.wrapMode = TextureWrapMode.Clamp;
+            }
+
+            asset.TryAddCharacters(EmptyGlyphCharacters, out _);
+
+            foreach (var glyph in asset.glyphLookupTable.Values)
+            {
+                if (glyph.glyphRect.width == 0 || glyph.glyphRect.height == 0)
+                {
+                    glyph.glyphRect = OffAtlasRect;
+                }
+            }
         }
 
         private static string AssetName(string resourcePath) => AssetNamePrefix + resourcePath.Substring(resourcePath.LastIndexOf('/') + 1);

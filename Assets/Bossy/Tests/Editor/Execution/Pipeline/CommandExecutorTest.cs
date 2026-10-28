@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
@@ -32,7 +33,7 @@ namespace Bossy.Tests.Shell
             
             
             _context = new BossyContext(null, registry, null, null, null, null);
-            _session = MockSession.Create(_context, _permissions, new MockEndpointCapabilities());
+            _session = MockSession.Create(_context, _permissions, new MockEndpoint());
             _executor = new CommandExecutor(_context, _permissions, new MockExecutionListener());
         }
         
@@ -564,13 +565,36 @@ namespace Bossy.Tests.Shell
         }
 
         [Test]
-        public void Test_ClosingFrontendAsWriter_WritesNothing()
+        public async Task Test_SkippedGroup_WritesReasonWithoutNotifyingListener()
         {
-            var frontend = new MockEndpointCapabilities();
+            var context = new BossyContext(null, new TypeAdapterRegistry(), null, null, new NullBinder(), null);
+            var listener = new MockExecutionListener();
+            var executor = new CommandExecutor(context, _permissions, listener);
+            var writer = new MockWriteable();
 
-            ((IWriteable)frontend).CloseWriter();
+            var graph = CommandGraph
+                .Create(false)
+                .Execute(new UnboundCommand(), null)
+                .Build();
 
-            Assert.That(frontend.Log, Is.Empty);
+            await executor.ExecuteAsync(graph, _session, CancellationToken.None, new MockReadable(), writer);
+
+            Assert.That(writer.Log, Is.Not.Empty);
+            Assert.That(listener.Calls, Is.Empty);
+        }
+
+        /// <summary>
+        /// A command with a binding nothing is registered for, so its group fails before it starts.
+        /// </summary>
+        private class UnboundCommand : SimpleCommand
+        {
+            [Bind]
+            private string _missing;
+
+            protected override CommandStatus Execute(SimpleContext ctx)
+            {
+                return CommandStatus.Ok;
+            }
         }
     }
 }

@@ -6,23 +6,24 @@ using Bossy.Frontend;
 namespace Bossy.Execution
 {
     /// <summary>
-    /// Sits between a session and the command executor. Opens command windows and shows command views
-    /// through the session's host. Endpoints without a host run windowed commands inline instead.
+    /// Sends a session's graphs where they should run. Windowed graphs open a command window through the
+    /// session's host, and endpoints without a host run them inline instead. Other graphs run in the executor,
+    /// and this keeps the endpoint's views and capabilities in step with each group.
     /// </summary>
-    internal class ExecutionProxy : IExecutionListener
+    internal class GraphDispatcher : IExecutionListener
     {
         private readonly IEndpoint _endpoint;
         private readonly ISessionHost _host;
         private readonly CommandExecutor _executor;
 
         /// <summary>
-        /// Creates a new execution proxy.
+        /// Creates a new graph dispatcher.
         /// </summary>
         /// <param name="context">The Bossy context.</param>
         /// <param name="permissions">The current permissions.</param>
         /// <param name="endpoint">The endpoint the session reads from and writes to.</param>
         /// <param name="host">Where the session's UI lives, or null if it has none.</param>
-        public ExecutionProxy(BossyContext context, BossyPermissions permissions, IEndpoint endpoint, ISessionHost host)
+        public GraphDispatcher(BossyContext context, BossyPermissions permissions, IEndpoint endpoint, ISessionHost host)
         {
             _endpoint = endpoint;
             _host = host;
@@ -53,7 +54,11 @@ namespace Bossy.Execution
                 graph.Windowed = false;
             }
 
-            await _executor.ExecuteAsync(graph, session, token, input ?? _endpoint, output ?? _endpoint);
+            // Commands close their output when they finish, which would end the endpoint for the rest of the session.
+            // Only an output the caller passed in is closed, because the caller may be waiting for it to end.
+            var resolvedOutput = output ?? new NonClosingWriter(_endpoint);
+
+            await _executor.ExecuteAsync(graph, session, token, input ?? _endpoint, resolvedOutput);
         }
 
         public void OnGroupStarted(CommandGroup group)
@@ -72,6 +77,26 @@ namespace Bossy.Execution
             }
 
             (_endpoint as IVisualEndpointCapabilities)?.ResetCapabilities();
+        }
+
+        /// <summary>
+        /// Writes through to a writer but ignores requests to close it.
+        /// </summary>
+        private sealed class NonClosingWriter : IWriteable
+        {
+            private readonly IWriteable _target;
+
+            public NonClosingWriter(IWriteable target)
+            {
+                _target = target;
+            }
+
+            public void Write(object value)
+            {
+                _target.Write(value);
+            }
+
+            public void CloseWriter() { }
         }
     }
 }

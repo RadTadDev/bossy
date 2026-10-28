@@ -44,119 +44,134 @@ namespace Bossy.Execution
         {
             if (graph.IsEmpty) return;
 
-            var previousStatus = CommandStatus.Ok;
-            var previousLink = CommandGraphLink.Then;
+            var context = new CommandContext(session, _context, input, output, true, token);
+            var groups = GroupCommands(graph, context);
 
-            var defaultContext = new CommandContext(session, _context, input, output, true, token);
+            if (!HasPermissions(groups, output)) return;
 
-            var groups = GroupCommands(graph, defaultContext);
-            
-            // Validate permissions for all commands
+            var status = CommandStatus.Ok;
+            var link = CommandGraphLink.Then;
+
             foreach (var group in groups)
+            {
+                if (!Continue(status, link)) break;
+
+                status = await RunGroupAsync(group, session, context, output);
+                link = group.Nodes[^1].Link;
+            }
+        }
+
+        /// <summary>
+        /// Checks every command in the graph against the permissions. Writes the reason when one is denied.
+        /// </summary>
+        private bool HasPermissions(IEnumerable<CommandGroup> groups, IWriteable output)
+        {
+            var denied = groups.SelectMany(group => group.Nodes).FirstOrDefault(node => !_permissions.CanExecute(node.Schema));
+            if (denied == null) return true;
+
+            output.Write(Format.Error($"You do not have permission to execute command: {denied.Schema.Name}. Use the command 'login' to login."));
+            return false;
+        }
+
+        /// <summary>
+        /// Runs one group. A group that is skipped because its hooks or bindings failed still writes the reason,
+        /// but it never starts, so the listener is not told about it.
+        /// </summary>
+        private async Task<CommandStatus> RunGroupAsync(CommandGroup group, Session session, CommandContext context, IWriteable output)
+        {
+            var status = CommandStatus.Error;
+            var started = false;
+
+            try
+            {
+                if (!await PrepareGroupAsync(group, context, output)) return status;
+
+                started = true;
+                _listener.OnGroupStarted(group);
+
+                status = await ExecuteNodesAsync(group, session, context);
+                return status;
+            }
+            catch (OperationCanceledException)
+            {
+                status = CommandStatus.Cancelled;
+                return status;
+            }
+            catch (BossyStreamClosedException)
+            {
+                output.Write(Format.Warning("Command failed after reading from a closed input stream."));
+                return status;
+            }
+            catch (BossyNotAdaptableException e)
+            {
+                output.Write(Format.Error(e.Message));
+                return status;
+            }
+            catch (Exception e)
+            {
+                output.Write(Format.Error(e.Message));
+                Log.Exception(e);
+                return status;
+            }
+            finally
             {
                 foreach (var node in group.Nodes)
                 {
-                    if (!_permissions.CanExecute(node.Schema))
-                    {
-                        output.Write(Format.Error($"You do not have permission to execute command: {node.Schema.Name}. Use the command 'login' to login."));
-                        return;
-                    }
-                }
-            }
-            
-            foreach (var group in groups)
-            {
-                if (!Continue(previousStatus, previousLink))
-                {
-                    break;
+                    node.Context.GetWriter().CloseWriter();
                 }
 
-                try
+                if (status is CommandStatus.Cancelled)
                 {
-                    // 1. Ensure all prelaunch hooks pass
-                    PrelaunchResult failure = null;
-                    foreach (var node in group.Nodes)
-                    {
-                        var result = await RunHooks(node.Command, defaultContext);
-                        if (!result.Execute)
-                        {
-                            failure = result;
-                            break;
-                        }
-                    }
+                    output.Write("Task cancelled");
+                }
 
-                    if (failure != null)
-                    {
-                        output.Write($"{Format.Color("Command cancelled", Format.Yellow)}: {failure.Message}");
-    
-                        // Note: Use error here rather than canceled so other commands react appropriately
-                        previousStatus = CommandStatus.Error;
-                        previousLink = group.Nodes.Last().Link;
-    
-                        continue;
-                    }
-                
-                    // 2. Install all bindings
-                    var bindingFailure = group.Nodes.Select(n => InstallBindings(n.Command)).FirstOrDefault(r => !r.Success);
-                    if (bindingFailure != null)
-                    {
-                        output.Write(Format.Error(bindingFailure.Message));
-                        
-                        previousStatus = CommandStatus.Error;
-                        previousLink = group.Nodes.Last().Link;
-                        
-                        continue;
-                    }
-                    
-                    _listener.OnGroupStarted(group);
-
-                    // 3. Execute
-                    var task = group.Nodes.Count == 1
-                        ? group.Nodes[0].Command.ExecuteAsync(defaultContext)
-                        : BuildPipeline(group.Nodes, session, defaultContext);
-
-                    // 4. Update bookkeeping
-                    previousLink = group.Nodes.Last().Link;
-                    previousStatus = await task;
-                }
-                catch (OperationCanceledException)
+                if (started)
                 {
-                    previousStatus = CommandStatus.Cancelled;
-                }
-                catch (BossyStreamClosedException)
-                {
-                    output.Write(Format.Warning("Command failed after reading from a closed input stream."));
-                    previousStatus = CommandStatus.Error;
-                }
-                catch (BossyNotAdaptableException e)
-                {
-                    output.Write(Format.Error(e.Message));
-                    previousStatus = CommandStatus.Error;
-                }
-                catch (Exception e)
-                {
-                    output.Write(Format.Error(e.Message));
-                    previousStatus = CommandStatus.Error;
-                    Log.Exception(e);
-                }
-                finally
-                {
-                    foreach (var node in group.Nodes)
-                    {
-                        node.Context.GetWriter().CloseWriter();
-                    }
-                    
-                    if (previousStatus is CommandStatus.Cancelled)
-                    {
-                        output.Write("Task cancelled");
-                    }
-                    
                     _listener.OnGroupFinished(group);
                 }
             }
         }
 
-        private static async Task<PrelaunchResult> RunHooks(ICommand command, CommandContext context)
+        /// <summary>
+        /// Runs the prelaunch hooks, then installs the bindings, for every command in a group.
+        /// </summary>
+        /// <returns>True if the group can run. False means the reason was written.</returns>
+        private async Task<bool> PrepareGroupAsync(CommandGroup group, CommandContext context, IWriteable output)
+        {
+            foreach (var node in group.Nodes)
+            {
+                var hookResult = await RunHooksAsync(node.Command, context);
+                if (!hookResult.Execute)
+                {
+                    output.Write($"{Format.Color("Command cancelled", Format.Yellow)}: {hookResult.Message}");
+                    return false;
+                }
+            }
+
+            foreach (var node in group.Nodes)
+            {
+                var binding = InstallBindings(node.Command);
+                if (!binding.Success)
+                {
+                    output.Write(Format.Error(binding.Message));
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Runs a group's commands, either alone or as a pipeline.
+        /// </summary>
+        private Task<CommandStatus> ExecuteNodesAsync(CommandGroup group, Session session, CommandContext context)
+        {
+            return group.Nodes.Count == 1
+                ? group.Nodes[0].Command.ExecuteAsync(context)
+                : RunPipelineAsync(group.Nodes, session, context);
+        }
+
+        private static async Task<PrelaunchResult> RunHooksAsync(ICommand command, CommandContext context)
         {
             var hooks = command.GetType().GetCustomAttributes<PrelaunchHookAttribute>();
 
@@ -188,24 +203,27 @@ namespace Bossy.Execution
                 {
                     return InstallBindingResult.Error($"Instance registered to Bossy for type \"{field.FieldType.GetFriendlyName()}\" was null.");
                 }
-                
+
                 field.SetValue(command, instance);
             }
 
             return InstallBindingResult.Ok();
         }
-        
-        private async Task<CommandStatus> BuildPipeline(IReadOnlyList<CommandGraphNode> group, Session session, CommandContext defaultContext)
+
+        /// <summary>
+        /// Runs piped commands concurrently. Each command reads from the previous one's pipe and writes to the next.
+        /// </summary>
+        private async Task<CommandStatus> RunPipelineAsync(IReadOnlyList<CommandGraphNode> nodes, Session session, CommandContext defaultContext)
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(defaultContext.CancellationToken);
 
-            var pipes = Enumerable.Range(0, group.Count - 1).Select(_ => new AsyncPipe()).ToList();
+            var pipes = Enumerable.Range(0, nodes.Count - 1).Select(_ => new AsyncPipe()).ToList();
 
             async Task<CommandStatus> RunNode(CommandGraphNode node, IReadable reader, IWriteable writer)
             {
                 var context = new CommandContext(session, _context, reader, writer, false, cts.Token);
                 node.Context = context;
-                
+
                 try
                 {
                     var status = await node.Command.ExecuteAsync(context);
@@ -228,18 +246,18 @@ namespace Bossy.Execution
                 }
                 finally
                 {
+                    // Closing the pipe is what tells the next command its input has ended
                     writer.CloseWriter();
                 }
             }
 
-            var tasks = group.Select((node, i) =>
+            var tasks = nodes.Select((node, i) =>
             {
                 var reader = i == 0 ? defaultContext.GetReader() : pipes[i - 1];
-                var writer = i == group.Count - 1 ? defaultContext.GetWriter() : pipes[i];
+                var writer = i == nodes.Count - 1 ? defaultContext.GetWriter() : pipes[i];
                 return RunNode(node, reader, writer);
             }).ToList();
 
-            // Execution suspends here until this pipeline task is awaited...
             var results = await Task.WhenAll(tasks);
 
             return results.Any(r => r is CommandStatus.Error or CommandStatus.Cancelled)
@@ -247,36 +265,39 @@ namespace Bossy.Execution
                 : CommandStatus.Ok;
         }
 
-        private List<CommandGroup> GroupCommands(CommandGraph graph, CommandContext defaultContext)
+        /// <summary>
+        /// Splits the graph into groups. Nodes linked by pipes share a group, and every other node ends one.
+        /// </summary>
+        private static List<CommandGroup> GroupCommands(CommandGraph graph, CommandContext context)
         {
-            List<CommandGroup> groups = new();
-            List<CommandGraphNode> current = new();
-            CommandGraphNode last = null;
-            
+            var groups = new List<CommandGroup>();
+            var current = new List<CommandGraphNode>();
+
             foreach (var node in graph.ToArray())
             {
-                // Assign this for all, it will be overriden for windowed commands and pipelines
-                node.Context = defaultContext;
-                
-                last = node;
-                
+                // Windowed commands and pipelines replace this when they run
+                node.Context = context;
                 current.Add(node);
 
                 if (node.Link is CommandGraphLink.Pipe) continue;
-                
+
                 groups.Add(new CommandGroup(current, node.Command as ICommandView));
                 current = new List<CommandGraphNode>();
             }
-            
+
+            // A pipeline left open at the end of the graph still forms a group
             if (current.Count > 0)
             {
-                groups.Add(new CommandGroup(current, last?.Command as ICommandView));
+                groups.Add(new CommandGroup(current, current[^1].Command as ICommandView));
             }
 
             return groups;
         }
 
-        private bool Continue(CommandStatus status, CommandGraphLink link)
+        /// <summary>
+        /// Tells whether the next group should run, given how the previous one ended and how it was linked.
+        /// </summary>
+        private static bool Continue(CommandStatus status, CommandGraphLink link)
         {
             if (status == CommandStatus.Cancelled) return false;
             if (link is CommandGraphLink.None) return false;
@@ -289,14 +310,14 @@ namespace Bossy.Execution
 
             return link is CommandGraphLink.Or;
         }
-        
+
         private class InstallBindingResult
         {
             /// <summary>
             /// Whether bindings were installed correctly.
             /// </summary>
             public readonly bool Success;
-            
+
             /// <summary>
             /// The failure message if not successful.
             /// </summary>

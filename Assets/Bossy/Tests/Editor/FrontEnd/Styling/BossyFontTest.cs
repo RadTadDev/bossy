@@ -102,5 +102,20 @@ namespace Bossy.Tests.FrontEnd.Styling
             Assert.That(weights[7].regularTypeface, Is.Not.Null);
             Assert.That(weights[4].italicTypeface, Is.Not.Null);
         }
+
+        [Test]
+        public void EmptyGlyphs_PointOutsideClampedAtlas()
+        {
+            var element = new VisualElement();
+            BossyFont.ApplyTo(element);
+            var asset = element.style.unityFontDefinition.value.fontAsset;
+
+            // A quad drawn for an empty glyph inside the atlas picked up the edge of a neighbor, which showed as a speck in every space
+            var empty = asset.glyphLookupTable.Values.Where(g => g.glyphRect.width == 0 || g.glyphRect.height == 0).ToList();
+
+            Assert.That(empty, Is.Not.Empty, "The space glyph was not added.");
+            Assert.That(empty.All(g => g.glyphRect.x < 0 && g.glyphRect.y < 0), Is.True, "An empty glyph points inside the atlas.");
+            Assert.That(asset.atlasTextures.All(t => t.wrapMode == TextureWrapMode.Clamp), Is.True, "The atlas is not clamped.");
+        }
     }
 }

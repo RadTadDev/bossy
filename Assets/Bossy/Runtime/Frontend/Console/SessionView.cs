@@ -34,10 +34,7 @@ namespace Bossy.Frontend
         /// </summary>
         public string Title { get; }
 
-        private const string CommandViewClass = "bossy-command-view";
-        private const string CommandViewEnteringClass = "bossy-command-view--entering";
-
-        private readonly IVisualEndpointEndpoint _capabilities;
+        private readonly IVisualEndpoint _capabilities;
         private readonly CommandWindowOpener _openCommandWindow;
         private readonly Stack<VisualElement> _commandViews = new();
         private bool _disposed;
@@ -50,7 +47,7 @@ namespace Bossy.Frontend
         /// <param name="createSession">Creates the session given this view as its host.</param>
         /// <param name="openCommandWindow">Opens command windows for this session.</param>
         /// <param name="inputSettings">The input settings.</param>
-        public SessionView(string title, IVisualEndpointEndpoint capabilities,Func<ISessionHost, Session> createSession, CommandWindowOpener openCommandWindow, BossyInputSettings inputSettings)
+        public SessionView(string title, IVisualEndpoint capabilities,Func<ISessionHost, Session> createSession, CommandWindowOpener openCommandWindow, BossyInputSettings inputSettings)
         {
             Title = title;
             _capabilities = capabilities;
@@ -114,9 +111,9 @@ namespace Bossy.Frontend
 
             // Command views are placed on top of the frontend rather than replacing it, because removing
             // or hiding the frontend breaks UI Toolkit's focus tracking for it.
-            root.AddToClassList(CommandViewClass);
+            root.AddToClassList(BossyTheme.CommandViewClass);
             root.delegatesFocus = true;
-            Animations.In(root, CommandViewEnteringClass);
+            Animations.In(root, BossyTheme.CommandViewEnteringClass);
 
             _commandViews.Push(root);
             Root.Add(root);

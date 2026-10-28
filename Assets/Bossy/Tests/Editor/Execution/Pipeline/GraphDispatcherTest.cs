@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
 using Bossy.Schema;
@@ -13,9 +12,9 @@ using NUnit.Framework;
 namespace Bossy.Tests.Shell
 {
     /// <summary>
-    /// Tests the <see cref="ExecutionProxy"/> behavior that a session sees: windows, views and endpoint resets.
+    /// Tests the <see cref="GraphDispatcher"/> behavior that a session sees: windows, views, endpoint resets and closing.
     /// </summary>
-    internal class ExecutionProxyTest
+    internal class GraphDispatcherTest
     {
         private BossyPermissions _permissions;
         private BossyContext _context;
@@ -33,7 +32,7 @@ namespace Bossy.Tests.Shell
         public async Task Test_Windowed_WithHost_OpensCommandWindow()
         {
             var host = new MockSessionHost();
-            var session = MockSession.Create(_context, _permissions, new MockEndpointCapabilities(), host);
+            var session = MockSession.Create(_context, _permissions, new MockEndpoint(), host);
 
             var graph = CommandGraph
                 .Create(true)
@@ -49,7 +48,7 @@ namespace Bossy.Tests.Shell
         [Test]
         public async Task Test_Windowed_NoHost_RunsInlineWithWarning()
         {
-            var endpoint = new MockEndpointCapabilities();
+            var endpoint = new MockEndpoint();
             var session = MockSession.Create(_context, _permissions, endpoint);
             var tracker = new TrackingCommand();
 
@@ -68,7 +67,7 @@ namespace Bossy.Tests.Shell
         public async Task Test_CommandView_PushedAndPopped()
         {
             var host = new MockSessionHost();
-            var session = MockSession.Create(_context, _permissions, new MockEndpointCapabilities(), host);
+            var session = MockSession.Create(_context, _permissions, new MockEndpoint(), host);
 
             var graph = CommandGraph
                 .Create(false)
@@ -83,7 +82,7 @@ namespace Bossy.Tests.Shell
         [Test]
         public async Task Test_VisualEndpoint_ResetAfterEachGroup()
         {
-            var endpoint = new MockEndpointCapabilities();
+            var endpoint = new MockEndpoint();
             var session = MockSession.Create(_context, _permissions, endpoint);
 
             var graph = CommandGraph
@@ -94,6 +93,38 @@ namespace Bossy.Tests.Shell
             await session.ExecuteAsync(graph, CancellationToken.None);
 
             Assert.That(endpoint.ResetCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Test_CommandOutput_DoesNotCloseEndpoint()
+        {
+            var endpoint = new MockEndpoint();
+            var session = MockSession.Create(_context, _permissions, endpoint);
+
+            var graph = CommandGraph
+                .Create(false)
+                .Execute(new SuccessfulCommand(), null)
+                .Build();
+
+            await session.ExecuteAsync(graph, CancellationToken.None);
+
+            Assert.That(endpoint.Log, Has.None.SameAs(CloseWriterSentinel.Object));
+        }
+
+        [Test]
+        public async Task Test_CallerOutput_IsClosedAfterGraph()
+        {
+            var session = MockSession.Create(_context, _permissions, new MockEndpoint());
+            var output = new MockWriteable();
+
+            var graph = CommandGraph
+                .Create(false)
+                .Execute(new SuccessfulCommand(), null)
+                .Build();
+
+            await session.ExecuteAsync(graph, CancellationToken.None, new MockReadable(), output);
+
+            Assert.That(output.Log, Has.Some.SameAs(CloseWriterSentinel.Object));
         }
     }
 }

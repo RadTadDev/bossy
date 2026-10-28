@@ -41,7 +41,8 @@
 
 .bossy-cli__line {
     color: var(--bossy-text);
-    white-space: normal;
+    /* Keeps runs of spaces so aligned output stays aligned, and still wraps long lines */
+    white-space: pre-wrap;
     padding: 1px 0;
 }
 

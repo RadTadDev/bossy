@@ -13,7 +13,7 @@ namespace Bossy.Frontend
     /// <summary>
     /// The default command line frontend.
     /// </summary>
-    internal class CliView : IVisualEndpointEndpoint,
+    internal class CliView : IVisualEndpoint,
         IClearable,
         IModifiableOutputBuffer,
         IModifiablePromptHeader
@@ -35,14 +35,6 @@ namespace Bossy.Frontend
         }
 
         public VisualElement Root { get; }
-
-        private const string LineClass = "bossy-cli__line";
-        private const string InputRowFocusedClass = "bossy-cli__input-row--focused";
-        private const string SuggestionsVisibleClass = "bossy-cli__suggestions--visible";
-        private const string SuggestionClass = "bossy-cli__suggestion";
-        private const string SelectedSuggestionClass = "bossy-cli__suggestion--selected";
-        private const string HintSuggestionClass = "bossy-cli__suggestion--hint";
-        private const string ErrorSuggestionClass = "bossy-cli__suggestion--error";
 
         private readonly BossyContext _context;
         private readonly InputVisibility _inputVisibility;
@@ -124,7 +116,7 @@ namespace Bossy.Frontend
 
         public void Write(object value)
         {
-            _outputBuffer.Add(Format.Render(DisplayObject(value)));
+            _outputBuffer.Add(DisplayObject(value));
             _output.RefreshItems();
             _output.ScrollToItem(_outputBuffer.Count - 1);
         }
@@ -160,7 +152,7 @@ namespace Bossy.Frontend
 
         public void Overwrite(object value)
         {
-            _outputBuffer[^1] = Format.Render(value.ToString());
+            _outputBuffer[^1] = value.ToString();
             _output.RefreshItems();
             _output.ScrollToItem(_outputBuffer.Count - 1);
         }
@@ -183,8 +175,8 @@ namespace Bossy.Frontend
             _input.selectAllOnMouseUp = false;
             _inputRow.focusable = true;
 
-            _input.RegisterCallback<FocusInEvent>(_ => _inputRow.AddToClassList(InputRowFocusedClass));
-            _input.RegisterCallback<FocusOutEvent>(_ => _inputRow.RemoveFromClassList(InputRowFocusedClass));
+            _input.RegisterCallback<FocusInEvent>(_ => _inputRow.AddToClassList(BossyTheme.CliInputRowFocusedClass));
+            _input.RegisterCallback<FocusOutEvent>(_ => _inputRow.RemoveFromClassList(BossyTheme.CliInputRowFocusedClass));
 
             var input = _context.Settings.BossyInputSettings;
             _input.RegisterCallback<KeyDownEvent>(evt =>
@@ -224,7 +216,7 @@ namespace Bossy.Frontend
             _output.makeItem = () =>
             {
                 var line = new Label { pickingMode = PickingMode.Ignore };
-                line.AddToClassList(LineClass);
+                line.AddToClassList(BossyTheme.CliLineClass);
                 return line;
             };
             _output.bindItem = (element, i) => ((Label)element).text = _outputBuffer[i];
@@ -354,12 +346,12 @@ namespace Bossy.Frontend
                 return;
             }
 
-            _autocompleteContainer.AddToClassList(SuggestionsVisibleClass);
+            _autocompleteContainer.AddToClassList(BossyTheme.CliSuggestionsVisibleClass);
 
             // If the first suggestion is a hint or error, that's all we show
             if (first.IsHint || first.IsError)
             {
-                _autocompleteContainer.Add(MakeSuggestionLabel(first, first.IsHint ? HintSuggestionClass : ErrorSuggestionClass));
+                _autocompleteContainer.Add(MakeSuggestionLabel(first, first.IsHint ? BossyTheme.CliSuggestionHintClass : BossyTheme.CliSuggestionErrorClass));
                 return;
             }
 
@@ -372,7 +364,7 @@ namespace Bossy.Frontend
         private static Label MakeSuggestionLabel(Suggestion suggestion, string modifierClass)
         {
             var label = new Label(suggestion.DisplayText) { userData = suggestion };
-            label.AddToClassList(SuggestionClass);
+            label.AddToClassList(BossyTheme.CliSuggestionClass);
 
             if (modifierClass != null)
             {
@@ -400,10 +392,10 @@ namespace Bossy.Frontend
 
             var count = _autocompleteContainer.childCount;
             var previous = _autocompleteContainer[(_suggestionIndex - 1 + count) % count];
-            previous.RemoveFromClassList(SelectedSuggestionClass);
+            previous.RemoveFromClassList(BossyTheme.CliSuggestionSelectedClass);
 
             var current = _autocompleteContainer[_suggestionIndex];
-            current.AddToClassList(SelectedSuggestionClass);
+            current.AddToClassList(BossyTheme.CliSuggestionSelectedClass);
 
             // Changing the input would otherwise recompute the suggestions being cycled. The change event
             // can arrive after this key event finishes, so the flag is cleared on the next tick.
@@ -416,7 +408,7 @@ namespace Bossy.Frontend
 
         private void ClearAutocomplete()
         {
-            _autocompleteContainer.RemoveFromClassList(SuggestionsVisibleClass);
+            _autocompleteContainer.RemoveFromClassList(BossyTheme.CliSuggestionsVisibleClass);
             _autocompleteContainer.Clear();
             _suggestionIndex = 0;
         }

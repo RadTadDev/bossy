@@ -201,13 +201,6 @@ namespace Bossy.Command
         /// <param name="value">The value.</param>
         /// <param name="color">The color.</param>
         public static string Color(object value, Color color) => $"<color=#{ColorUtility.ToHtmlStringRGB(color)}>{value}</color>";
-        
-        /// <summary>
-        /// Renders an object consistently.
-        /// </summary>
-        /// <param name="value">The value to render.</param>
-        /// <returns>The rendered string.</returns>
-        public static string Render(object value) => value.ToString().Replace(" ", "\u00A0");
 
         private static string StripMarkup(string text)
         {
