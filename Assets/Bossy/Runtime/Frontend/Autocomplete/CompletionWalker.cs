@@ -1,0 +1,560 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Bossy.Command;
+using Bossy.Frontend.Parsing;
+using Bossy.Schema;
+using Bossy.Utils;
+
+namespace Bossy.Frontend.Autocomplete
+{
+    /// <summary>
+    /// Walks the tokens of one command, the way the parser binds them, and completes the slot at the cursor.
+    /// Each token before the cursor is either read and the walk goes on, or it ends the walk with a result,
+    /// such as an error. Rule numbers (R1 to R31, B1 to B9) and proposal numbers refer to the autocomplete design
+    /// rules, each pinned by a test in AutocompleteEngineTest.
+    /// </summary>
+    internal class CompletionWalker
+    {
+        private readonly BossyContext _context;
+        private readonly OperatorList _operators;
+        private readonly UserSuggestions _userSuggestions;
+        private readonly CommandSchema _root;
+        private readonly IReadOnlyList<Token> _tokens;
+        private readonly CompletionSlot _slot;
+        private readonly ArgumentCursor _cursor;
+
+        // The index of the next token to read
+        private int _index;
+
+        /// <summary>
+        /// Creates a walker for one command.
+        /// </summary>
+        /// <param name="context">The Bossy context.</param>
+        /// <param name="operators">The operators, used to decide when inserted values need quotes.</param>
+        /// <param name="userSuggestions">The suggestion functions and their cache.</param>
+        /// <param name="root">The root command schema.</param>
+        /// <param name="tokens">The tokens after the command name and before the slot, with aliases expanded.</param>
+        /// <param name="slot">The slot at the cursor.</param>
+        public CompletionWalker(BossyContext context, OperatorList operators, UserSuggestions userSuggestions,
+            CommandSchema root, IReadOnlyList<Token> tokens, CompletionSlot slot)
+        {
+            _context = context;
+            _operators = operators;
+            _userSuggestions = userSuggestions;
+            _root = root;
+            _tokens = tokens;
+            _slot = slot;
+            _cursor = new ArgumentCursor(root);
+        }
+
+        /// <summary>
+        /// Walks the tokens and completes the slot.
+        /// </summary>
+        /// <returns>The result.</returns>
+        public CompletionResult Walk()
+        {
+            while (_index < _tokens.Count)
+            {
+                var token = _tokens[_index];
+
+                // R10: after "--", nothing is a switch
+                var result = !_cursor.Surrendered && token.IsSwitch ? ReadSwitch(token.Text) : ReadOrdered(token);
+
+                if (result != null) return result;
+            }
+
+            return CompleteSlot();
+        }
+
+        // --- Reading tokens before the cursor ---
+
+        private CompletionResult ReadSwitch(string text)
+        {
+            _index++;
+
+            if (text == "--")
+            {
+                _cursor.Surrendered = true;
+                return null;
+            }
+
+            // R12
+            if (text == "-")
+            {
+                return CompletionResult.Error("'-' is not a valid token");
+            }
+
+            ArgumentSchema argument;
+
+            // R15: an unknown switch is an error once the user moves on
+            if (text.StartsWith("--"))
+            {
+                if (!_cursor.Schema.TryFindSwitch(text[2..], out argument))
+                {
+                    return CompletionResult.Error(new InvalidSwitchError(text).Message);
+                }
+            }
+            else
+            {
+                // R13: "-abc" is a group of bool switches, each one used
+                argument = null;
+                foreach (var shortName in text[1..])
+                {
+                    if (!_cursor.Schema.TryFindSwitch(shortName, out argument))
+                    {
+                        return CompletionResult.Error(new InvalidSwitchError($"-{shortName}").Message);
+                    }
+
+                    if (text.Length > 2 && argument.Type != typeof(bool))
+                    {
+                        return CompletionResult.Error(new NonBoolAggregateSwitchError(text, shortName).Message);
+                    }
+
+                    _cursor.TakeSwitch(argument);
+                }
+            }
+
+            _cursor.TakeSwitch(argument);
+
+            // R16 to R18: the switch reads its value greedily from the tokens after it, as in the parser
+            var read = ReadValue(argument.Type, false);
+
+            switch (read.State)
+            {
+                case ValueState.Read:
+                    _index += read.TokensRead;
+                    return null;
+                case ValueState.Invalid:
+                    return CompletionResult.Error(new TypeAdaptError(argument.Type, _tokens[_index].Text, read.ErrorMessage).Message);
+                default:
+                    return CompleteValue(argument, read);
+            }
+        }
+
+        private CompletionResult ReadOrdered(Token token)
+        {
+            // R19: an exact subcommand name before any argument switches the schema
+            if (_cursor.CanTakeSubcommand)
+            {
+                var subcommand = _cursor.Schema.ChildSchemas.FirstOrDefault(c => c.Name == token.Text);
+                if (subcommand != null)
+                {
+                    _cursor.EnterSubcommand(subcommand);
+                    _index++;
+                    return null;
+                }
+            }
+
+            // R20 to R23
+            if (_cursor.TryGetNextOrdered(out var argument, out var positional))
+            {
+                var read = ReadValue(argument.Type, true);
+
+                if (read.State == ValueState.Read)
+                {
+                    _cursor.TakeOrdered(argument);
+                    _index += read.TokensRead;
+                    return null;
+                }
+
+                // R22: a value that does not fit an optional goes to the variadic instead, as in the parser
+                if (!positional && _cursor.Variadic != null && read.IsCompleteAndInvalid)
+                {
+                    _cursor.SkipOptionals();
+                    return null;
+                }
+
+                return read.State == ValueState.Invalid
+                    ? CompletionResult.Error(new TypeAdaptError(argument.Type, token.Text, read.ErrorMessage).Message)
+                    : CompleteValue(argument, read);
+            }
+
+            // R24
+            if (_cursor.Variadic != null)
+            {
+                var elementType = _cursor.Variadic.Type.GetElementType();
+                var read = ReadValue(elementType, true);
+
+                if (read.State == ValueState.Read)
+                {
+                    _cursor.TakeVariadicValue();
+                    _index += Math.Max(1, read.TokensRead);
+                    return null;
+                }
+
+                return read.State == ValueState.Invalid
+                    ? CompletionResult.Error(new TypeAdaptError(elementType, token.Text, read.ErrorMessage).Message)
+                    : CompleteValue(_cursor.Variadic, read);
+            }
+
+            // Every argument is filled, so the parser rejects anything more
+            return CompletionResult.Error(new UnexpectedTokensError(_tokens.Skip(_index).Select(t => t.Text).ToList()).Message);
+        }
+
+        // --- Completing the slot ---
+
+        private CompletionResult CompleteSlot()
+        {
+            // R2: with no token at the cursor, predict the next one
+            if (_slot.IsEmpty)
+            {
+                return CompleteNext();
+            }
+
+            if (!_cursor.Surrendered && _slot.IsSwitch)
+            {
+                return CompleteSwitchName();
+            }
+
+            if (_cursor.TryGetNextOrdered(out var argument, out var positional))
+            {
+                var read = ReadValue(argument.Type, true);
+
+                // R22 at the cursor
+                if (!positional && _cursor.Variadic != null && read.IsCompleteAndInvalid)
+                {
+                    _cursor.SkipOptionals();
+                    return CompleteSlot();
+                }
+
+                return CompleteValue(argument, read);
+            }
+
+            if (_cursor.Variadic != null)
+            {
+                return CompleteValue(_cursor.Variadic, ReadValue(_cursor.Variadic.Type.GetElementType(), true));
+            }
+
+            // R25: with no arguments left, only a subcommand can follow
+            var subcommands = Rank(SubcommandCompletions());
+            return subcommands.Count > 0
+                ? CompletionResult.List(subcommands)
+                : CompletionResult.Error(new UnexpectedTokensError(new List<string> { _slot.Typed }).Message);
+        }
+
+        private CompletionResult CompleteNext()
+        {
+            // R26: suggest subcommands and the next value together
+            var completions = SubcommandCompletions();
+
+            if (_cursor.Positionals.Count > 0)
+            {
+                var positional = _cursor.Positionals[0];
+                var hint = ArgumentHint(positional, null);
+                completions.AddRange(ValueCompletions(positional, ref hint));
+                return CompletionResult.Hint(hint, Distinct(completions));
+            }
+
+            // Every positional is filled, so the line can run. The optional parts stay discoverable.
+            var readyMessage = ReadyMessage();
+            var next = _cursor.TryGetNextOrdered(out var optional, out _) ? optional : _cursor.Variadic;
+            if (next != null)
+            {
+                completions.AddRange(ValueCompletions(next, ref readyMessage));
+            }
+
+            if (!_cursor.Surrendered)
+            {
+                completions.AddRange(_cursor.Switches.Select(s => SwitchCompletion(s, false)));
+            }
+
+            return CompletionResult.Ready(readyMessage, Distinct(completions));
+        }
+
+        private CompletionResult CompleteValue(ArgumentSchema argument, ValueRead read)
+        {
+            var progress = read.TokensDesired > 1 ? (read.TokenNumber, read.TokensDesired) : ((int, int)?)null;
+            var hint = ArgumentHint(argument, progress);
+
+            // R17, R23: the value has all its tokens but does not parse
+            if (read.IsCompleteAndInvalid)
+            {
+                hint += $" · current value '{read.Text}' is invalid";
+            }
+
+            var completions = SubcommandCompletions();
+
+            // Suggested values are whole values, so they only apply to the first token of a value
+            if (read.TokenNumber == 1)
+            {
+                completions.AddRange(ValueCompletions(argument, ref hint));
+            }
+
+            return CompletionResult.Hint(hint, Rank(completions));
+        }
+
+        private CompletionResult CompleteSwitchName()
+        {
+            var typed = _slot.Typed;
+
+            // R10, R12: "-" and "--" list every switch left
+            // TODO: Make listing short or long names on "-" a Bossy setting once settings are implemented.
+            if (typed == "-" || typed == "--")
+            {
+                return CompletionResult.List(_cursor.Switches.Select(s => SwitchCompletion(s, false)).ToList());
+            }
+
+            // R11
+            if (typed.StartsWith("--"))
+            {
+                var matches = FuzzyMatcher.Rank(typed[2..], _cursor.Switches, s => s.Name);
+                return matches.Count > 0
+                    ? CompletionResult.List(matches.Select(s => SwitchCompletion(s, false)).ToList())
+                    : CompletionResult.Hint($"No switch matches '{typed}'");
+            }
+
+            // R14: a short name lists the short switches, with an exact match first
+            if (typed.Length == 2)
+            {
+                var ordered = _cursor.Switches.OrderBy(s => ShortName(s) == typed[1] ? 0 : 1);
+                return CompletionResult.List(ordered.Select(s => SwitchCompletion(s, true)).ToList());
+            }
+
+            // R13: a group of bool switches
+            var letters = typed[1..];
+            if (letters.All(c => _cursor.Schema.TryFindSwitch(c, out var s) && s.Type == typeof(bool)))
+            {
+                return CompletionResult.Hint($"<bool> Aggregate flags: {string.Join(", ", letters.Select(c => $"-{c}"))}");
+            }
+
+            // R13: a long name typed with one dash
+            var longNames = _cursor.Switches.Where(s => s.Name.StartsWith(letters, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (longNames.Count > 0)
+            {
+                return CompletionResult.List(longNames.Select(s => SwitchCompletion(s, false)).ToList());
+            }
+
+            foreach (var letter in letters)
+            {
+                if (!_cursor.Schema.TryFindSwitch(letter, out var argument))
+                {
+                    return CompletionResult.Error(new InvalidSwitchError($"-{letter}").Message);
+                }
+
+                if (argument.Type != typeof(bool))
+                {
+                    return CompletionResult.Error(new NonBoolAggregateSwitchError(typed, letter).Message);
+                }
+            }
+
+            return CompletionResult.Empty;
+        }
+
+        // --- Values ---
+
+        /*
+         * Runs the type adapter on the tokens from the current index, plus the text typed in the slot, and works
+         * out where the value ends: inside the tokens already typed, or at the slot because it reaches the cursor.
+         */
+        private ValueRead ReadValue(Type type, bool requireExplicitBool)
+        {
+            var available = _tokens.Count - _index;
+            var texts = _tokens.Skip(_index).Select(t => t.Text).ToList();
+
+            if (!_slot.IsEmpty)
+            {
+                texts.Add(_slot.Typed);
+            }
+
+            var stream = new TokenStream(texts);
+            var result = _context.TypeAdapterRegistry.TryConvert(type, stream, out _, requireExplicitBool);
+
+            if (result.Success)
+            {
+                var read = stream.Cursor;
+                return read <= available
+                    ? ValueRead.InTokens(read)
+                    : ValueRead.AtSlot(true, true, read, read, string.Join(" ", texts));
+            }
+
+            var desired = Math.Max(1, result.TokensDesired);
+            var valueText = string.Join(" ", texts.Take(desired));
+
+            if (desired <= available)
+            {
+                return ValueRead.Invalid(result.ErrorMessage);
+            }
+
+            var complete = desired <= texts.Count;
+            return ValueRead.AtSlot(false, complete, available + 1, desired, valueText);
+        }
+
+        private List<Completion> ValueCompletions(ArgumentSchema argument, ref string hint)
+        {
+            var key = string.Join("\u001f", _tokens.Take(_index).Select(t => t.Text).Prepend(_cursor.Schema.Name));
+            var values = _userSuggestions.Get(argument, _cursor.Schema.CommandType, key, MakeSuggestionContext, out var error);
+
+            // Proposal 14: a failing suggestion function is reported in the status line
+            if (error != null)
+            {
+                hint += $" · Suggestions failed: {error}";
+            }
+
+            return values.Select(v => MakeCompletion(Quote(v, _slot.IsQuoted), v, string.Empty, CompletionKind.Value)).ToList();
+        }
+
+        private SuggestionContext MakeSuggestionContext()
+        {
+            var tokensSoFar = _tokens.Take(_index).Select(t => t.Text).Prepend(_root.Name).ToList();
+            return new SuggestionContext(_context, _cursor.Schema, new ReadOnlyCompletionContext(_cursor, tokensSoFar));
+        }
+
+        /*
+         * Proposal 12: one quoting rule for every inserted value. A value is quoted when it would otherwise split
+         * into several tokens, read as an operator or a switch, or lose its quotes and escapes.
+         */
+        private string Quote(string value, bool force)
+        {
+            var needsQuotes = force
+                              || value.Length == 0
+                              || value.Any(c => char.IsWhiteSpace(c) || c == '"' || c == '\'' || c == '\\')
+                              || _operators.ToEnumerable().Any(value.Contains)
+                              || new Token(value).IsSwitch;
+
+            return needsQuotes ? $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"" : value;
+        }
+
+        // --- Completions ---
+
+        private List<Completion> SubcommandCompletions()
+        {
+            if (!_cursor.CanTakeSubcommand) return new List<Completion>();
+
+            return _cursor.Schema.ChildSchemas
+                .Select(c => MakeCompletion(c.Name, c.Name, c.Description, CompletionKind.Subcommand))
+                .ToList();
+        }
+
+        /*
+         * Proposal 11: each switch row shows both names, its type, and its description. Accepting it inserts the
+         * long name, unless the user typed a short name.
+         */
+        private Completion SwitchCompletion(ArgumentSchema argument, bool insertShortName)
+        {
+            var shortName = ShortName(argument);
+            var names = char.IsLetter(shortName) ? $"-{shortName}, --{argument.Name}" : $"--{argument.Name}";
+            var display = argument.Type == typeof(bool) ? names : $"{names} <{argument.Type.GetFriendlyName()}>";
+            var insert = insertShortName && char.IsLetter(shortName) ? $"-{shortName}" : $"--{argument.Name}";
+
+            return MakeCompletion(insert, display, argument.Description, CompletionKind.Switch);
+        }
+
+        private Completion MakeCompletion(string insertText, string displayText, string description, CompletionKind kind)
+        {
+            return new Completion(_slot.Start, _slot.End, insertText + _slot.Suffix, displayText, description, kind);
+        }
+
+        private List<Completion> Rank(List<Completion> completions)
+        {
+            return Distinct(FuzzyMatcher.Rank(_slot.Typed, completions, c => c.DisplayText));
+        }
+
+        private static List<Completion> Distinct(IEnumerable<Completion> completions)
+        {
+            var seen = new HashSet<string>();
+            return completions.Where(c => seen.Add(c.InsertText)).ToList();
+        }
+
+        // --- Messages ---
+
+        /*
+         * Proposal 4: the status line for the argument being typed, such as
+         * "pos <Vector3> (2/3) positional — The position".
+         */
+        private static string ArgumentHint(ArgumentSchema argument, (int Number, int Desired)? progress)
+        {
+            var progressText = progress.HasValue ? $" ({progress.Value.Number}/{progress.Value.Desired})" : string.Empty;
+            var description = string.IsNullOrWhiteSpace(argument.Description) ? string.Empty : $" — {argument.Description}";
+
+            return $"{argument.Name} <{argument.Type.GetFriendlyName()}>{progressText} {RoleName(argument)}{description}";
+        }
+
+        private string ReadyMessage()
+        {
+            var parts = new List<string>();
+
+            var optionalCount = _cursor.Optionals.Count + (_cursor.Variadic != null ? 1 : 0);
+            if (optionalCount > 0)
+            {
+                parts.Add($"{optionalCount} optional");
+            }
+
+            var switchCount = _cursor.Surrendered ? 0 : _cursor.Switches.Count;
+            if (switchCount > 0)
+            {
+                parts.Add(switchCount == 1 ? "1 switch" : $"{switchCount} switches");
+            }
+
+            return parts.Count == 0 ? "Ready to execute" : $"Ready to execute · {string.Join(", ", parts)} available";
+        }
+
+        private static string RoleName(ArgumentSchema argument)
+        {
+            return argument.ArgumentAttribute switch
+            {
+                PositionalAttribute => "positional",
+                OptionalAttribute   => "optional",
+                SwitchAttribute     => "switch",
+                VariadicAttribute   => "variadic",
+                _                   => "argument",
+            };
+        }
+
+        private static char ShortName(ArgumentSchema argument)
+        {
+            return ((SwitchAttribute)argument.ArgumentAttribute).ShortName;
+        }
+
+        private enum ValueState
+        {
+            /// <summary>
+            /// The value fits in the tokens before the cursor and parses.
+            /// </summary>
+            Read,
+
+            /// <summary>
+            /// The value has all its tokens before the cursor but does not parse.
+            /// </summary>
+            Invalid,
+
+            /// <summary>
+            /// The value reaches the cursor, so the slot is (part of) this value.
+            /// </summary>
+            AtSlot
+        }
+
+        private readonly struct ValueRead
+        {
+            public readonly ValueState State;
+            public readonly int TokensRead;
+            public readonly string ErrorMessage;
+            public readonly bool IsValid;
+            public readonly bool IsComplete;
+            public readonly int TokenNumber;
+            public readonly int TokensDesired;
+            public readonly string Text;
+
+            public bool IsCompleteAndInvalid => State == ValueState.Invalid || (State == ValueState.AtSlot && IsComplete && !IsValid);
+
+            private ValueRead(ValueState state, int tokensRead, string errorMessage, bool isValid, bool isComplete, int tokenNumber, int tokensDesired, string text)
+            {
+                State = state;
+                TokensRead = tokensRead;
+                ErrorMessage = errorMessage;
+                IsValid = isValid;
+                IsComplete = isComplete;
+                TokenNumber = tokenNumber;
+                TokensDesired = tokensDesired;
+                Text = text;
+            }
+
+            public static ValueRead InTokens(int tokensRead) => new(ValueState.Read, tokensRead, null, true, true, 0, tokensRead, string.Empty);
+
+            public static ValueRead Invalid(string errorMessage) => new(ValueState.Invalid, 0, errorMessage, false, true, 0, 0, string.Empty);
+
+            public static ValueRead AtSlot(bool isValid, bool isComplete, int tokenNumber, int tokensDesired, string text) =>
+                new(ValueState.AtSlot, 0, null, isValid, isComplete, tokenNumber, tokensDesired, text);
+        }
+    }
+}

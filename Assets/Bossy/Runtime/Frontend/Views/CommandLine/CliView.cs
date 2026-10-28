@@ -57,6 +57,9 @@ namespace Bossy.Frontend
         // Autocomplete
         private readonly AutocompleteEngine _autocomplete;
         private readonly VisualElement _autocompleteContainer;
+        private readonly List<Label> _completionLabels = new();
+        private CompletionResult _completions = CompletionResult.Empty;
+        private string _completedLine = string.Empty;
         private int _suggestionIndex;
         private bool _cyclingSuggestions;
 
@@ -70,13 +73,14 @@ namespace Bossy.Frontend
         /// <param name="context">The Bossy context.</param>
         /// <param name="inputVisibility">When the input line is shown.</param>
         /// <param name="history">The history to browse with the history keys.</param>
-        public CliView(BossyContext context, InputVisibility inputVisibility, CommandHistory history)
+        /// <param name="aliases">The session's aliases, so autocomplete can suggest and expand them.</param>
+        public CliView(BossyContext context, InputVisibility inputVisibility, CommandHistory history, Dictionary<string, string> aliases)
         {
             _context = context;
             _inputVisibility = inputVisibility;
             _history = history;
             _historyIndex = _history.Lines.Count;
-            _autocomplete = new AutocompleteEngine(_context, context.Settings.BossyCliSettings.ToOperatorList());
+            _autocomplete = new AutocompleteEngine(_context, context.Settings.BossyCliSettings.ToOperatorList(), aliases);
 
             Root = ContentViewUtility.GetRootFromUxml("BossyCli");
 
@@ -273,6 +277,16 @@ namespace Bossy.Frontend
             _input.schedule.Execute(MoveCursorToEnd);
         }
 
+        private void SetInput(string value, int cursorIndex)
+        {
+            _input.value = value;
+            _input.schedule.Execute(() =>
+            {
+                _input.cursorIndex = cursorIndex;
+                _input.selectIndex = cursorIndex;
+            });
+        }
+
         private void MoveCursorToEnd()
         {
             _input.cursorIndex = _input.value.Length;
@@ -311,39 +325,47 @@ namespace Bossy.Frontend
                 return;
             }
 
-            ShowSuggestions(_autocomplete.Suggest(evt.newValue, _input.cursorIndex));
+            ShowCompletions(evt.newValue, _input.cursorIndex);
         }
 
-        private void ShowSuggestions(IEnumerable<Suggestion> suggestions)
+        private void ShowCompletions(string line, int cursorIndex)
         {
             ClearAutocomplete();
 
-            var all = suggestions as Suggestion[] ?? suggestions.ToArray();
-            var first = all.FirstOrDefault();
-
-            if (first == null)
+            var result = _autocomplete.Complete(line, cursorIndex);
+            if (result.IsEmpty)
             {
                 return;
             }
 
+            // Completions replace spans of the line they were made for, so keep it while they are cycled
+            _completions = result;
+            _completedLine = line;
             _autocompleteContainer.AddToClassList(BossyTheme.CliSuggestionsVisibleClass);
 
-            // If the first suggestion is a hint or error, that's all we show
-            if (first.IsHint || first.IsError)
+            if (result.MessageKind != CompletionMessageKind.None)
             {
-                _autocompleteContainer.Add(MakeSuggestionLabel(first, first.IsHint ? BossyTheme.CliSuggestionHintClass : BossyTheme.CliSuggestionErrorClass));
-                return;
+                var modifier = result.MessageKind == CompletionMessageKind.Error
+                    ? BossyTheme.CliSuggestionErrorClass
+                    : BossyTheme.CliSuggestionHintClass;
+                _autocompleteContainer.Add(MakeSuggestionLabel(result.Message, modifier));
             }
 
-            foreach (var suggestion in all)
+            foreach (var completion in result.Completions)
             {
-                _autocompleteContainer.Add(MakeSuggestionLabel(suggestion, null));
+                var text = string.IsNullOrEmpty(completion.Description)
+                    ? completion.DisplayText
+                    : $"{completion.DisplayText}  {Format.Color(completion.Description, Format.Gray)}";
+                var label = MakeSuggestionLabel(text, null);
+
+                _completionLabels.Add(label);
+                _autocompleteContainer.Add(label);
             }
         }
 
-        private static Label MakeSuggestionLabel(Suggestion suggestion, string modifierClass)
+        private static Label MakeSuggestionLabel(string text, string modifierClass)
         {
-            var label = new Label(suggestion.DisplayText) { userData = suggestion };
+            var label = new Label(text);
             label.AddToClassList(BossyTheme.CliSuggestionClass);
 
             if (modifierClass != null)
@@ -359,28 +381,25 @@ namespace Bossy.Frontend
             // If autocomplete is not open, try opening it
             if (_autocompleteContainer.childCount == 0)
             {
-                ShowSuggestions(_autocomplete.Suggest(_input.value, _input.cursorIndex));
+                ShowCompletions(_input.value, _input.cursorIndex);
                 return;
             }
 
-            // Hints and errors cannot be applied
-            var suggestion = (Suggestion)_autocompleteContainer[0].userData;
-            if (suggestion.IsError || suggestion.IsHint)
+            // Messages cannot be applied
+            var count = _completionLabels.Count;
+            if (count == 0)
             {
                 return;
             }
 
-            var count = _autocompleteContainer.childCount;
-            var previous = _autocompleteContainer[(_suggestionIndex - 1 + count) % count];
-            previous.RemoveFromClassList(BossyTheme.CliSuggestionSelectedClass);
-
-            var current = _autocompleteContainer[_suggestionIndex];
-            current.AddToClassList(BossyTheme.CliSuggestionSelectedClass);
+            _completionLabels[(_suggestionIndex - 1 + count) % count].RemoveFromClassList(BossyTheme.CliSuggestionSelectedClass);
+            _completionLabels[_suggestionIndex].AddToClassList(BossyTheme.CliSuggestionSelectedClass);
 
             // Changing the input would otherwise recompute the suggestions being cycled. The change event
             // can arrive after this key event finishes, so the flag is cleared on the next tick.
+            var completion = _completions.Completions[_suggestionIndex];
             _cyclingSuggestions = true;
-            SetInput(((Suggestion)current.userData).FullText);
+            SetInput(completion.ApplyTo(_completedLine), completion.CursorAfterApply);
             _input.schedule.Execute(() => _cyclingSuggestions = false);
 
             _suggestionIndex = (_suggestionIndex + 1) % count;
@@ -390,6 +409,8 @@ namespace Bossy.Frontend
         {
             _autocompleteContainer.RemoveFromClassList(BossyTheme.CliSuggestionsVisibleClass);
             _autocompleteContainer.Clear();
+            _completionLabels.Clear();
+            _completions = CompletionResult.Empty;
             _suggestionIndex = 0;
         }
     }
