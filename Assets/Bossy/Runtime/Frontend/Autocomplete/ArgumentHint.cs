@@ -29,11 +29,6 @@ namespace Bossy.Frontend.Autocomplete
         public readonly string InvalidValue;
 
         /// <summary>
-        /// The message of an exception thrown by the argument's suggestion function, otherwise null.
-        /// </summary>
-        public readonly string SuggestionError;
-
-        /// <summary>
         /// True if the value takes more than one token, so <see cref="TokenNumber"/> shows progress.
         /// </summary>
         public bool HasProgress => TokensDesired > 1;
@@ -45,14 +40,12 @@ namespace Bossy.Frontend.Autocomplete
         /// <param name="tokenNumber">Which token of the value is being typed, from 1.</param>
         /// <param name="tokensDesired">How many tokens the value takes.</param>
         /// <param name="invalidValue">The typed value if it is complete but does not parse, otherwise null.</param>
-        /// <param name="suggestionError">The message of an exception thrown by the suggestion function, otherwise null.</param>
-        public ArgumentHint(ArgumentSchema argument, int tokenNumber, int tokensDesired, string invalidValue, string suggestionError)
+        public ArgumentHint(ArgumentSchema argument, int tokenNumber, int tokensDesired, string invalidValue)
         {
             Argument = argument;
             TokenNumber = tokenNumber;
             TokensDesired = tokensDesired;
             InvalidValue = invalidValue;
-            SuggestionError = suggestionError;
         }
     }
 }

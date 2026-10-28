@@ -65,6 +65,10 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
                 .WithPositional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.Throws), typeof(TestSuggestions))
                 .Generate().GetType();
 
+            var fragile = CommandGenerator.WithName("fragile")
+                .WithOptional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.Throws), typeof(TestSuggestions))
+                .Generate().GetType();
+
             var counted = CommandGenerator.WithName("counted")
                 .WithPositional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.Counted), typeof(TestSuggestions))
                 .Generate().GetType();
@@ -73,7 +77,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
                 .WithConstructorCall(typeof(ConstructionCounter).GetMethod(nameof(ConstructionCounter.Increment)))
                 .Generate().GetType();
 
-            var types = new List<Type> { load, wait, vec, tag, pick, level, levelOpen, levelClose, broken, counted, created };
+            var types = new List<Type> { load, wait, vec, tag, pick, level, levelOpen, levelClose, broken, fragile, counted, created };
             var graph = CommandDependencyGraphBuilder.BuildGraph(types);
             var schemas = new SchemaRegistry(SchemaFactory.BuildCommandSchemas(graph));
 
@@ -611,13 +615,30 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         }
 
         [Test]
-        public void Complete_SuggestionFunctionThrows_ReportsItInHint()
+        public void Complete_SuggestionFunctionThrows_ReportsItApartFromHint()
         {
             var result = Complete("broken ");
 
             Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Hint));
-            Assert.That(result.Message, Does.Contain("Suggestions failed: Broken on purpose"));
-            Assert.That(result.Argument.SuggestionError, Is.EqualTo("Broken on purpose"));
+            Assert.That(result.Message, Is.EqualTo("thing <string>"));
+            Assert.That(result.SuggestionFailure.Argument.Name, Is.EqualTo("thing"));
+            Assert.That(result.SuggestionFailure.Message, Is.EqualTo("Broken on purpose"));
+        }
+
+        [Test]
+        public void Complete_SuggestionFunctionThrowsWhenReady_ReportsItApartFromReady()
+        {
+            var result = Complete("fragile ");
+
+            Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Ready));
+            Assert.That(result.Message, Is.EqualTo("Ready  1 optional"));
+            Assert.That(result.SuggestionFailure.Message, Is.EqualTo("Broken on purpose"));
+        }
+
+        [Test]
+        public void Complete_SuggestionFunctionWorks_HasNoFailure()
+        {
+            Assert.That(Complete("load ").SuggestionFailure, Is.Null);
         }
 
         [Test]
