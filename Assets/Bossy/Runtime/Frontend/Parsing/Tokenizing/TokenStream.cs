@@ -27,7 +27,7 @@ namespace Bossy.Frontend.Parsing
         /// <param name="line">The input to tokenize.</param>
         public TokenStream(string line)
         {
-            _tokens = Tokenizer.Tokenize(line);
+            _tokens = Tokenizer.Tokenize(line).Select(t => t.Text).ToList();
         }
 
         /// <summary>

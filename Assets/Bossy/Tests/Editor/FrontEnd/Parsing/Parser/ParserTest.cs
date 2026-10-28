@@ -150,7 +150,35 @@ namespace Bossy.Tests.FrontEnd.Parsing
                 new("vari", "description", variField, variField.GetCustomAttribute<VariadicAttribute>(), null),
             };
             var allSchema = new CommandSchema("all", "description", all.GetType(), allArgs);
-            
+
+            // Mixed switches
+            var mixed = CommandGenerator.WithName("mixed")
+                .WithSwitch("aflag", typeof(bool), 'a')
+                .WithSwitch("ival", typeof(int), 'i')
+                .WithVariadic("rest", typeof(string))
+                .Generate();
+            var aflagField = mixed.GetType().GetField("aflag");
+            var ivalField = mixed.GetType().GetField("ival");
+            var restField = mixed.GetType().GetField("rest");
+            var mixedArgs = new HashSet<ArgumentSchema>
+            {
+                new("aflag", "description", aflagField, aflagField.GetCustomAttribute<SwitchAttribute>(), null),
+                new("ival", "description", ivalField, ivalField.GetCustomAttribute<SwitchAttribute>(), null),
+                new("rest", "description", restField, restField.GetCustomAttribute<VariadicAttribute>(), null),
+            };
+            var mixedSchema = new CommandSchema("mixed", "description", mixed.GetType(), mixedArgs);
+
+            // Strings
+            var strings = CommandGenerator.WithName("strings")
+                .WithPositional("text", typeof(string))
+                .Generate();
+            var textField = strings.GetType().GetField("text");
+            var stringsArgs = new HashSet<ArgumentSchema>
+            {
+                new("text", "description", textField, textField.GetCustomAttribute<PositionalAttribute>(), null),
+            };
+            var stringsSchema = new CommandSchema("strings", "description", strings.GetType(), stringsArgs);
+
             var schemas = new List<CommandSchema>
             {
                 rootSchema,
@@ -164,7 +192,9 @@ namespace Bossy.Tests.FrontEnd.Parsing
                 optionalsSchema,
                 optionalsAndVariadicSchema,
                 variadicSchema,
-                allSchema
+                allSchema,
+                mixedSchema,
+                stringsSchema
             };
             
             var schemaRegistry = new SchemaRegistry(schemas);
@@ -173,6 +203,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
             adapterRegistry.RegisterAdapter(typeof(int), new IntAdapter());
             adapterRegistry.RegisterAdapter(typeof(float), new FloatAdapter());
             adapterRegistry.RegisterAdapter(typeof(bool), new BoolAdapter());
+            adapterRegistry.RegisterAdapter(typeof(string), new StringAdapter());
             
             _parser = new Parser(schemaRegistry, adapterRegistry);
         }
@@ -216,6 +247,56 @@ namespace Bossy.Tests.FrontEnd.Parsing
             Assert.That(_result.GetType(), Is.EqualTo(typeof(BadWindowOperatorError)));
         }
         
+        [Test]
+        public void Parse_QuotedWindowOperator_IsValue()
+        {
+            _result = _parser.Parse("strings \"!\"", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+            Assert.That(graph.Windowed, Is.False);
+
+            var cmd = graph.ToArray()[0].Command;
+            Assert.That(cmd.GetType().GetField("text").GetValue(cmd), Is.EqualTo("!"));
+        }
+
+        [Test]
+        public void Parse_QuotedWindowOperatorInMiddle_IsNotBadWindowError()
+        {
+            _result = _parser.Parse("strings \"!\" ; root", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+            Assert.That(graph.Windowed, Is.False);
+            Assert.That(graph.ToArray().Length, Is.EqualTo(2));
+
+            _result = _parser.Parse("strings '!' ; root", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+        }
+
+        [Test]
+        public void Parse_QuotedLinkOperators_AreValues()
+        {
+            foreach (var op in new[] { ";", "&&", "||", "|" })
+            {
+                _result = _parser.Parse($"strings \"{op}\"", _ops);
+                Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)), op);
+                Assert.That(_result.TryGetGraph(out var graph), Is.True);
+                Assert.That(graph.ToArray().Length, Is.EqualTo(1), op);
+
+                var cmd = graph.ToArray()[0].Command;
+                Assert.That(cmd.GetType().GetField("text").GetValue(cmd), Is.EqualTo(op));
+            }
+        }
+
+        [Test]
+        public void Parse_QuotedOperatorWithRealOperators_SplitsOnlyOnRealOnes()
+        {
+            _result = _parser.Parse("strings \"&&\" && strings \"!\" !", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+            Assert.That(graph.Windowed, Is.True);
+            Assert.That(graph.ToArray().Length, Is.EqualTo(2));
+        }
+
         [Test]
         public void Parse_ContiguousOperators()
         {
@@ -349,7 +430,137 @@ namespace Bossy.Tests.FrontEnd.Parsing
         public void Parse_Switches_AggregatedNotBools_InValid()
         {
             _result = _parser.Parse("switches -sw", _ops);
-            Assert.That(_result.GetType(), Is.EqualTo(typeof(TypeAdaptError)));
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(NonBoolAggregateSwitchError)));
+        }
+
+        [Test]
+        public void Parse_Switches_AggregatedBoolThenValueSwitch_Invalid()
+        {
+            _result = _parser.Parse("mixed -ai 5", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(NonBoolAggregateSwitchError)));
+        }
+
+        [Test]
+        public void Parse_Switches_AggregatedUnknownSwitch_Invalid()
+        {
+            _result = _parser.Parse("mixed -ax", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(InvalidSwitchError)));
+        }
+
+        [Test]
+        public void Parse_Switches_SeparateBoolAndValueSwitch_Valid()
+        {
+            _result = _parser.Parse("mixed -a -i 5", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+
+            var cmd = graph.ToArray()[0].Command;
+            var cmdType = cmd.GetType();
+            Assert.That(cmdType.GetField("aflag").GetValue(cmd), Is.True);
+            Assert.That(cmdType.GetField("ival").GetValue(cmd), Is.EqualTo(5));
+        }
+
+        [Test]
+        public void Parse_Switches_AggregateAfterSurrender_IsValue()
+        {
+            _result = _parser.Parse("mixed -- -ai", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+
+            var cmd = graph.ToArray()[0].Command;
+            var cmdType = cmd.GetType();
+            Assert.That(cmdType.GetField("rest").GetValue(cmd), Is.EqualTo(new[] { "-ai" }));
+            Assert.That(cmdType.GetField("aflag").GetValue(cmd), Is.False);
+        }
+
+        [Test]
+        public void Parse_NegativeNumbers_Positionals_Valid()
+        {
+            _result = _parser.Parse("positionals -5 -10", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+
+            var cmd = graph.ToArray()[0].Command;
+            var cmdType = cmd.GetType();
+            Assert.That(cmdType.GetField("pos1").GetValue(cmd), Is.EqualTo(-5));
+            Assert.That(cmdType.GetField("pos2").GetValue(cmd), Is.EqualTo(-10));
+        }
+
+        [Test]
+        public void Parse_NegativeNumbers_SwitchValue_Valid()
+        {
+            _result = _parser.Parse("switches -s -15", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+
+            var cmd = graph.ToArray()[0].Command;
+            Assert.That(cmd.GetType().GetField("sw1").GetValue(cmd), Is.EqualTo(-15));
+        }
+
+        [Test]
+        public void Parse_NegativeNumbers_Variadic_Valid()
+        {
+            _result = _parser.Parse("variadic -1 2 -30", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+
+            var cmd = graph.ToArray()[0].Command;
+            Assert.That(cmd.GetType().GetField("vari").GetValue(cmd), Is.EqualTo(new[] { -1, 2, -30 }));
+        }
+
+        [Test]
+        public void Parse_NegativeDecimal_IsValueNotSwitch()
+        {
+            _result = _parser.Parse("mixed -1.5", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+
+            var cmd = graph.ToArray()[0].Command;
+            Assert.That(cmd.GetType().GetField("rest").GetValue(cmd), Is.EqualTo(new[] { "-1.5" }));
+        }
+
+        [Test]
+        public void Parse_QuotedDashToken_IsValueNotSwitch()
+        {
+            _result = _parser.Parse("strings \"-x\"", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+
+            var cmd = graph.ToArray()[0].Command;
+            Assert.That(cmd.GetType().GetField("text").GetValue(cmd), Is.EqualTo("-x"));
+        }
+
+        [Test]
+        public void Parse_QuotedSwitchName_IsValueNotSwitch()
+        {
+            _result = _parser.Parse("mixed '-a' \"--ival\" \\-i", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+
+            var cmd = graph.ToArray()[0].Command;
+            var cmdType = cmd.GetType();
+            Assert.That(cmdType.GetField("aflag").GetValue(cmd), Is.False);
+            Assert.That(cmdType.GetField("rest").GetValue(cmd), Is.EqualTo(new[] { "-a", "--ival", "-i" }));
+        }
+
+        [Test]
+        public void Parse_QuotedSurrender_IsValueNotSurrender()
+        {
+            _result = _parser.Parse("mixed \"--\" -a", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+
+            var cmd = graph.ToArray()[0].Command;
+            var cmdType = cmd.GetType();
+            Assert.That(cmdType.GetField("aflag").GetValue(cmd), Is.True);
+            Assert.That(cmdType.GetField("rest").GetValue(cmd), Is.EqualTo(new[] { "--" }));
+        }
+
+        [Test]
+        public void Parse_DashLetter_IsStillSwitch()
+        {
+            _result = _parser.Parse("positionals -5 -x", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(InvalidSwitchError)));
         }
         
         [Test]

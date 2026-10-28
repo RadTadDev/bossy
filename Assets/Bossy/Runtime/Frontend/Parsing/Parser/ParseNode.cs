@@ -18,7 +18,7 @@ namespace Bossy.Frontend.Parsing
         /// <summary>
         /// The tokens in this node.
         /// </summary>
-        public readonly IEnumerable<string> Tokens;
+        public readonly IReadOnlyList<Token> Tokens;
 
         /// <summary>
         /// The command that this node parsed to.
@@ -35,7 +35,7 @@ namespace Bossy.Frontend.Parsing
         /// </summary>
         /// <param name="tokens">The tokens in this node.</param>
         /// <param name="link">The link to the next node.</param>
-        public ParseNode(IEnumerable<string> tokens, CommandGraphLink link)
+        public ParseNode(IReadOnlyList<Token> tokens, CommandGraphLink link)
         {
             Link = link;
             Tokens = tokens;

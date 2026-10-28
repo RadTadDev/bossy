@@ -133,6 +133,24 @@ namespace Bossy.Frontend.Parsing
     }
     
     /// <summary>
+    /// A switch that is not a bool was combined with others, as in "-ab".
+    /// </summary>
+    internal class NonBoolAggregateSwitchError : ParseResult
+    {
+        private readonly string _token;
+        private readonly char _shortName;
+
+        public override string Message => $"Switch \"-{_shortName}\" in \"{_token}\" takes a value, so it cannot be " +
+                                          "combined with other switches. Only bool switches can be combined.";
+
+        public NonBoolAggregateSwitchError(string token, char shortName)
+        {
+            _token = token;
+            _shortName = shortName;
+        }
+    }
+
+    /// <summary>
     /// Type adapt error.
     /// </summary>
     internal class TypeAdaptError : ParseResult
