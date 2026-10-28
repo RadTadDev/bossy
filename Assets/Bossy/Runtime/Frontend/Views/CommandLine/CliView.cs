@@ -121,9 +121,9 @@ namespace Bossy.Frontend
             _output.ScrollToItem(_outputBuffer.Count - 1);
         }
 
-        public async Task<object> ReadAsync(Type requestedType, CancellationToken token)
+        public async Task<object> ReadAsync(ReadRequest request, CancellationToken token)
         {
-            _requestingCommand = requestedType == typeof(CommandGraph);
+            _requestingCommand = request.RequestedType == typeof(CommandGraph);
             _readSource = new TaskCompletionSource<object>();
 
             // Start browsing from the end, after anything the last command added to the history

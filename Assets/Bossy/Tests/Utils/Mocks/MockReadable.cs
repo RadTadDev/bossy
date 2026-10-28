@@ -31,7 +31,7 @@ namespace Bossy.Tests.Utils
             _infinite = true;
         }
         
-        public async Task<object> ReadAsync(Type requestedType, CancellationToken token)
+        public async Task<object> ReadAsync(ReadRequest request, CancellationToken token)
         {
             if (!_infinite) return _idx >= _queue.Count ? CloseWriterSentinel.Object : _queue[_idx++];
             

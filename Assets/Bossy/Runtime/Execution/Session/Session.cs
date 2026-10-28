@@ -84,7 +84,7 @@ namespace Bossy.Execution
         {
             while (!_sessionCancellationSource.IsCancellationRequested)
             {
-                var response = await Endpoint.ReadAsync(typeof(CommandGraph), _sessionCancellationSource.Token);
+                var response = await Endpoint.ReadAsync(new ReadRequest(typeof(CommandGraph)), _sessionCancellationSource.Token);
 
                 // Command lines are parsed here so aliases apply to every endpoint. Graphs are accepted as is.
                 CommandGraph graph;

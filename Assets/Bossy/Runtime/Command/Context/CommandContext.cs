@@ -286,7 +286,7 @@ namespace Bossy.Command
             {
                 _token.ThrowIfCancellationRequested();
 
-                response = await input.ReadAsync(typeof(T), _token);
+                response = await input.ReadAsync(new ReadRequest(typeof(T)), _token);
             
                 if (response == CloseWriterSentinel.Object)
                 {
