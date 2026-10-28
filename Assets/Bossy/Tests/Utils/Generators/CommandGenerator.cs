@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Bossy.Command;
+using Bossy.Frontend.Autocomplete;
 using Bossy.Schema.Registry;
 
 namespace Bossy.Tests.Utils
@@ -21,6 +22,7 @@ namespace Bossy.Tests.Utils
         private int _optionalIndex;
 
         private List<ArgumentFieldRecord> _arguments = new();
+        private readonly Dictionary<string, (string FunctionName, Type ProviderType)> _suggestions = new();
         private string _output;
 
         private CommandGenerator(string name)
@@ -220,6 +222,24 @@ namespace Bossy.Tests.Utils
         }
         
         /// <summary>
+        /// Adds a <see cref="SuggestAttribute"/> to the most recently added argument.
+        /// </summary>
+        /// <param name="functionName">The name of the static suggestion function.</param>
+        /// <param name="providerType">The type the suggestion function resides on.</param>
+        /// <returns>The generator.</returns>
+        /// <exception cref="InvalidOperationException">Throws when no argument has been added yet.</exception>
+        public CommandGenerator WithSuggestions(string functionName, Type providerType)
+        {
+            if (_arguments.Count == 0)
+            {
+                throw new InvalidOperationException("Add an argument before adding suggestions to it.");
+            }
+
+            _suggestions[_arguments[^1].Name] = (functionName, providerType);
+            return this;
+        }
+
+        /// <summary>
         /// Makes the command write text to its output when it runs.
         /// </summary>
         /// <param name="text">The text to write.</param>
@@ -256,7 +276,24 @@ namespace Bossy.Tests.Utils
                 
                 var builder = new CustomAttributeBuilder(argRecord.ConstructorInfo, argRecord.ConstructorArgs);
                 fieldBuilder.SetCustomAttribute(builder);
+
+                if (_suggestions.TryGetValue(argRecord.Name, out var suggestion))
+                {
+                    fieldBuilder.SetCustomAttribute(BuildSuggestAttribute(suggestion.FunctionName, suggestion.ProviderType));
+                }
             }
+        }
+
+        private static CustomAttributeBuilder BuildSuggestAttribute(string functionName, Type providerType)
+        {
+            var constructorInfo = typeof(SuggestAttribute).GetConstructor(new[] { typeof(string), typeof(Type) });
+
+            if (constructorInfo == null)
+            {
+                throw new InvalidOperationException($"Cannot find constructor for {nameof(SuggestAttribute)}");
+            }
+
+            return new CustomAttributeBuilder(constructorInfo, new object[] { functionName, providerType });
         }
 
         private void GenerateCommandAttribute(TypeBuilder typeBuilder)
