@@ -654,7 +654,9 @@ Hints are a guide, and you can type values that are not suggested. Errors come f
 
 Values that contain spaces, quotes or operators, or that start with `-`, are quoted for you when a suggestion is applied. If you start typing inside a quote, suggestions keep the quote and close it.
 
-The autocomplete system is fully automated based on your command definitions. However, sometimes you may prefer to suggest values that you know are relevant. Consider the way the `open` command works:
+The autocomplete system is fully automated based on your command definitions. Enum arguments suggest their names and bool arguments suggest `true` and `false` without any extra code. Validation attributes describe themselves in the status line, for example `ends with .cs` or `range 0..10`; if you write your own `ArgumentValidationAttribute`, override `Describe()` to return a few words, or leave it returning null to show nothing.
+
+Sometimes you may prefer to suggest values that you know are relevant. Consider the way the `open` command works:
 
 ```csharp
 [Command("open", "Opens a file to edit in the external editor.")]
@@ -684,11 +686,62 @@ From this example you can see that you have the ability to register suggestion f
 ```
 where `MySuggesters.MyFunction` is a public static method on `MySuggesters`.
 
-All suggestion functions must be <b>static</b> and return a collection of strings from which `IEnumerable<string>` is assignable (`List<string>`, `string[]`, and others are valid).
+All suggestion functions must be <b>static</b>. They return either strings (anything assignable to `IEnumerable<string>`, such as `List<string>` or `string[]`) or `Suggestion` values, which add a description shown dimmed beside the value:
 
-A suggestion function runs once when you start typing a value, and its results are reused while you type that value, so it can do expensive work such as searching the project. It runs again when anything typed before the value changes. If it throws, a small red tab slides up above the suggestions saying which argument's suggestions failed and the exception message. The status line and the rest of the suggestions are unaffected, and nothing is written to the Unity console.
+```csharp
+private static IEnumerable<Suggestion> Suggest()
+{
+    yield return new Suggestion("Main Menu", "The title screen");
+    yield return "Level1"; // A string converts to a suggestion with no description
+}
+```
 
-This method is fine for simple cases where the suggestion does not depend on the state of the input or need additional resources. However, you have the option to take in a context object for more complex cases. The single argument allowed must be of type `SuggestionContext`. Consider the following example from the `help` command:
+A suggestion function takes no parameters, or a single `SuggestionContext`. The context gives you:
+
+| Member                    | Description                                                                                                  |
+|---------------------------|--------------------------------------------------------------------------------------------------------------|
+| `TryGet<T>(name, out T)`  | The value the user typed for another argument, converted to its type. Pass the field name, as in `nameof(_objectName)`. |
+| `Current`                 | The text typed so far for the value being completed, without quotes.                                         |
+| `Bossy`                   | The Bossy context, for the schema registry and settings.                                                     |
+| `Schema`, `Argument`      | The command (or subcommand) being completed, and the argument whose values are suggested.                    |
+
+`TryGet` returns true only once the user has typed the whole value and moved on, so you never see a default or a half typed value. Arguments can be filled in any order, and switches count wherever they were typed. For a variadic argument, `TryGet<string[]>` gives the elements typed before the one being completed, and returns false while there are none. Asking for a name the command does not have, or for the wrong type, throws, and the error shows in the suggestion failure tab described below. Your command is never constructed for autocomplete, so field initializers and constructors do not run.
+
+Consider the `get` command, whose component suggestions depend on the object name typed before them:
+
+```csharp
+[Command("get", "Get generic data.")]
+public class GetCommand : SimpleCommand
+{
+    [Suggest(nameof(SuggestGameObjectName))]
+    [Positional(0, "Object name in scene")]
+    private string _objectName;
+
+    [Suggest(nameof(SuggestComponents))]
+    [Positional(1, "Component type on the object.")]
+    private Type _componentType;
+
+    // ...
+
+    public static string[] SuggestComponents(SuggestionContext context)
+    {
+        if (!context.TryGet<string>(nameof(_objectName), out var objectName)) return Array.Empty<string>();
+
+        var go = GameObject.Find(objectName);
+        if (go == null) return Array.Empty<string>();
+
+        return go.GetComponents<Component>()
+            .Select(c => c.GetType().GetFriendlyName())
+            .ToArray();
+    }
+}
+```
+
+Results are cached. The engine remembers which values your function read through `TryGet` and `Current`, and runs it again only when one of those values changes. A function that reads nothing runs once when you start typing a value, and later keystrokes only re-rank its results, so it can do expensive work such as searching the project. A function that reads `Current` runs on every keystroke, so only read it when the suggestions depend on it, such as when completing file paths. Moving to another part of the line and back runs the function again, so its results stay fresh.
+
+If a suggestion function throws, a small red tab slides up above the suggestions saying which argument's suggestions failed and the exception message. The status line and the rest of the suggestions are unaffected, and nothing is written to the Unity console.
+
+The `help` command shows how a variadic argument reads its own earlier elements:
 
 ```csharp
 [Command("help", "Displays information about a command and its arguments.")]
@@ -706,31 +759,24 @@ public class HelpCommand : SimpleCommand
         // Not important...    
     }
 
-    private static string[] Suggest(SuggestionContext ctx)
+    private static Suggestion[] Suggest(SuggestionContext ctx)
     {
-        var commandPath = ctx.AutocompleteContext.TokensSoFar.Skip(1).Where(t => t != "-r" && t != "--recursive").ToList();
-
-        var parent = commandPath.FirstOrDefault();
-        var rest = commandPath.Skip(1);
-
-        if (parent == null)
+        if (!ctx.TryGet<string[]>(nameof(_command), out var commandPath))
         {
-            return ctx.BossyContext.SchemaRegistry.GetValidSchemas().Select(s => s.Name).ToArray();
+            return ctx.Bossy.SchemaRegistry.GetValidSchemas().Select(s => new Suggestion(s.Name, s.Description)).ToArray();
         }
         
-        if (ctx.BossyContext.SchemaRegistry.TryResolveSchema(parent, rest, out var schema) is SchemaQueryStatus.Found)
+        if (ctx.Bossy.SchemaRegistry.TryResolveSchema(commandPath[0], commandPath.Skip(1), out var schema) is SchemaQueryStatus.Found)
         {
-            return schema.ChildSchemas.Select(s => s.Name).ToArray();
+            return schema.ChildSchemas.Select(s => new Suggestion(s.Name, s.Description)).ToArray();
         }
         
-        return Array.Empty<string>();
+        return Array.Empty<Suggestion>();
     }
 }
 ```
 
-The `SuggestionContext` gives you access to the Bossy internal context as well as the tokens parsed so far, and the internal autocomplete context. Note that generally speaking, you should only read these objects, as writing to them will happen every time this suggestion function is called.
-
-In the example above, you can see that its simple enough to check which tokens have been consumed so far, and discard the command name, as well as expected switch values and return a different set of options depending on the context. Note that a lot of the complexity in this case comes from the fact that the input is a variadic set.
+The `-r` switch can be typed anywhere in the line without affecting the path, because `TryGet` only returns the variadic's own elements. Treat the context as read only: your function may run many times while the user types.
 
 ---
 
