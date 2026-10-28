@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Bossy.Execution;
@@ -36,12 +37,13 @@ namespace Bossy.Frontend
         /// <returns>The view. Call <see cref="SessionView.Start()"/> to run it.</returns>
         public SessionView CreateConsole(SessionView.CommandWindowOpener openCommandWindow)
         {
-            var frontend = new CliView(_context, CliView.InputVisibility.Always, _history);
+            var aliases = new Dictionary<string, string>();
+            var frontend = new CliView(_context, CliView.InputVisibility.Always, _history, aliases);
 
             return new SessionView(
                 ConsoleTitle,
                 frontend,
-                host => new Session(_context, _permissions, frontend, host, _history, new(), false),
+                host => new Session(_context, _permissions, frontend, host, _history, aliases, false),
                 openCommandWindow,
                 _context.Settings.BossyInputSettings);
         }
@@ -55,7 +57,7 @@ namespace Bossy.Frontend
         /// <returns>The view. Call <see cref="SessionView.Start"/> to run it.</returns>
         public SessionView CreateCommandWindow(Session template, CommandGraph graph, SessionView.CommandWindowOpener openCommandWindow)
         {
-            var frontend = new CliView(_context, CliView.InputVisibility.WhenReading, _history);
+            var frontend = new CliView(_context, CliView.InputVisibility.WhenReading, _history, template.Aliases);
             var commandName = graph.ToArray().FirstOrDefault()?.Schema?.Name;
 
             return new SessionView(

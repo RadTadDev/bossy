@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -35,38 +34,82 @@ namespace Bossy.Frontend.Parsing
         /// <returns>True is parsing was successful, otherwise false.</returns>
         public ParseResult Parse(string input, OperatorList operators, Dictionary<string, string> aliases = null)
         {
-            if (string.IsNullOrWhiteSpace(input)) return new EmptyInputError();
-            
+            var bindResult = Bind(input, operators, aliases, out var isWindowed);
+            if (bindResult.IsError) return bindResult.Error;
+            var pipeline = bindResult.Value;
+
+            // 1. Create each command and give it its bound values
+            foreach (var node in pipeline)
+            {
+                node.Command = node.Schema.Instantiate();
+                foreach (var (argSchema, value) in node.Values)
+                {
+                    argSchema.SetValue(node.Command, value);
+                }
+            }
+
+            // 2. Run validators on the arguments left at their default values
+            foreach (var node in pipeline)
+            {
+                var argResult = ValidateDefaultArguments(node);
+                if (argResult.IsError) return argResult.Error;
+            }
+
+            // 3. Build the command graph.
+            return new ParseSucceeded(BuildGraph(pipeline, isWindowed));
+        }
+
+        /// <summary>
+        /// Checks whether a string would parse, without creating any command. Arguments the input does not set are
+        /// not validated, since their default values are only known once a command is created.
+        /// </summary>
+        /// <param name="input">The input to check.</param>
+        /// <param name="operators">The operators to use.</param>
+        /// <param name="aliases">An optional list of aliases to expand before parsing.</param>
+        /// <param name="error">The parse error, or null if the input would parse.</param>
+        /// <returns>True if the input would parse, otherwise false.</returns>
+        internal bool TryCheck(string input, OperatorList operators, Dictionary<string, string> aliases, out ParseResult error)
+        {
+            var bindResult = Bind(input, operators, aliases, out _);
+            error = bindResult.Error;
+            return !bindResult.IsError;
+        }
+
+        private ParseStep<List<ParseNode>> Bind(string input, OperatorList operators, Dictionary<string, string> aliases, out bool isWindowed)
+        {
+            isWindowed = false;
+            if (string.IsNullOrWhiteSpace(input)) return ParseStep<List<ParseNode>>.Fail(new EmptyInputError());
+
             // 1. Expand macros
             if (ShouldExpandAliases(input, aliases))
             {
                 input = ExpandAliases(input, aliases);
             }
-            
+
             // 2. Split into nodes
             var tokens = Tokenizer.Tokenize(input, operators.ToEnumerable());
-            var pipelineResult = MakePipeline(tokens, operators, out var isWindowed);
-            if (pipelineResult.IsError) return pipelineResult.Error;
-            
-            // 3. Parse each node to a command
+            var pipelineResult = MakePipeline(tokens, operators, out isWindowed);
+            if (pipelineResult.IsError) return pipelineResult;
+
+            // 3. Bind each node's tokens to its command's arguments
             var pipeline = pipelineResult.Value;
             foreach (var node in pipeline)
             {
-                var commandResult = ParseCommand(node.Tokens);
-                if (commandResult.IsError) return commandResult.Error;
-                node.Command = commandResult.Value.Item1;
-                node.Schema = commandResult.Value.Item2;
+                // Values are collected rather than set, so no command is created until binding succeeds
+                node.Values = new Dictionary<ArgumentSchema, object>();
+                var commandResult = BindCommand(node.Tokens, node.Values);
+                if (commandResult.IsError) return ParseStep<List<ParseNode>>.Fail(commandResult.Error);
+                node.Schema = commandResult.Value;
             }
-            
-            // 4. Run argument validators
+
+            // 4. Run validators on the bound values
             foreach (var node in pipeline)
             {
-                var argResult = ValidateArguments(node);
-                if (argResult.IsError) return argResult.Error;
+                var argResult = ValidateBoundArguments(node);
+                if (argResult.IsError) return ParseStep<List<ParseNode>>.Fail(argResult.Error);
             }
-                
-            // 5. Build the command graph.
-            return new ParseSucceeded(BuildGraph(pipeline, isWindowed));
+
+            return pipelineResult;
         }
 
         private bool ShouldExpandAliases(string input, Dictionary<string, string> aliases)
@@ -155,44 +198,41 @@ namespace Bossy.Frontend.Parsing
             throw new ArgumentOutOfRangeException(nameof(token), token, "Token is not a linking operator.");
         }
 
-        private ParseStep<(ICommand, CommandSchema)> ParseCommand(IReadOnlyList<Token> tokens)
+        private ParseStep<CommandSchema> BindCommand(IReadOnlyList<Token> tokens, Dictionary<ArgumentSchema, object> values)
         {
             var stream = new TokenStream(Texts(tokens));
-            
+
             var result = GetSchema(stream);
-            if (result.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(result.Error);
+            if (result.IsError) return ParseStep<CommandSchema>.Fail(result.Error);
             var schema = result.Value;
-            
-            // Begin parsing command as per schema
-            var command = schema.Instantiate();
-            
+
             // 1. Collect the tokens after the command path into the arg list
             var argTokens = tokens.Skip(stream.Cursor).ToList();
             
             // 2. Expand aggregate flags
             var aggregateResult = ExpandAggregateFlags(argTokens, schema);
-            if (aggregateResult.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(aggregateResult.Error);
+            if (aggregateResult.IsError) return ParseStep<CommandSchema>.Fail(aggregateResult.Error);
             
             // 3. Foreach flag starting with - or -- ensure match in schema
-            var switchResult = ParseSwitches(argTokens, schema, command);
-            if (switchResult.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(switchResult.Error);
+            var switchResult = ParseSwitches(argTokens, schema, values);
+            if (switchResult.IsError) return ParseStep<CommandSchema>.Fail(switchResult.Error);
 
             // 4. Parse in positionals - return on error or not enough
-            var positionalResult = ParsePositionals(argTokens, schema, command);
-            if (positionalResult.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(positionalResult.Error);
+            var positionalResult = ParsePositionals(argTokens, tokens, schema, values);
+            if (positionalResult.IsError) return ParseStep<CommandSchema>.Fail(positionalResult.Error);
             
             // 5. Parse in optionals - return on error
-            var optionalResult = ParseOptionals(argTokens, schema, command);
-            if (optionalResult.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(optionalResult.Error);
+            var optionalResult = ParseOptionals(argTokens, tokens, schema, values);
+            if (optionalResult.IsError) return ParseStep<CommandSchema>.Fail(optionalResult.Error);
             
             // 6. Parse in variadic - return on error
-            var variadicResult = ParseVariadic(argTokens, schema, command);
-            if (variadicResult.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(variadicResult.Error);
+            var variadicResult = ParseVariadic(argTokens, tokens, schema, values);
+            if (variadicResult.IsError) return ParseStep<CommandSchema>.Fail(variadicResult.Error);
             
-            return ParseStep<(ICommand, CommandSchema)>.Ok((command, schema));
+            return ParseStep<CommandSchema>.Ok(schema);
         }
 
-        private ParseStep ParseSwitches(List<Token> argTokens, CommandSchema schema, ICommand command)
+        private ParseStep ParseSwitches(List<Token> argTokens, CommandSchema schema, Dictionary<ArgumentSchema, object> values)
         {
             var idx = 0;
             
@@ -201,7 +241,7 @@ namespace Bossy.Frontend.Parsing
                 ArgumentSchema argSchema;
                 
                 // 1. Only match with - or -- style arguments
-                if (!IsSwitch(argTokens[idx]))
+                if (!argTokens[idx].IsSwitch)
                 {
                     idx++;
                     continue;
@@ -246,14 +286,14 @@ namespace Bossy.Frontend.Parsing
                 
                 argTokens.RemoveRange(idx, substream.Cursor);
                 
-                // 5. Set field value
-                argSchema.SetValue(command, value);
+                // 5. Record the value
+                values[argSchema] = value;
             }
 
             return ParseStep.Ok();
         }
 
-        private ParseStep ParsePositionals(List<Token> argTokens, CommandSchema schema, ICommand command)
+        private ParseStep ParsePositionals(List<Token> argTokens, IReadOnlyList<Token> lineTokens, CommandSchema schema, Dictionary<ArgumentSchema, object> values)
         {
             var positionals = schema.GetOrderedPositionalArguments();
 
@@ -274,16 +314,17 @@ namespace Bossy.Frontend.Parsing
                     return ParseStep.Fail(new TypeAdaptError(argSchema.Type, argTokens[0].Text, adaptResult.ErrorMessage));
                 }
                 
-                argTokens.RemoveRange(0, substream.Cursor);
+                var takeResult = TakeValueTokens(argTokens, substream.Cursor, argSchema, lineTokens);
+                if (takeResult.IsError) return takeResult;
                 
-                // 4. Set the value
-                argSchema.SetValue(command, value);
+                // 4. Record the value
+                values[argSchema] = value;
             }
 
             return ParseStep.Ok();
         }
         
-        private ParseStep ParseOptionals(List<Token> argTokens, CommandSchema schema, ICommand command)
+        private ParseStep ParseOptionals(List<Token> argTokens, IReadOnlyList<Token> lineTokens, CommandSchema schema, Dictionary<ArgumentSchema, object> values)
         {
             var optionals = schema.GetOrderedOptionalArguments();
 
@@ -306,16 +347,17 @@ namespace Bossy.Frontend.Parsing
                     return ParseStep.Ok();
                 }
                 
-                argTokens.RemoveRange(0, substream.Cursor);
+                var takeResult = TakeValueTokens(argTokens, substream.Cursor, argSchema, lineTokens);
+                if (takeResult.IsError) return takeResult;
                 
-                // 4. Set the value
-                argSchema.SetValue(command, value);
+                // 4. Record the value
+                values[argSchema] = value;
             }
 
             return ParseStep.Ok();
         }
 
-        private ParseStep ParseVariadic(List<Token> argTokens, CommandSchema schema, ICommand command)
+        private ParseStep ParseVariadic(List<Token> argTokens, IReadOnlyList<Token> lineTokens, CommandSchema schema, Dictionary<ArgumentSchema, object> values)
         {
             // 1. If there are not variadic args, we are done but must check for unexpected tokens
             if (!schema.TryGetVariadic(out var variadic))
@@ -340,29 +382,55 @@ namespace Bossy.Frontend.Parsing
                     return ParseStep.Fail(new TypeAdaptError(type, argTokens[0].Text, result.ErrorMessage));
                 }
                 
-                argTokens.RemoveRange(0, substream.Cursor);
+                var takeResult = TakeValueTokens(argTokens, substream.Cursor, variadic, lineTokens);
+                if (takeResult.IsError) return takeResult;
                 
                 // 3. Add to list
                 args.Add(value);
             }
 
-            // 4. Set the arguments' value
+            // 4. Record the arguments' value
             var array = Array.CreateInstance(type, args.Count);
             for (var i = 0; i < args.Count; i++)
             {
                 array.SetValue(args[i], i);
             }
             
-            variadic.SetValue(command, array);
+            values[variadic] = array;
             
             return ParseStep.Ok();
         }
         
+        /*
+         * Removes the tokens an ordered value used. Switches are removed before ordered values are read, so the
+         * tokens of a value may have had a switch between them in the line, as in "vec 1 -f 2 3". That is an
+         * error, so a value's tokens must be next to each other in the line.
+         */
+        private static ParseStep TakeValueTokens(List<Token> argTokens, int count, ArgumentSchema argSchema, IReadOnlyList<Token> lineTokens)
+        {
+            for (var i = 1; i < count; i++)
+            {
+                var previousEnd = argTokens[i - 1].End;
+                var nextStart = argTokens[i].Start;
+
+                foreach (var token in lineTokens)
+                {
+                    if (token.Start >= previousEnd && token.End <= nextStart)
+                    {
+                        return ParseStep.Fail(new SplitValueError(token.Text, argSchema.Name));
+                    }
+                }
+            }
+
+            argTokens.RemoveRange(0, count);
+            return ParseStep.Ok();
+        }
+
         private static ParseStep ExpandAggregateFlags(List<Token> tokens, CommandSchema schema)
         {
             for (var i = 0; i < tokens.Count; i++)
             {
-                if (!IsSwitch(tokens[i])) continue;
+                if (!tokens[i].IsSwitch) continue;
                 
                 var token = tokens[i].Text;
 
@@ -394,24 +462,9 @@ namespace Bossy.Frontend.Parsing
             return ParseStep.Ok();
         }
 
-        private static bool IsSwitch(Token token)
-        {
-            // Quoted text is always a value, and so are negative numbers
-            return !token.IsQuoted && token.Text.StartsWith("-") && !IsNegativeNumber(token.Text);
-        }
-
         private static IEnumerable<string> Texts(IEnumerable<Token> tokens)
         {
             return tokens.Select(t => t.Text);
-        }
-
-        private static bool IsNegativeNumber(string token)
-        {
-            // Short switch names are always letters, so a dash followed by a number is never a switch
-            return token.Length > 1
-                   && token[0] == '-'
-                   && (char.IsDigit(token[1]) || token[1] == '.')
-                   && double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
         }
 
         private ParseStep<CommandSchema> GetSchema(TokenStream stream)
@@ -454,24 +507,44 @@ namespace Bossy.Frontend.Parsing
             return ParseStep<CommandSchema>.Ok(schema);
         }
 
-        private ParseStep ValidateArguments(ParseNode node)
+        private static ParseStep ValidateBoundArguments(ParseNode node)
+        {
+            foreach (var (arg, value) in node.Values)
+            {
+                var result = ValidateArgument(arg, value);
+                if (result.IsError) return result;
+            }
+
+            return ParseStep.Ok();
+        }
+
+        private static ParseStep ValidateDefaultArguments(ParseNode node)
         {
             var bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic;
             foreach (var arg in node.Schema.Arguments)
             {
-                foreach (var validator in arg.Validators)
-                {
-                    var field = node.Command.GetType().GetField(arg.FieldInfo.Name, bindingFlags);
-                    var value = field!.GetValue(node.Command);
-                    var result = validator.Validate(value);
+                if (node.Values.ContainsKey(arg)) continue;
 
-                    if (!result.Success)
-                    {
-                        return ParseStep.Fail(new ArgumentValidationError(result.Message, arg.Name));
-                    }
+                var field = node.Command.GetType().GetField(arg.FieldInfo.Name, bindingFlags);
+                var result = ValidateArgument(arg, field!.GetValue(node.Command));
+                if (result.IsError) return result;
+            }
+
+            return ParseStep.Ok();
+        }
+
+        private static ParseStep ValidateArgument(ArgumentSchema arg, object value)
+        {
+            foreach (var validator in arg.Validators)
+            {
+                var result = validator.Validate(value);
+
+                if (!result.Success)
+                {
+                    return ParseStep.Fail(new ArgumentValidationError(result.Message, arg.Name));
                 }
             }
-            
+
             return ParseStep.Ok();
         }
 

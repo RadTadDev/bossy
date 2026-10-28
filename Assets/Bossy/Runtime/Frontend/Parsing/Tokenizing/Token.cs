@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Bossy.Frontend.Parsing
 {
     /// <summary>
@@ -22,16 +24,43 @@ namespace Bossy.Frontend.Parsing
         public readonly bool IsQuoted;
 
         /// <summary>
+        /// The index in the input line where this token starts, including any opening quote.
+        /// </summary>
+        public readonly int Start;
+
+        /// <summary>
+        /// The index in the input line just past the end of this token, including any closing quote.
+        /// </summary>
+        public readonly int End;
+
+        /// <summary>
+        /// True if this token names a switch: unquoted text starting with a dash that is not a negative number.
+        /// </summary>
+        public bool IsSwitch => !IsOperator && !IsQuoted && Text.StartsWith("-") && !IsNegativeNumber(Text);
+
+        /// <summary>
         /// Creates a token.
         /// </summary>
         /// <param name="text">The text of the token.</param>
         /// <param name="isOperator">True if this token is an unquoted operator.</param>
         /// <param name="isQuoted">True if any part of this token was quoted or escaped.</param>
-        public Token(string text, bool isOperator = false, bool isQuoted = false)
+        /// <param name="start">The index in the input line where this token starts.</param>
+        /// <param name="end">The index in the input line just past the end of this token.</param>
+        public Token(string text, bool isOperator = false, bool isQuoted = false, int start = 0, int end = 0)
         {
             Text = text;
             IsOperator = isOperator;
             IsQuoted = isQuoted;
+            Start = start;
+            End = end;
+        }
+
+        private static bool IsNegativeNumber(string text)
+        {
+            // Short switch names are always letters, so a dash followed by a number is never a switch
+            return text.Length > 1
+                   && (char.IsDigit(text[1]) || text[1] == '.')
+                   && double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
         }
     }
 }

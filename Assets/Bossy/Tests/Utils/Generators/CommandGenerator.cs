@@ -24,6 +24,7 @@ namespace Bossy.Tests.Utils
         private List<ArgumentFieldRecord> _arguments = new();
         private readonly Dictionary<string, (string FunctionName, Type ProviderType)> _suggestions = new();
         private string _output;
+        private MethodInfo _constructorCall;
 
         private CommandGenerator(string name)
         {
@@ -251,6 +252,24 @@ namespace Bossy.Tests.Utils
         }
 
         /// <summary>
+        /// Makes the command's constructor call a public static method, so tests can see when the command is
+        /// created. Note that <see cref="Generate"/> creates one instance itself.
+        /// </summary>
+        /// <param name="method">A public static method with no parameters and no return value.</param>
+        /// <returns>The generator.</returns>
+        /// <exception cref="ArgumentException">Throws when the method does not have that shape.</exception>
+        public CommandGenerator WithConstructorCall(MethodInfo method)
+        {
+            if (method == null || !method.IsStatic || !method.IsPublic || method.GetParameters().Length > 0 || method.ReturnType != typeof(void))
+            {
+                throw new ArgumentException("The method must be public and static, take no parameters, and return nothing.", nameof(method));
+            }
+
+            _constructorCall = method;
+            return this;
+        }
+
+        /// <summary>
         /// Generates a command object.
         /// </summary>
         /// <returns>The generated command.</returns>
@@ -318,6 +337,12 @@ namespace Bossy.Tests.Utils
             var il = constructor.GetILGenerator();
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
+
+            if (_constructorCall != null)
+            {
+                il.Emit(OpCodes.Call, _constructorCall);
+            }
+
             il.Emit(OpCodes.Ret);
         }
         

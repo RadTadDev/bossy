@@ -6,6 +6,7 @@ using Bossy.Frontend.Parsing;
 using Bossy.Schema.Registry;
 using Bossy.Schema;
 using Bossy.Tests.Utils;
+using UnityEngine;
 
 namespace Bossy.Tests.FrontEnd.Parsing
 {
@@ -179,6 +180,20 @@ namespace Bossy.Tests.FrontEnd.Parsing
             };
             var stringsSchema = new CommandSchema("strings", "description", strings.GetType(), stringsArgs);
 
+            // Multi-token value with a switch
+            var vector = CommandGenerator.WithName("vector")
+                .WithPositional("pos", typeof(Vector3))
+                .WithSwitch("fast", typeof(bool), 'f')
+                .Generate();
+            var vectorPosField = vector.GetType().GetField("pos");
+            var vectorFastField = vector.GetType().GetField("fast");
+            var vectorArgs = new HashSet<ArgumentSchema>
+            {
+                new("pos", "description", vectorPosField, vectorPosField.GetCustomAttribute<PositionalAttribute>(), null),
+                new("fast", "description", vectorFastField, vectorFastField.GetCustomAttribute<SwitchAttribute>(), null),
+            };
+            var vectorSchema = new CommandSchema("vector", "description", vector.GetType(), vectorArgs);
+
             var schemas = new List<CommandSchema>
             {
                 rootSchema,
@@ -194,7 +209,8 @@ namespace Bossy.Tests.FrontEnd.Parsing
                 variadicSchema,
                 allSchema,
                 mixedSchema,
-                stringsSchema
+                stringsSchema,
+                vectorSchema
             };
             
             var schemaRegistry = new SchemaRegistry(schemas);
@@ -204,7 +220,8 @@ namespace Bossy.Tests.FrontEnd.Parsing
             adapterRegistry.RegisterAdapter(typeof(float), new FloatAdapter());
             adapterRegistry.RegisterAdapter(typeof(bool), new BoolAdapter());
             adapterRegistry.RegisterAdapter(typeof(string), new StringAdapter());
-            
+            adapterRegistry.RegisterAdapter(typeof(Vector3), new Vector3Adapter());
+
             _parser = new Parser(schemaRegistry, adapterRegistry);
         }
         
@@ -868,6 +885,47 @@ namespace Bossy.Tests.FrontEnd.Parsing
             Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             Assert.That(graph.ToArray().Length, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void TryCheck_ValidInput_Succeeds()
+        {
+            Assert.That(_parser.TryCheck("root | switches --sw1 5 ; all 1 2", _ops, null, out var error), Is.True);
+            Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        public void TryCheck_InvalidInput_ReturnsSameErrorAsParse()
+        {
+            Assert.That(_parser.TryCheck("switches --sw1 abc", _ops, null, out var error), Is.False);
+            Assert.That(error.GetType(), Is.EqualTo(_parser.Parse("switches --sw1 abc", _ops).GetType()));
+        }
+
+        [Test]
+        public void Parse_SwitchInsideMultiTokenValue_Fails()
+        {
+            _result = _parser.Parse("vector 1 -f 2 3", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(SplitValueError)));
+
+            _result = _parser.Parse("vector 1 -- 2 3", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(SplitValueError)));
+        }
+
+        [Test]
+        public void Parse_SwitchAroundMultiTokenValue_Succeeds()
+        {
+            _result = _parser.Parse("vector -f 1 2 3", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+
+            _result = _parser.Parse("vector 1 2 3 -f", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+        }
+
+        [Test]
+        public void Parse_UnterminatedQuote_IsValueWithoutTheQuote()
+        {
+            _result = _parser.Parse("strings \"hello world", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
         }
     }
 }

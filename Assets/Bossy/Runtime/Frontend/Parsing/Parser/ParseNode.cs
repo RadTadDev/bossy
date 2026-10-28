@@ -29,7 +29,12 @@ namespace Bossy.Frontend.Parsing
         /// The schema associated with this command.
         /// </summary>
         public CommandSchema Schema;
-        
+
+        /// <summary>
+        /// The values bound to the command's arguments, keyed by argument.
+        /// </summary>
+        public Dictionary<ArgumentSchema, object> Values;
+
         /// <summary>
         /// Creates a new parse node.
         /// </summary>

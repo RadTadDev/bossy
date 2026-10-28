@@ -12,13 +12,13 @@ using UnityEngine;
 namespace Bossy.Tests.FrontEnd.Autocomplete
 {
     /// <summary>
-    /// Characterization tests for the <see cref="AutocompleteEngine"/>. These pin the engine's current behavior so
-    /// that it can be rewritten safely. Tests marked "Current behavior, scheduled to change" pin known bugs that a
-    /// later change fixes on purpose, at which point the test is updated with it.
+    /// Tests the <see cref="AutocompleteEngine"/>. The rule numbers (R1 to R31, B1 to B9, and the numbered
+    /// proposals) match the comments in <see cref="CompletionWalker"/> and <see cref="AutocompleteEngine"/>.
     /// </summary>
     internal class AutocompleteEngineTest
     {
         private AutocompleteEngine _engine;
+        private Dictionary<string, string> _aliases;
 
         [OneTimeSetUp]
         public void Setup()
@@ -36,11 +36,12 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
 
             var vec = CommandGenerator.WithName("vec")
                 .WithPositional("pos", typeof(Vector3))
+                .WithSwitch("fast", typeof(bool), 'f')
                 .Generate().GetType();
 
             var tag = CommandGenerator.WithName("tag")
                 .WithOptional("amount", typeof(int))
-                .WithVariadic("words", typeof(string))
+                .WithVariadic("words", typeof(string)).WithSuggestions(nameof(TestSuggestions.Words), typeof(TestSuggestions))
                 .Generate().GetType();
 
             var pick = CommandGenerator.WithName("pick")
@@ -60,7 +61,19 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
                 .AsSubcommand(level)
                 .Generate().GetType();
 
-            var types = new List<Type> { load, wait, vec, tag, pick, level, levelOpen, levelClose };
+            var broken = CommandGenerator.WithName("broken")
+                .WithPositional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.Throws), typeof(TestSuggestions))
+                .Generate().GetType();
+
+            var counted = CommandGenerator.WithName("counted")
+                .WithPositional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.Counted), typeof(TestSuggestions))
+                .Generate().GetType();
+
+            var created = CommandGenerator.WithName("created")
+                .WithConstructorCall(typeof(ConstructionCounter).GetMethod(nameof(ConstructionCounter.Increment)))
+                .Generate().GetType();
+
+            var types = new List<Type> { load, wait, vec, tag, pick, level, levelOpen, levelClose, broken, counted, created };
             var graph = CommandDependencyGraphBuilder.BuildGraph(types);
             var schemas = new SchemaRegistry(SchemaFactory.BuildCommandSchemas(graph));
 
@@ -74,397 +87,566 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
             var context = new BossyContext(schemas, adapters, null, null, null, null);
             var operators = new OperatorList(";", "&&", "||", "|", "!");
 
-            _engine = new AutocompleteEngine(context, operators);
+            _aliases = new Dictionary<string, string>();
+            _engine = new AutocompleteEngine(context, operators, _aliases);
         }
 
-        // --- Input and cursor ---
-
-        [Test]
-        public void Suggest_EmptyInput_ReturnsNothing()
+        [SetUp]
+        public void ResetAliases()
         {
-            Assert.That(Suggest(""), Is.Empty);
+            _aliases.Clear();
         }
 
-        [Test]
-        public void Suggest_CursorBeforeEnd_IgnoresTextAfterCursor()
-        {
-            var result = _engine.Suggest("load Lev extra", 8).ToList();
-
-            Assert.That(FullTexts(result)[0], Is.EqualTo("load Level1"));
-        }
-
-        // --- Command names ---
+        // --- Input and cursor (R1 to R3, proposal 6) ---
 
         [Test]
-        public void Suggest_TypingCommandName_SuggestsMatchingCommands()
+        public void Complete_EmptyInput_ReturnsNothing()
         {
-            var result = Suggest("lo");
-
-            Assert.That(FullTexts(result)[0], Is.EqualTo("load"));
+            Assert.That(Complete("").IsEmpty, Is.True);
+            Assert.That(Complete("   ").IsEmpty, Is.True);
         }
 
         [Test]
-        public void Suggest_NoCommandMatches_ReturnsNothingForWholeLine()
+        public void Complete_CursorInsideToken_ReplacesWholeTokenAndKeepsTextAfterIt()
         {
-            Assert.That(Suggest("xyzq"), Is.Empty);
-            Assert.That(Suggest("xyzq "), Is.Empty);
-            Assert.That(Suggest("xyzq -f "), Is.Empty);
+            var line = "load Lev extra";
+            var result = _engine.Complete(line, 8);
+
+            Assert.That(result.Completions[0].ApplyTo(line), Is.EqualTo("load Level1 extra"));
+            Assert.That(result.Completions[0].CursorAfterApply, Is.EqualTo("load Level1".Length));
         }
 
         [Test]
-        public void Suggest_MisspelledCommand_ResolvesToBestMatchAndCorrectsIt()
+        public void Complete_CursorRightBeforeToken_InsertsWithSeparatingSpace()
         {
-            var result = Suggest("laod ");
+            var line = "load -f";
+            var result = _engine.Complete(line, 5);
 
-            Assert.That(FullTexts(result), Is.EqualTo(new[] { "load \"Main Menu\"", "load Level1", "load Level2" }));
+            Assert.That(Applied(line, result), Does.Contain("load Level1 -f"));
         }
 
-        // --- Operators ---
+        // --- Command names (R4 to R6, proposals 7 and 8, B4) ---
 
         [Test]
-        public void Suggest_AfterOperator_SuggestsNextCommandKeepingPrefix()
+        public void Complete_TypingCommandName_SuggestsMatchingCommands()
         {
-            var result = Suggest("wait 2 && lo");
+            var result = Complete("lo");
 
-            Assert.That(FullTexts(result)[0], Is.EqualTo("wait 2 && load"));
-        }
-
-        [Test]
-        public void Suggest_OperatorAfterInvalidValue_ReturnsError()
-        {
-            AssertError(Suggest("wait abc && lo"), "Invalid input");
+            Assert.That(Applied("lo", result)[0], Is.EqualTo("load"));
+            Assert.That(result.Completions[0].Kind, Is.EqualTo(CompletionKind.Command));
         }
 
         [Test]
-        public void Suggest_OperatorAfterIncompleteCommand_SuggestsNextCommand()
+        public void Complete_NoCommandMatchesWhileTyping_Hints()
         {
-            // Current behavior, scheduled to change: the missing positional should be reported as an error
-            var result = Suggest("wait && lo");
-
-            Assert.That(FullTexts(result)[0], Is.EqualTo("wait && load"));
+            AssertHint(Complete("xyzq"), "No command matches 'xyzq'");
         }
 
         [Test]
-        public void Suggest_TrailingWindowOperator_IsReadyToExecute()
+        public void Complete_NoCommandMatchesMovedOn_ReturnsError()
         {
-            AssertHint(Suggest("wait 2 !"), "Ready to execute");
+            AssertError(Complete("xyzq "), "No command with name \"xyzq\"");
+            AssertError(Complete("xyzq -f "), "No command with name \"xyzq\"");
         }
 
         [Test]
-        public void Suggest_WindowOperatorAfterIncompleteCommand_IsReadyToExecute()
+        public void Complete_MisspelledCommand_ResolvesToBestMatchAndOffersFixFirst()
         {
-            // Current behavior, scheduled to change: the missing positional should be reported as an error
-            AssertHint(Suggest("wait !"), "Ready to execute");
+            var line = "laod ";
+            var result = Complete(line);
+
+            Assert.That(result.Completions[0].Kind, Is.EqualTo(CompletionKind.Command));
+            Assert.That(result.Completions[0].ApplyTo(line), Is.EqualTo("load "));
+            Assert.That(Applied(line, result).Skip(1), Is.EqualTo(new[] { "laod \"Main Menu\"", "laod Level1", "laod Level2" }));
         }
 
         [Test]
-        public void Suggest_LeadingWindowOperator_ReturnsNothing()
+        public void Complete_AliasName_IsSuggestedWithItsExpansion()
         {
-            // Current behavior, scheduled to change: the leading operator should be skipped
-            Assert.That(Suggest("!wait"), Is.Empty);
+            _aliases["ld"] = "load Level1";
+
+            var result = Complete("ld");
+
+            var alias = result.Completions.First(c => c.Kind == CompletionKind.Alias);
+            Assert.That(alias.DisplayText, Is.EqualTo("ld"));
+            Assert.That(alias.Description, Is.EqualTo("load Level1"));
         }
 
         [Test]
-        public void Suggest_QuotedWindowOperator_IsTreatedAsOperator()
+        public void Complete_AfterAlias_CompletesTheExpandedCommand()
         {
-            // Current behavior, scheduled to change: a quoted operator should be a plain value
-            AssertHint(Suggest("load \"!\" "), "Ready to execute");
+            _aliases["ld"] = "load";
+
+            Assert.That(Applied("ld ", Complete("ld ")), Does.Contain("ld Level1"));
         }
 
-        // --- Quotes ---
+        // --- Operators (R7, R8, proposals 1 and 2, B1, B9) ---
 
         [Test]
-        public void Suggest_UnfinishedQuote_HintsCurrentArgument()
+        public void Complete_AfterOperator_SuggestsNextCommandKeepingPrefix()
         {
-            AssertHint(Suggest("load \"Main"), "scene");
-        }
-
-        [Test]
-        public void Suggest_UnfinishedQuoteWithNoArgumentLeft_ReturnsError()
-        {
-            AssertError(Suggest("level close \"x"), "Invalid token");
+            Assert.That(Applied("wait 2 && lo", Complete("wait 2 && lo"))[0], Is.EqualTo("wait 2 && load"));
         }
 
         [Test]
-        public void Suggest_AfterQuotedValue_DropsQuotesFromSuggestedLine()
+        public void Complete_AfterOperatorWithSpace_ListsAllCommands()
         {
-            // Current behavior, scheduled to change: the user's quotes should be kept
-            var result = Suggest("load \"Main Menu\" -");
+            Assert.That(Applied("wait 2 && ", Complete("wait 2 && ")), Does.Contain("wait 2 && load"));
+        }
 
-            Assert.That(FullTexts(result), Is.EquivalentTo(new[]
+        [Test]
+        public void Complete_OperatorAfterInvalidValue_ReturnsParserError()
+        {
+            AssertError(Complete("wait abc && lo"), "Could not parse \"abc\"");
+        }
+
+        [Test]
+        public void Complete_OperatorAfterIncompleteCommand_ReturnsParserError()
+        {
+            AssertError(Complete("wait && lo"), "Expected argument \"seconds\"");
+        }
+
+        [Test]
+        public void Complete_OperatorAtStart_ReturnsError()
+        {
+            AssertError(Complete("&& lo"), "&&");
+        }
+
+        [Test]
+        public void Complete_CommandsBeforeOperator_AreCheckedWithoutBeingCreated()
+        {
+            ConstructionCounter.Count = 0;
+
+            Assert.That(Applied("created && lo", Complete("created && lo"))[0], Is.EqualTo("created && load"));
+            AssertReady(Complete("created !"), "in window");
+
+            Assert.That(ConstructionCounter.Count, Is.Zero);
+        }
+
+        [Test]
+        public void Complete_TrailingWindowOperator_IsReadyToExecuteInWindow()
+        {
+            AssertReady(Complete("wait 2 !"), "in window");
+        }
+
+        [Test]
+        public void Complete_WindowOperatorAfterIncompleteCommand_ReturnsParserError()
+        {
+            AssertError(Complete("wait !"), "Expected argument \"seconds\"");
+        }
+
+        [Test]
+        public void Complete_WindowOperatorInMiddle_ReturnsParserError()
+        {
+            AssertError(Complete("wait 2 ! lo"), "Window operator may only appear first or last");
+        }
+
+        [Test]
+        public void Complete_LeadingWindowOperator_IsSkipped()
+        {
+            Assert.That(Applied("!wa", Complete("!wa"))[0], Is.EqualTo("!wait"));
+            AssertReady(Complete("!wait 2 "), "Ready");
+        }
+
+        [Test]
+        public void Complete_QuotedWindowOperator_IsPlainValue()
+        {
+            AssertReady(Complete("load \"!\" "), "Ready");
+        }
+
+        // --- Quotes (proposal 5, B2) ---
+
+        [Test]
+        public void Complete_UnfinishedQuote_CompletesInsideQuoteAndClosesIt()
+        {
+            var line = "load \"Main";
+            var result = Complete(line);
+
+            Assert.That(result.Message, Does.Contain("scene"));
+            Assert.That(Applied(line, result)[0], Is.EqualTo("load \"Main Menu\""));
+        }
+
+        [Test]
+        public void Complete_UnfinishedQuoteWithSpace_StaysInsideQuote()
+        {
+            var line = "load \"Main M";
+
+            Assert.That(Applied(line, Complete(line))[0], Is.EqualTo("load \"Main Menu\""));
+        }
+
+        [Test]
+        public void Complete_UnfinishedQuoteWithNoArgumentLeft_ReturnsError()
+        {
+            AssertError(Complete("level close \"x"), "unexpected token");
+        }
+
+        [Test]
+        public void Complete_AfterQuotedValue_KeepsQuotes()
+        {
+            var line = "load \"Main Menu\" -";
+
+            Assert.That(Applied(line, Complete(line)), Is.EquivalentTo(new[]
             {
-                "load Main Menu --force",
-                "load Main Menu --verbose",
-                "load Main Menu --count"
+                "load \"Main Menu\" --force",
+                "load \"Main Menu\" --verbose",
+                "load \"Main Menu\" --count"
             }));
         }
 
-        // --- Long switches ---
+        // --- Long switches (R10, R11, R15, B8) ---
 
         [Test]
-        public void Suggest_DoubleDash_SuggestsAllLongSwitches()
+        public void Complete_DoubleDash_SuggestsAllLongSwitches()
         {
-            var result = Suggest("load --");
+            var result = Complete("load --");
 
-            Assert.That(FullTexts(result), Is.EquivalentTo(new[] { "load --force", "load --verbose", "load --count" }));
-        }
-
-        [Test]
-        public void Suggest_PartialLongSwitch_SuggestsMatchingSwitchFirst()
-        {
-            var result = Suggest("load --ver");
-
-            Assert.That(FullTexts(result)[0], Is.EqualTo("load --verbose"));
+            Assert.That(Applied("load --", result), Is.EquivalentTo(new[] { "load --force", "load --verbose", "load --count" }));
+            Assert.That(result.Completions.Select(c => c.DisplayText), Does.Contain("-c, --count <int>"));
+            Assert.That(result.Completions.Select(c => c.DisplayText), Does.Contain("-f, --force"));
         }
 
         [Test]
-        public void Suggest_TokensAfterSwitchSurrender_AreSkipped()
+        public void Complete_PartialLongSwitch_SuggestsMatchingSwitchFirst()
         {
-            // Current behavior, scheduled to change: "-x" should fill the scene positional, as it does in the parser
-            var result = Suggest("load -- -x ");
-
-            Assert.That(FullTexts(result), Does.Contain("load -- -x Level1"));
+            Assert.That(Applied("load --ver", Complete("load --ver"))[0], Is.EqualTo("load --verbose"));
         }
 
         [Test]
-        public void Suggest_UnknownSwitch_ReturnsError()
+        public void Complete_DashTokenAfterSwitchSurrender_IsValue()
         {
-            AssertError(Suggest("load --nope "), "Unrecognized switch arg");
-        }
-
-        // --- Short switches ---
-
-        [Test]
-        public void Suggest_SingleDash_SuggestsLongSwitches()
-        {
-            var result = Suggest("load -");
-
-            Assert.That(FullTexts(result), Is.EquivalentTo(new[] { "load --force", "load --verbose", "load --count" }));
+            AssertReady(Complete("load -- -x "), "Ready");
         }
 
         [Test]
-        public void Suggest_SingleDashMovedOn_ReturnsError()
+        public void Complete_UnknownSwitch_ReturnsParserError()
         {
-            AssertError(Suggest("load - "), "'-' is not a valid token");
+            AssertError(Complete("load --nope "), "Unknown switch \"--nope\"");
+        }
+
+        // --- Short switches (R12 to R14) ---
+
+        [Test]
+        public void Complete_SingleDash_SuggestsLongSwitches()
+        {
+            Assert.That(Applied("load -", Complete("load -")), Is.EquivalentTo(new[] { "load --force", "load --verbose", "load --count" }));
         }
 
         [Test]
-        public void Suggest_ShortSwitch_SuggestsShortNamesWithMatchFirst()
+        public void Complete_SingleDashMovedOn_ReturnsError()
         {
-            var result = Suggest("load -v");
-
-            Assert.That(result.Count, Is.EqualTo(3));
-            Assert.That(FullTexts(result)[0], Is.EqualTo("load -v"));
+            AssertError(Complete("load - "), "'-' is not a valid token");
         }
 
         [Test]
-        public void Suggest_AggregateBoolSwitches_Hints()
+        public void Complete_ShortSwitch_SuggestsShortNamesWithMatchFirst()
         {
-            AssertHint(Suggest("load -fv"), "Aggregate flags");
+            var result = Complete("load -v");
+
+            Assert.That(result.Completions.Count, Is.EqualTo(3));
+            Assert.That(Applied("load -v", result)[0], Is.EqualTo("load -v"));
         }
 
         [Test]
-        public void Suggest_AggregateBoolSwitchesMovedOn_ContinuesToNextArgument()
+        public void Complete_AggregateBoolSwitches_Hints()
         {
-            var result = Suggest("load -fv ");
-
-            Assert.That(FullTexts(result), Does.Contain("load -fv Level1"));
+            AssertHint(Complete("load -fv"), "Aggregate flags");
         }
 
         [Test]
-        public void Suggest_AggregateWithNonBoolSwitch_ReturnsError()
+        public void Complete_AggregateBoolSwitchesMovedOn_ContinuesToNextArgument()
         {
-            AssertError(Suggest("load -fc"), "Unrecognized boolean switch");
+            Assert.That(Applied("load -fv ", Complete("load -fv ")), Does.Contain("load -fv Level1"));
         }
 
         [Test]
-        public void Suggest_SingleDashLongSwitchPrefix_SuggestsLongSwitch()
+        public void Complete_AggregateWithNonBoolSwitch_ReturnsParserError()
         {
-            var result = Suggest("load -verb");
-
-            Assert.That(FullTexts(result), Is.EqualTo(new[] { "load --verbose" }));
-        }
-
-        // --- Switch values ---
-
-        [Test]
-        public void Suggest_AfterBoolSwitch_ContinuesToNextArgument()
-        {
-            var result = Suggest("load --force ");
-
-            Assert.That(FullTexts(result), Does.Contain("load --force Level1"));
+            AssertError(Complete("load -fc"), "takes a value");
         }
 
         [Test]
-        public void Suggest_AfterValueSwitch_HintsItsType()
+        public void Complete_SingleDashLongSwitchPrefix_SuggestsLongSwitch()
         {
-            AssertHint(Suggest("load --count "), "count");
+            Assert.That(Applied("load -verb", Complete("load -verb")), Is.EqualTo(new[] { "load --verbose" }));
         }
 
         [Test]
-        public void Suggest_InvalidSwitchValueMovedOn_ReturnsError()
+        public void Complete_NegativeNumber_IsValueNotSwitch()
         {
-            AssertError(Suggest("load --count abc "), "is invalid for arg --count");
+            AssertReady(Complete("wait -5 "), "Ready");
+        }
+
+        // --- Switch values (R16 to R18) ---
+
+        [Test]
+        public void Complete_AfterBoolSwitch_ContinuesToNextArgument()
+        {
+            Assert.That(Applied("load --force ", Complete("load --force ")), Does.Contain("load --force Level1"));
         }
 
         [Test]
-        public void Suggest_InvalidSwitchValueAtCursor_HintsInvalidValue()
+        public void Complete_AfterValueSwitch_HintsItsType()
         {
-            AssertHint(Suggest("load --count abc"), "current value 'abc' is invalid");
+            AssertHint(Complete("load --count "), "count <int>");
         }
 
         [Test]
-        public void Suggest_ValidSwitchValueMovedOn_ContinuesToNextArgument()
+        public void Complete_InvalidSwitchValueMovedOn_ReturnsParserError()
         {
-            var result = Suggest("load --count 5 ");
-
-            Assert.That(FullTexts(result), Does.Contain("load --count 5 Level1"));
-        }
-
-        // --- Ordered values ---
-
-        [Test]
-        public void Suggest_NextPositional_SuggestsUserValuesInOrderAndQuotesWhitespace()
-        {
-            var result = Suggest("load ");
-
-            Assert.That(FullTexts(result), Is.EqualTo(new[] { "load \"Main Menu\"", "load Level1", "load Level2" }));
-            Assert.That(result[1].DisplayText, Does.Contain("scene").And.Contain("Level1"));
+            AssertError(Complete("load --count abc "), "Could not parse \"abc\"");
         }
 
         [Test]
-        public void Suggest_PartialPositional_RanksPrefixMatchesFirst()
+        public void Complete_InvalidSwitchValueAtCursor_HintsInvalidValue()
         {
-            var result = Suggest("load Lev");
-
-            Assert.That(FullTexts(result)[0], Is.EqualTo("load Level1"));
-            Assert.That(FullTexts(result)[1], Is.EqualTo("load Level2"));
+            AssertInvalid(Complete("load --count abc"), "count", "abc");
         }
 
         [Test]
-        public void Suggest_NextPositionalWithoutSuggestions_HintsItsType()
+        public void Complete_ValidSwitchValueMovedOn_ContinuesToNextArgument()
         {
-            AssertHint(Suggest("wait "), "seconds");
+            Assert.That(Applied("load --count 5 ", Complete("load --count 5 ")), Does.Contain("load --count 5 Level1"));
+        }
+
+        // --- Ordered values (R20 to R23, proposals 4, 10 and 13) ---
+
+        [Test]
+        public void Complete_NextPositional_HintsAndSuggestsUserValuesInOrderWithQuotes()
+        {
+            var result = Complete("load ");
+
+            Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Hint));
+            Assert.That(result.Message, Does.Contain("scene <string>"));
+            Assert.That(Applied("load ", result), Is.EqualTo(new[] { "load \"Main Menu\"", "load Level1", "load Level2" }));
+            Assert.That(result.Completions[1].DisplayText, Is.EqualTo("Level1"));
+            Assert.That(result.Completions[1].Kind, Is.EqualTo(CompletionKind.Value));
         }
 
         [Test]
-        public void Suggest_InvalidPositionalMovedOn_ReturnsError()
+        public void Complete_PartialPositional_RanksPrefixMatchesFirst()
         {
-            AssertError(Suggest("wait abc "), "Invalid input for arg seconds");
+            var result = Applied("load Lev", Complete("load Lev"));
+
+            Assert.That(result[0], Is.EqualTo("load Level1"));
+            Assert.That(result[1], Is.EqualTo("load Level2"));
         }
 
         [Test]
-        public void Suggest_InvalidPositionalAtCursor_HintsInvalidValue()
+        public void Complete_NextPositionalWithoutSuggestions_HintsItsType()
         {
-            AssertHint(Suggest("wait abc"), "current value 'abc' is invalid");
+            var result = Complete("wait ");
+
+            AssertHint(result, "seconds <float>");
+            Assert.That(result.Completions, Is.Empty);
         }
 
         [Test]
-        public void Suggest_MultiTokenValueWithTooFewTokens_HintsTypeWithoutError()
+        public void Complete_InvalidPositionalMovedOn_ReturnsParserError()
         {
-            var result = Suggest("vec 1 2");
-
-            AssertHint(result, "pos");
-            Assert.That(result[0].DisplayText, Does.Not.Contain("invalid"));
+            AssertError(Complete("wait abc "), "Could not parse \"abc\" as type \"float\"");
         }
 
         [Test]
-        public void Suggest_MultiTokenValueInvalid_HintsInvalidValue()
+        public void Complete_InvalidPositionalAtCursor_HintsInvalidValue()
         {
-            AssertHint(Suggest("vec 1 2 x"), "current value '1 2 x' is invalid");
+            AssertInvalid(Complete("wait abc"), "seconds", "abc");
         }
 
         [Test]
-        public void Suggest_AllArgumentsFilled_IsReadyToExecute()
+        public void Complete_MultiTokenValueWithTooFewTokens_HintsProgressWithoutError()
         {
-            AssertHint(Suggest("wait 2 "), "Ready to execute");
+            var result = Complete("vec 1 2");
+
+            AssertHint(result, "pos <Vector3> 2/3");
+            Assert.That(result.Argument.TokenNumber, Is.EqualTo(2));
+            Assert.That(result.Argument.TokensDesired, Is.EqualTo(3));
+            Assert.That(result.Argument.InvalidValue, Is.Null);
+            AssertHint(Complete("vec 1 2 "), "pos <Vector3> 3/3");
+            AssertHint(Complete("vec "), "pos <Vector3> 1/3");
         }
 
         [Test]
-        public void Suggest_ExtraTokenAfterAllArguments_IsReadyToExecute()
+        public void Complete_ArgumentHint_IsShortAndCarriesTheArgument()
         {
-            // Current behavior, scheduled to change: the parser rejects the extra token, so this should be an error
-            AssertHint(Suggest("wait 2 extra "), "Ready to execute");
-        }
+            var result = Complete("load ");
 
-        // --- Optionals and variadic ---
-
-        [Test]
-        public void Suggest_OptionalFailsButVariadicAccepts_HintsVariadic()
-        {
-            AssertHint(Suggest("tag hello"), "words");
-            AssertHint(Suggest("tag hello "), "words");
+            Assert.That(result.Message, Is.EqualTo("scene <string>"));
+            Assert.That(result.Argument.Argument.Name, Is.EqualTo("scene"));
+            Assert.That(result.Argument.HasProgress, Is.False);
         }
 
         [Test]
-        public void Suggest_AfterOptional_HintsVariadic()
+        public void Complete_MultiTokenValueInvalid_HintsInvalidValue()
         {
-            AssertHint(Suggest("tag 5 "), "words");
-        }
-
-        // --- Subcommands ---
-
-        [Test]
-        public void Suggest_CommandWithSubcommands_SuggestsSubcommands()
-        {
-            var result = Suggest("level ");
-
-            Assert.That(FullTexts(result), Is.EquivalentTo(new[] { "level open", "level close" }));
+            AssertInvalid(Complete("vec 1 2 x"), "pos", "1 2 x");
         }
 
         [Test]
-        public void Suggest_PartialSubcommand_SuggestsMatchingSubcommandFirst()
+        public void Complete_SwitchInsideMultiTokenValue_ReturnsParserError()
         {
-            var result = Suggest("level op");
-
-            Assert.That(FullTexts(result)[0], Is.EqualTo("level open"));
-            Assert.That(result[0].DisplayText, Does.Contain("subcommand"));
+            AssertError(Complete("vec 1 -f 2 3"), "\"-f\" splits the value of argument \"pos\"");
+            AssertError(Complete("vec 1 -- 2 3"), "\"--\" splits the value of argument \"pos\"");
         }
 
         [Test]
-        public void Suggest_AfterSubcommand_UsesSubcommandArguments()
+        public void Complete_SwitchAfterMultiTokenValue_IsAllowed()
         {
-            AssertHint(Suggest("level open "), "path");
+            AssertReady(Complete("vec -f 1 2 3 "), "Ready");
+            AssertReady(Complete("vec 1 2 3 -f "), "Ready");
         }
 
         [Test]
-        public void Suggest_AfterArgumentConsumed_NoLongerSuggestsSubcommands()
+        public void Complete_AllArgumentsFilled_IsReadyToExecute()
         {
-            AssertHint(Suggest("level foo "), "Ready to execute");
+            AssertReady(Complete("wait 2 "), "Ready");
         }
-
-        // --- Limits ---
 
         [Test]
-        public void Suggest_ManyUserValues_ReturnsAtMostFive()
+        public void Complete_ReadyWithSwitchesLeft_ListsThem()
         {
-            // Current behavior, scheduled to change: the limit is being removed
-            Assert.That(Suggest("pick ").Count, Is.EqualTo(5));
-            Assert.That(Suggest("pick item").Count, Is.EqualTo(5));
+            var result = Complete("load Level1 --force ");
+
+            AssertReady(result, "Ready · 2 switches");
+            Assert.That(Applied("load Level1 --force ", result), Is.EquivalentTo(new[]
+            {
+                "load Level1 --force --verbose",
+                "load Level1 --force --count"
+            }));
         }
 
-        private List<Suggestion> Suggest(string line)
+        [Test]
+        public void Complete_ExtraTokenAfterAllArguments_ReturnsParserError()
         {
-            return _engine.Suggest(line, line.Length).ToList();
+            AssertError(Complete("wait 2 extra "), "unexpected token(s): \"extra\"");
         }
 
-        private static List<string> FullTexts(List<Suggestion> suggestions)
+        // --- Optionals and variadic (R22, R24, B5, B6) ---
+
+        [Test]
+        public void Complete_OptionalFailsButVariadicAccepts_HintsVariadic()
         {
-            return suggestions.Select(s => s.FullText).ToList();
+            AssertHint(Complete("tag hello"), "words");
+            AssertReady(Complete("tag hello "), "1 optional");
         }
 
-        private static void AssertHint(List<Suggestion> suggestions, string expectedText)
+        [Test]
+        public void Complete_AfterOptional_OffersVariadicValues()
         {
-            Assert.That(suggestions.Count, Is.EqualTo(1));
-            Assert.That(suggestions[0].IsHint, Is.True);
-            Assert.That(suggestions[0].DisplayText, Does.Contain(expectedText));
+            var result = Complete("tag 5 ");
+
+            AssertReady(result, "1 optional");
+            Assert.That(Applied("tag 5 ", result), Does.Contain("tag 5 \"two words\""));
         }
 
-        private static void AssertError(List<Suggestion> suggestions, string expectedText)
+        [Test]
+        public void Complete_VariadicValues_QuoteWhitespaceAndSwitchLikeText()
         {
-            Assert.That(suggestions.Count, Is.EqualTo(1));
-            Assert.That(suggestions[0].IsError, Is.True);
-            Assert.That(suggestions[0].DisplayText, Does.Contain(expectedText));
+            var result = Applied("tag 5 x ", Complete("tag 5 x "));
+
+            Assert.That(result, Does.Contain("tag 5 x \"two words\""));
+            Assert.That(result, Does.Contain("tag 5 x \"-dash\""));
+            Assert.That(result, Does.Contain("tag 5 x \"a&&b\""));
+        }
+
+        // --- Subcommands (R19, R25, R26) ---
+
+        [Test]
+        public void Complete_CommandWithSubcommands_SuggestsSubcommands()
+        {
+            var result = Complete("level ");
+
+            Assert.That(Applied("level ", result), Is.EquivalentTo(new[] { "level open", "level close" }));
+        }
+
+        [Test]
+        public void Complete_PartialSubcommand_SuggestsMatchingSubcommandFirst()
+        {
+            var result = Complete("level op");
+
+            Assert.That(Applied("level op", result)[0], Is.EqualTo("level open"));
+            Assert.That(result.Completions[0].Kind, Is.EqualTo(CompletionKind.Subcommand));
+        }
+
+        [Test]
+        public void Complete_AfterSubcommand_UsesSubcommandArguments()
+        {
+            AssertHint(Complete("level open "), "path");
+        }
+
+        [Test]
+        public void Complete_AfterArgumentConsumed_NoLongerSuggestsSubcommands()
+        {
+            var result = Complete("level foo ");
+
+            AssertReady(result, "Ready");
+            Assert.That(result.Completions, Is.Empty);
+        }
+
+        // --- Suggestion functions (proposal 14, caching) ---
+
+        [Test]
+        public void Complete_ManyUserValues_AreNotCapped()
+        {
+            Assert.That(Complete("pick ").Completions.Count, Is.EqualTo(8));
+            Assert.That(Complete("pick item").Completions.Count, Is.EqualTo(8));
+        }
+
+        [Test]
+        public void Complete_SuggestionFunctionThrows_ReportsItInHint()
+        {
+            var result = Complete("broken ");
+
+            Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Hint));
+            Assert.That(result.Message, Does.Contain("Suggestions failed: Broken on purpose"));
+            Assert.That(result.Argument.SuggestionError, Is.EqualTo("Broken on purpose"));
+        }
+
+        [Test]
+        public void Complete_TypingInSameSlot_RunsSuggestionFunctionOnce()
+        {
+            TestSuggestions.CountedCalls = 0;
+
+            Complete("counted ");
+            Complete("counted a");
+            Complete("counted al");
+
+            Assert.That(TestSuggestions.CountedCalls, Is.EqualTo(1));
+        }
+
+        private CompletionResult Complete(string line)
+        {
+            return _engine.Complete(line, line.Length);
+        }
+
+        private static List<string> Applied(string line, CompletionResult result)
+        {
+            return result.Completions.Select(c => c.ApplyTo(line)).ToList();
+        }
+
+        private static void AssertHint(CompletionResult result, string expectedText)
+        {
+            Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Hint));
+            Assert.That(result.Message, Does.Contain(expectedText));
+        }
+
+        private static void AssertInvalid(CompletionResult result, string argumentName, string invalidValue)
+        {
+            AssertHint(result, "· invalid");
+            Assert.That(result.Argument.Argument.Name, Is.EqualTo(argumentName));
+            Assert.That(result.Argument.InvalidValue, Is.EqualTo(invalidValue));
+        }
+
+        private static void AssertReady(CompletionResult result, string expectedText)
+        {
+            Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Ready));
+            Assert.That(result.Message, Does.Contain(expectedText));
+        }
+
+        private static void AssertError(CompletionResult result, string expectedText)
+        {
+            Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Error));
+            Assert.That(result.Message, Does.Contain(expectedText).IgnoreCase);
+            Assert.That(result.Completions, Is.Empty);
         }
     }
 
@@ -473,6 +655,8 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
     /// </summary>
     internal static class TestSuggestions
     {
+        public static int CountedCalls;
+
         public static string[] Scenes()
         {
             return new[] { "Main Menu", "Level1", "Level2" };
@@ -481,6 +665,22 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         public static string[] Many()
         {
             return Enumerable.Range(0, 8).Select(i => $"item{i}").ToArray();
+        }
+
+        public static string[] Words()
+        {
+            return new[] { "two words", "-dash", "a&&b" };
+        }
+
+        public static string[] Throws()
+        {
+            throw new InvalidOperationException("Broken on purpose");
+        }
+
+        public static string[] Counted()
+        {
+            CountedCalls++;
+            return new[] { "alpha", "beta" };
         }
     }
 }
