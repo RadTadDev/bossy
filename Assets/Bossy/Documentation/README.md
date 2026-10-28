@@ -675,7 +675,7 @@ where `MySuggesters.MyFunction` is a public static method on `MySuggesters`.
 
 All suggestion functions must be <b>static</b> and return a collection of strings from which `IEnumerable<string>` is assignable (`List<string>`, `string[]`, and others are valid).
 
-A suggestion function runs once when you start typing a value, and its results are reused while you type that value, so it can do expensive work such as searching the project. It runs again when anything typed before the value changes. If it throws, the status line shows `Suggestions failed:` with the exception message, and the exception is logged once.
+A suggestion function runs once when you start typing a value, and its results are reused while you type that value, so it can do expensive work such as searching the project. It runs again when anything typed before the value changes. If it throws, the status line shows `Suggestions failed:` with the exception message. Nothing is written to the Unity console.
 
 This method is fine for simple cases where the suggestion does not depend on the state of the input or need additional resources. However, you have the option to take in a context object for more complex cases. The single argument allowed must be of type `SuggestionContext`. Consider the following example from the `help` command:
 

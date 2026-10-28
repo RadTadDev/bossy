@@ -17,7 +17,6 @@ namespace Bossy.Frontend.Autocomplete
     {
         private readonly Dictionary<ArgumentSchema, Func<SuggestionContext, IEnumerable<string>>> _functions = new();
         private readonly Dictionary<ArgumentSchema, CachedSuggestions> _cache = new();
-        private readonly HashSet<ArgumentSchema> _reportedFailures = new();
 
         /// <summary>
         /// Gets the suggestions for an argument.
@@ -48,13 +47,8 @@ namespace Bossy.Frontend.Autocomplete
                 }
                 catch (Exception e)
                 {
+                    // Reported in the status line only, so a failing function never writes to the Unity console
                     error = e.Message;
-
-                    // Log once per argument so a failing function does not flood the console on every keystroke
-                    if (_reportedFailures.Add(argument))
-                    {
-                        Log.Exception(e);
-                    }
                 }
             }
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Bossy.Frontend.Autocomplete;
 using Bossy.Frontend.Parsing;
 using Bossy.Schema;
@@ -9,7 +8,6 @@ using Bossy.Schema.Registry;
 using Bossy.Tests.Utils;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.TestTools;
 
 namespace Bossy.Tests.FrontEnd.Autocomplete
 {
@@ -583,8 +581,6 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         [Test]
         public void Complete_SuggestionFunctionThrows_ReportsItInHint()
         {
-            LogAssert.Expect(LogType.Exception, new Regex("Broken on purpose"));
-
             var result = Complete("broken ");
 
             Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Hint));
