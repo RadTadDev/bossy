@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using Bossy.Utils;
 
 namespace Bossy.Command
@@ -31,6 +32,21 @@ namespace Bossy.Command
             }
             
             return ArgumentValidationResult.Fail($"{num} is outside the range [{Min}, {Max}]");
+        }
+
+        public override string Describe()
+        {
+            return $"range {Bound(Min)}..{Bound(Max)}";
+        }
+
+        private static string Bound(float value)
+        {
+            return value switch
+            {
+                float.MaxValue or float.PositiveInfinity => "∞",
+                float.MinValue or float.NegativeInfinity => "-∞",
+                _                                        => value.ToString(CultureInfo.InvariantCulture)
+            };
         }
     }
 }
