@@ -11,15 +11,14 @@ namespace Bossy.Frontend.Autocomplete
     /// <summary>
     /// Walks the tokens of one command, the way the parser binds them, and completes the slot at the cursor.
     /// Each token before the cursor is either read and the walk goes on, or it ends the walk with a result,
-    /// such as an error. Rule numbers (R1 to R31, B1 to B9) and proposal numbers refer to the autocomplete design
-    /// rules, each pinned by a test in AutocompleteEngineTest.
+    /// such as an error. Rule numbers (R1 to R31, B1 to B9) and proposal numbers refer to the rule catalogue in
+    /// Documentation/AutocompleteRules.md, each pinned by a test in AutocompleteEngineTest.
     /// </summary>
     internal class CompletionWalker
     {
         private readonly BossyContext _context;
         private readonly OperatorList _operators;
         private readonly UserSuggestions _userSuggestions;
-        private readonly CommandSchema _root;
         private readonly IReadOnlyList<Token> _tokens;
         private readonly CompletionSlot _slot;
         private readonly ArgumentCursor _cursor;
@@ -42,7 +41,6 @@ namespace Bossy.Frontend.Autocomplete
             _context = context;
             _operators = operators;
             _userSuggestions = userSuggestions;
-            _root = root;
             _tokens = tokens;
             _slot = slot;
             _cursor = new ArgumentCursor(root);
@@ -111,6 +109,7 @@ namespace Bossy.Frontend.Autocomplete
                     }
 
                     _cursor.TakeSwitch(argument);
+                    _cursor.Bind(argument, true, string.Empty);
                 }
             }
 
@@ -121,6 +120,7 @@ namespace Bossy.Frontend.Autocomplete
 
             if (read.State == ValueState.Read)
             {
+                _cursor.Bind(argument, read.Value, read.Text);
                 _index += read.TokensRead;
                 return null;
             }
@@ -150,6 +150,7 @@ namespace Bossy.Frontend.Autocomplete
                 if (read.State == ValueState.Read)
                 {
                     _cursor.TakeOrdered(argument);
+                    _cursor.Bind(argument, read.Value, read.Text);
                     _index += read.TokensRead;
                     return null;
                 }
@@ -173,6 +174,7 @@ namespace Bossy.Frontend.Autocomplete
                 if (read.State == ValueState.Read)
                 {
                     _cursor.TakeVariadicValue();
+                    _cursor.Bind(_cursor.Variadic, read.Value, read.Text);
                     _index += Math.Max(1, read.TokensRead);
                     return null;
                 }
@@ -367,13 +369,13 @@ namespace Bossy.Frontend.Autocomplete
             }
 
             var stream = new TokenStream(texts);
-            var result = _context.TypeAdapterRegistry.TryConvert(type, stream, out _, requireExplicitBool);
+            var result = _context.TypeAdapterRegistry.TryConvert(type, stream, out var value, requireExplicitBool);
 
             if (result.Success)
             {
                 var read = stream.Cursor;
                 return read <= available
-                    ? ValueRead.InTokens(read)
+                    ? ValueRead.InTokens(read, value, string.Join(" ", texts.Take(read)))
                     : ValueRead.AtSlot(true, true, read, read, string.Join(" ", texts));
             }
 
@@ -397,17 +399,11 @@ namespace Bossy.Frontend.Autocomplete
         private List<Completion> ValueCompletions(ArgumentSchema argument, out SuggestionFailure failure)
         {
             // Proposal 14: a failing suggestion function is reported through the failure, never thrown
-            var key = string.Join("\u001f", _tokens.Take(_index).Select(t => t.Text).Prepend(_cursor.Schema.Name));
-            var values = _userSuggestions.Get(argument, _cursor.Schema.CommandType, key, MakeSuggestionContext, out var error);
+            var context = new SuggestionContext(_context, _cursor.Schema, argument, _cursor.Values, _slot.Typed);
+            var values = _userSuggestions.Get(context, out var error);
             failure = error != null ? new SuggestionFailure(argument, error) : null;
 
-            return values.Select(v => MakeCompletion(Quote(v, _slot.IsQuoted), v, string.Empty, CompletionKind.Value)).ToList();
-        }
-
-        private SuggestionContext MakeSuggestionContext()
-        {
-            var tokensSoFar = _tokens.Take(_index).Select(t => t.Text).Prepend(_root.Name).ToList();
-            return new SuggestionContext(_context, _cursor.Schema, new ReadOnlyCompletionContext(_cursor, tokensSoFar));
+            return values.Select(v => MakeCompletion(Quote(v.Value, _slot.IsQuoted), v.Value, v.Description, CompletionKind.Value)).ToList();
         }
 
         /*
@@ -547,10 +543,12 @@ namespace Bossy.Frontend.Autocomplete
             public readonly int TokenNumber;
             public readonly int TokensDesired;
             public readonly string Text;
+            public readonly object Value;
 
             public bool IsCompleteAndInvalid => State == ValueState.Invalid || (State == ValueState.AtSlot && IsComplete && !IsValid);
 
-            private ValueRead(ValueState state, int tokensRead, string errorMessage, bool isValid, bool isComplete, int tokenNumber, int tokensDesired, string text)
+            private ValueRead(ValueState state, int tokensRead, string errorMessage, bool isValid, bool isComplete, int tokenNumber, int tokensDesired,
+                string text, object value = null)
             {
                 State = state;
                 TokensRead = tokensRead;
@@ -560,9 +558,10 @@ namespace Bossy.Frontend.Autocomplete
                 TokenNumber = tokenNumber;
                 TokensDesired = tokensDesired;
                 Text = text;
+                Value = value;
             }
 
-            public static ValueRead InTokens(int tokensRead) => new(ValueState.Read, tokensRead, null, true, true, 0, tokensRead, string.Empty);
+            public static ValueRead InTokens(int tokensRead, object value, string text) => new(ValueState.Read, tokensRead, null, true, true, 0, tokensRead, text, value);
 
             public static ValueRead Invalid(string errorMessage) => new(ValueState.Invalid, 0, errorMessage, false, true, 0, 0, string.Empty);
 

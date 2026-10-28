@@ -42,6 +42,20 @@ namespace Bossy.Frontend.Autocomplete
         /// <returns>The completions and status message.</returns>
         public CompletionResult Complete(string line, int cursorPosition)
         {
+            _userSuggestions.BeginCompletion();
+
+            try
+            {
+                return CompleteLine(line, cursorPosition);
+            }
+            finally
+            {
+                _userSuggestions.EndCompletion();
+            }
+        }
+
+        private CompletionResult CompleteLine(string line, int cursorPosition)
+        {
             var cursor = Math.Clamp(cursorPosition, 0, line.Length);
             var tokens = Tokenizer.Tokenize(line, _operators.ToEnumerable());
 

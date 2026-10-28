@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Bossy.Command;
-using Bossy.Frontend.Autocomplete;
 using UnityEngine;
 
 namespace Bossy.Runtime.Command.Library
@@ -9,7 +8,6 @@ namespace Bossy.Runtime.Command.Library
     [Command("unity-log", "Pipes the unity log to the console.")]
     public class UnityLogCommand : ICommand
     {
-        [Suggest(nameof(Suggest))]
         [Optional(0, "The minimum log level to log")]
         private LogType _level = LogType.Log;
         
@@ -59,11 +57,6 @@ namespace Bossy.Runtime.Command.Library
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
-        }
-
-        private static string[] Suggest()
-        {
-            return Enum.GetNames(typeof(LogType));
         }
     }
 }

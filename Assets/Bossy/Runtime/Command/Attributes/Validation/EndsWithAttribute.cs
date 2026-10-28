@@ -35,5 +35,10 @@ namespace Bossy.Command
 
             return ArgumentValidationResult.Pass();
         }
+
+        public override string Describe()
+        {
+            return $"ends with {_suffix}";
+        }
     }
 }

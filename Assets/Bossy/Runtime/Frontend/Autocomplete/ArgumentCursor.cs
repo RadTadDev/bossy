@@ -49,6 +49,12 @@ namespace Bossy.Frontend.Autocomplete
         /// </summary>
         public bool CanTakeSubcommand => !_anyArgumentTaken && Schema.ChildSchemas.Count > 0;
 
+        /// <summary>
+        /// The values read so far, by argument. Arguments not typed yet have no entry.
+        /// </summary>
+        public IReadOnlyDictionary<ArgumentSchema, BoundValue> Values => _values;
+
+        private readonly Dictionary<ArgumentSchema, BoundValue> _values = new();
         private bool _anyArgumentTaken;
 
         /// <summary>
@@ -112,6 +118,24 @@ namespace Bossy.Frontend.Autocomplete
         public void TakeVariadicValue()
         {
             _anyArgumentTaken = true;
+        }
+
+        /// <summary>
+        /// Records the value read for an argument. A variadic argument's values are added one element at a time.
+        /// </summary>
+        /// <param name="argument">The argument.</param>
+        /// <param name="value">The converted value.</param>
+        /// <param name="text">The typed text of the value.</param>
+        public void Bind(ArgumentSchema argument, object value, string text)
+        {
+            if (!_values.TryGetValue(argument, out var bound) || argument != Variadic)
+            {
+                bound = new BoundValue();
+                _values[argument] = bound;
+            }
+
+            bound.Values.Add(value);
+            bound.Texts.Add(text);
         }
 
         /// <summary>

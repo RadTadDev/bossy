@@ -191,7 +191,8 @@ namespace Bossy.Frontend
         /*
          * Errors replace the list, so they are the whole status line. A hint about an argument is laid out in
          * pieces: the name and type, progress through a value that takes several tokens, the argument's kind,
-         * whether the value is invalid, and the description, which is clipped to the width that is left.
+         * its validators' constraints, whether the value is invalid, and the description, which is clipped to the
+         * width that is left.
          * The whole line turns red for an error or an invalid value.
          */
         private void ShowStatus(CompletionResult result)
@@ -227,6 +228,11 @@ namespace Bossy.Frontend
             if (tag != null)
             {
                 AddStatusPart(tag, BossyTheme.CliStatusMutedClass);
+            }
+
+            if (hint.Constraints.Count > 0)
+            {
+                AddStatusPart(Literal(string.Join(", ", hint.Constraints)), BossyTheme.CliStatusMutedClass);
             }
 
             if (hint.InvalidValue != null)

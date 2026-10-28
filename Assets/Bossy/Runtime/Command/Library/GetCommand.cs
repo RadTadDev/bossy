@@ -94,46 +94,34 @@ namespace Bossy.Runtime.Command.Library
 
         public static string[] SuggestComponents(SuggestionContext context)
         {
-            if (context.AutocompleteContext.TokensSoFar.Count < 2) return Array.Empty<string>();
-            
-            var go = GameObject.Find(context.AutocompleteContext.TokensSoFar[1]);
+            if (!context.TryGet<string>(nameof(_objectName), out var objectName)) return Array.Empty<string>();
+
+            var go = GameObject.Find(objectName);
 
             if (go == null) return Array.Empty<string>();
-            
+
             return go.GetComponents<Component>()
                 .Select(c => c.GetType().GetFriendlyName())
                 .ToArray();
         }
 
-
-        public static string[] SuggestDataPath(SuggestionContext context)
+        public static Suggestion[] SuggestDataPath(SuggestionContext context)
         {
-            if (context.AutocompleteContext.TokensSoFar.Count < 3) return Array.Empty<string>();
-
-            var go = GameObject.Find(context.AutocompleteContext.TokensSoFar[1]);
-            if (go == null) return Array.Empty<string>();
-            
-            var components = SuggestComponents(context);
-            if (!components.Contains(context.AutocompleteContext.TokensSoFar[2])) return Array.Empty<string>();
-
-            var componentType = TypeExtensions.GetTypeFromName(context.AutocompleteContext.TokensSoFar[2]);
-            if (componentType == null) return Array.Empty<string>();
+            if (!context.TryGet<Type>(nameof(_componentType), out var componentType)) return Array.Empty<Suggestion>();
 
             var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
             // No path token yet - suggest top-level fields
-            if (context.AutocompleteContext.TokensSoFar.Count < 4)
+            if (!context.TryGet<string[]>(nameof(_dataPath), out var path))
             {
-                return GetMemberNames(componentType, bindingFlags);
+                return GetMembers(componentType, bindingFlags);
             }
 
-            var path = context.AutocompleteContext.TokensSoFar.Skip(3).ToList();
-            
             var current = componentType;
             foreach (var part in path)
             {
                 var member = current.GetField(part, bindingFlags) ?? (MemberInfo)current.GetProperty(part, bindingFlags);
-                if (member == null) return Array.Empty<string>();
+                if (member == null) return Array.Empty<Suggestion>();
 
                 current = member switch
                 {
@@ -142,35 +130,35 @@ namespace Bossy.Runtime.Command.Library
                     _              => null
                 };
 
-                if (current == null) return Array.Empty<string>();
+                if (current == null) return Array.Empty<Suggestion>();
             }
 
-            return GetMemberNames(current, bindingFlags);
+            return GetMembers(current, bindingFlags);
         }
 
-        private static string[] GetMemberNames(Type type, BindingFlags flags)
+        private static Suggestion[] GetMembers(Type type, BindingFlags flags)
         {
             var members = type.GetMembers(flags);
-            var names = new List<string>(members.Length);
+            var suggestions = new List<Suggestion>(members.Length);
 
             foreach (var member in members)
             {
                 switch (member)
                 {
-                    case FieldInfo { IsStatic: false, IsSpecialName: false } f 
+                    case FieldInfo { IsStatic: false, IsSpecialName: false } f
                         when !f.Name.StartsWith('<'):
-                        names.Add(f.Name);
+                        suggestions.Add(new Suggestion(f.Name, f.FieldType.GetFriendlyName()));
                         break;
-                    case PropertyInfo p 
+                    case PropertyInfo p
                         when !(p.Name == "Item" && p.GetIndexParameters().Length > 0)
                              && !p.IsSpecialName
                              && !(IsStatic(p) && p.SetMethod == null):
-                        names.Add(p.Name);
+                        suggestions.Add(new Suggestion(p.Name, p.PropertyType.GetFriendlyName()));
                         break;
                 }
             }
 
-            return names.ToArray();
+            return suggestions.ToArray();
         }
 
         private static bool IsStatic(PropertyInfo p) => p.GetMethod?.IsStatic ?? p.SetMethod?.IsStatic ?? false;

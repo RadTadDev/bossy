@@ -13,5 +13,14 @@ namespace Bossy.Command
         /// <param name="value">The argument value.</param>
         /// <returns>The result.</returns>
         public abstract ArgumentValidationResult Validate(object value);
+
+        /// <summary>
+        /// Describes the constraint in a few words for the autocomplete status line, such as "ends with .cs".
+        /// </summary>
+        /// <returns>The description, or null to show nothing.</returns>
+        public virtual string Describe()
+        {
+            return null;
+        }
     }
 }

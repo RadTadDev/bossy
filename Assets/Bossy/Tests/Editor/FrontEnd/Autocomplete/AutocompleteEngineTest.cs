@@ -13,7 +13,8 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
 {
     /// <summary>
     /// Tests the <see cref="AutocompleteEngine"/>. The rule numbers (R1 to R31, B1 to B9, and the numbered
-    /// proposals) match the comments in <see cref="CompletionWalker"/> and <see cref="AutocompleteEngine"/>.
+    /// proposals) match the comments in <see cref="CompletionWalker"/> and <see cref="AutocompleteEngine"/>, and are
+    /// listed in Documentation/AutocompleteRules.md.
     /// </summary>
     internal class AutocompleteEngineTest
     {
@@ -77,7 +78,44 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
                 .WithConstructorCall(typeof(ConstructionCounter).GetMethod(nameof(ConstructionCounter.Increment)))
                 .Generate().GetType();
 
-            var types = new List<Type> { load, wait, vec, tag, pick, level, levelOpen, levelClose, broken, fragile, counted, created };
+            var chain = CommandGenerator.WithName("chain")
+                .WithSwitch("mode", typeof(string), 'm')
+                .WithSwitch("verbose", typeof(bool), 'v')
+                .WithPositional("kind", typeof(string))
+                .WithPositional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.ThingsOfKind), typeof(TestSuggestions))
+                .Generate().GetType();
+
+            var path = CommandGenerator.WithName("path")
+                .WithVariadic("parts", typeof(string)).WithSuggestions(nameof(TestSuggestions.NextPart), typeof(TestSuggestions))
+                .Generate().GetType();
+
+            var echo = CommandGenerator.WithName("echo")
+                .WithPositional("text", typeof(string)).WithSuggestions(nameof(TestSuggestions.EchoCurrent), typeof(TestSuggestions))
+                .Generate().GetType();
+
+            var badName = CommandGenerator.WithName("badname")
+                .WithPositional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.ReadsMissingArgument), typeof(TestSuggestions))
+                .Generate().GetType();
+
+            var badType = CommandGenerator.WithName("badtype")
+                .WithPositional("count", typeof(int))
+                .WithPositional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.ReadsWrongType), typeof(TestSuggestions))
+                .Generate().GetType();
+
+            var described = CommandGenerator.WithName("described")
+                .WithPositional("item", typeof(string)).WithSuggestions(nameof(TestSuggestions.Described), typeof(TestSuggestions))
+                .Generate().GetType();
+
+            var paint = CommandGenerator.WithName("paint")
+                .WithPositional("level", typeof(LogType))
+                .WithOptional("glossy", typeof(bool))
+                .Generate().GetType();
+
+            var types = new List<Type>
+            {
+                load, wait, vec, tag, pick, level, levelOpen, levelClose, broken, fragile, counted, created,
+                chain, path, echo, badName, badType, described, paint
+            };
             var graph = CommandDependencyGraphBuilder.BuildGraph(types);
             var schemas = new SchemaRegistry(SchemaFactory.BuildCommandSchemas(graph));
 
@@ -87,6 +125,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
             adapters.RegisterAdapter(new FloatAdapter());
             adapters.RegisterAdapter(new StringAdapter());
             adapters.RegisterAdapter(new Vector3Adapter());
+            adapters.RegisterAdapter(new EnumAdapter<LogType>());
 
             var context = new BossyContext(schemas, adapters, null, null, null, null);
             var operators = new OperatorList(";", "&&", "||", "|", "!");
@@ -653,6 +692,124 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
             Assert.That(TestSuggestions.CountedCalls, Is.EqualTo(1));
         }
 
+        [Test]
+        public void Complete_LeavingSlotAndComingBack_RunsSuggestionFunctionAgain()
+        {
+            TestSuggestions.CountedCalls = 0;
+
+            Complete("counted a");
+            Complete("counte");
+            Complete("counted a");
+
+            Assert.That(TestSuggestions.CountedCalls, Is.EqualTo(2));
+        }
+
+        // --- Suggestion API: typed reads, tracked caching, rich values ---
+
+        [Test]
+        public void Complete_SuggestionFunction_ReadsEarlierPositionalWithTryGet()
+        {
+            Assert.That(Complete("chain fruit ").Completions.Select(c => c.DisplayText), Does.Contain("fruit-1"));
+        }
+
+        [Test]
+        public void Complete_SuggestionFunction_ReadsSwitchTypedAnywhereBefore()
+        {
+            Assert.That(Complete("chain -m fast fruit ").Completions.Select(c => c.DisplayText), Does.Contain("mode-fast"));
+        }
+
+        [Test]
+        public void Complete_TryGetOnArgumentNotTyped_ReturnsFalse()
+        {
+            Assert.That(Complete("chain fruit ").Completions.Select(c => c.DisplayText), Does.Contain("no mode"));
+        }
+
+        [Test]
+        public void Complete_ValueReadByFunctionChanges_RunsFunctionAgain()
+        {
+            TestSuggestions.ThingsOfKindCalls = 0;
+
+            Complete("chain fruit ");
+            Complete("chain fruit a");
+            Complete("chain color ");
+
+            Assert.That(TestSuggestions.ThingsOfKindCalls, Is.EqualTo(2));
+            Assert.That(Complete("chain color ").Completions.Select(c => c.DisplayText), Does.Contain("color-1"));
+        }
+
+        [Test]
+        public void Complete_TextNotReadByFunctionChanges_KeepsCachedValues()
+        {
+            TestSuggestions.ThingsOfKindCalls = 0;
+
+            Complete("chain fruit ");
+            Complete("chain -v fruit ");
+
+            Assert.That(TestSuggestions.ThingsOfKindCalls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Complete_FunctionReadingCurrent_RunsOnEveryKeystroke()
+        {
+            TestSuggestions.EchoCalls = 0;
+
+            Complete("echo a");
+            var result = Complete("echo ab");
+
+            Assert.That(TestSuggestions.EchoCalls, Is.EqualTo(2));
+            Assert.That(result.Completions.Select(c => c.DisplayText), Does.Contain("ab!"));
+        }
+
+        [Test]
+        public void Complete_VariadicTryGet_ReturnsElementsTypedBefore()
+        {
+            Assert.That(Complete("path ").Completions.Select(c => c.DisplayText), Does.Contain("first"));
+            Assert.That(Complete("path a b ").Completions.Select(c => c.DisplayText), Does.Contain("after a/b"));
+        }
+
+        [Test]
+        public void Complete_TryGetUnknownArgument_ReportsFailure()
+        {
+            var result = Complete("badname ");
+
+            Assert.That(result.SuggestionFailure, Is.Not.Null);
+            Assert.That(result.SuggestionFailure.Message, Does.Contain("no argument named 'missing'"));
+        }
+
+        [Test]
+        public void Complete_TryGetWithWrongType_ReportsFailure()
+        {
+            var result = Complete("badtype 5 ");
+
+            Assert.That(result.SuggestionFailure, Is.Not.Null);
+            Assert.That(result.SuggestionFailure.Message, Does.Contain("not a string"));
+        }
+
+        [Test]
+        public void Complete_RichSuggestion_ShowsItsDescription()
+        {
+            var completion = Complete("described ").Completions.Single(c => c.DisplayText == "sword");
+
+            Assert.That(completion.Description, Is.EqualTo("A sharp blade"));
+        }
+
+        [Test]
+        public void Complete_EnumArgument_SuggestsItsNames()
+        {
+            var shown = Complete("paint ").Completions.Select(c => c.DisplayText);
+
+            Assert.That(shown, Is.EquivalentTo(Enum.GetNames(typeof(LogType))));
+        }
+
+        [Test]
+        public void Complete_BoolArgument_SuggestsTrueAndFalse()
+        {
+            var result = Complete("paint Error ");
+
+            AssertReady(result, "Ready");
+            Assert.That(result.Completions.Select(c => c.DisplayText), Is.EquivalentTo(new[] { "true", "false" }));
+        }
+
         private CompletionResult Complete(string line)
         {
             return _engine.Complete(line, line.Length);
@@ -696,6 +853,8 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
     internal static class TestSuggestions
     {
         public static int CountedCalls;
+        public static int ThingsOfKindCalls;
+        public static int EchoCalls;
 
         public static string[] Scenes()
         {
@@ -721,6 +880,45 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         {
             CountedCalls++;
             return new[] { "alpha", "beta" };
+        }
+
+        public static string[] ThingsOfKind(SuggestionContext ctx)
+        {
+            ThingsOfKindCalls++;
+            ctx.TryGet<string>("kind", out var kind);
+            var mode = ctx.TryGet<string>("mode", out var m) ? $"mode-{m}" : "no mode";
+            return new[] { $"{kind}-1", $"{kind}-2", mode };
+        }
+
+        public static string[] NextPart(SuggestionContext ctx)
+        {
+            return ctx.TryGet<string[]>("parts", out var parts)
+                ? new[] { $"after {string.Join("/", parts)}" }
+                : new[] { "first" };
+        }
+
+        public static string[] EchoCurrent(SuggestionContext ctx)
+        {
+            EchoCalls++;
+            return new[] { $"{ctx.Current}!" };
+        }
+
+        public static string[] ReadsMissingArgument(SuggestionContext ctx)
+        {
+            ctx.TryGet<string>("missing", out _);
+            return Array.Empty<string>();
+        }
+
+        public static string[] ReadsWrongType(SuggestionContext ctx)
+        {
+            ctx.TryGet<string>("count", out _);
+            return Array.Empty<string>();
+        }
+
+        public static IEnumerable<Suggestion> Described()
+        {
+            yield return new Suggestion("sword", "A sharp blade");
+            yield return "shield";
         }
     }
 }

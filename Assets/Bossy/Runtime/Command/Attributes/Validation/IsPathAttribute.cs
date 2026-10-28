@@ -26,5 +26,10 @@ namespace Bossy.Command
 
             return ArgumentValidationResult.Pass();
         }
+
+        public override string Describe()
+        {
+            return "path";
+        }
     }
 }
