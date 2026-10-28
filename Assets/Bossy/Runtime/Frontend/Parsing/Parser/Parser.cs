@@ -206,7 +206,6 @@ namespace Bossy.Frontend.Parsing
             if (result.IsError) return ParseStep<CommandSchema>.Fail(result.Error);
             var schema = result.Value;
 
-
             // 1. Collect the tokens after the command path into the arg list
             var argTokens = tokens.Skip(stream.Cursor).ToList();
             
@@ -219,15 +218,15 @@ namespace Bossy.Frontend.Parsing
             if (switchResult.IsError) return ParseStep<CommandSchema>.Fail(switchResult.Error);
 
             // 4. Parse in positionals - return on error or not enough
-            var positionalResult = ParsePositionals(argTokens, schema, values);
+            var positionalResult = ParsePositionals(argTokens, tokens, schema, values);
             if (positionalResult.IsError) return ParseStep<CommandSchema>.Fail(positionalResult.Error);
             
             // 5. Parse in optionals - return on error
-            var optionalResult = ParseOptionals(argTokens, schema, values);
+            var optionalResult = ParseOptionals(argTokens, tokens, schema, values);
             if (optionalResult.IsError) return ParseStep<CommandSchema>.Fail(optionalResult.Error);
             
             // 6. Parse in variadic - return on error
-            var variadicResult = ParseVariadic(argTokens, schema, values);
+            var variadicResult = ParseVariadic(argTokens, tokens, schema, values);
             if (variadicResult.IsError) return ParseStep<CommandSchema>.Fail(variadicResult.Error);
             
             return ParseStep<CommandSchema>.Ok(schema);
@@ -294,7 +293,7 @@ namespace Bossy.Frontend.Parsing
             return ParseStep.Ok();
         }
 
-        private ParseStep ParsePositionals(List<Token> argTokens, CommandSchema schema, Dictionary<ArgumentSchema, object> values)
+        private ParseStep ParsePositionals(List<Token> argTokens, IReadOnlyList<Token> lineTokens, CommandSchema schema, Dictionary<ArgumentSchema, object> values)
         {
             var positionals = schema.GetOrderedPositionalArguments();
 
@@ -315,7 +314,8 @@ namespace Bossy.Frontend.Parsing
                     return ParseStep.Fail(new TypeAdaptError(argSchema.Type, argTokens[0].Text, adaptResult.ErrorMessage));
                 }
                 
-                argTokens.RemoveRange(0, substream.Cursor);
+                var takeResult = TakeValueTokens(argTokens, substream.Cursor, argSchema, lineTokens);
+                if (takeResult.IsError) return takeResult;
                 
                 // 4. Record the value
                 values[argSchema] = value;
@@ -324,7 +324,7 @@ namespace Bossy.Frontend.Parsing
             return ParseStep.Ok();
         }
         
-        private ParseStep ParseOptionals(List<Token> argTokens, CommandSchema schema, Dictionary<ArgumentSchema, object> values)
+        private ParseStep ParseOptionals(List<Token> argTokens, IReadOnlyList<Token> lineTokens, CommandSchema schema, Dictionary<ArgumentSchema, object> values)
         {
             var optionals = schema.GetOrderedOptionalArguments();
 
@@ -347,7 +347,8 @@ namespace Bossy.Frontend.Parsing
                     return ParseStep.Ok();
                 }
                 
-                argTokens.RemoveRange(0, substream.Cursor);
+                var takeResult = TakeValueTokens(argTokens, substream.Cursor, argSchema, lineTokens);
+                if (takeResult.IsError) return takeResult;
                 
                 // 4. Record the value
                 values[argSchema] = value;
@@ -356,7 +357,7 @@ namespace Bossy.Frontend.Parsing
             return ParseStep.Ok();
         }
 
-        private ParseStep ParseVariadic(List<Token> argTokens, CommandSchema schema, Dictionary<ArgumentSchema, object> values)
+        private ParseStep ParseVariadic(List<Token> argTokens, IReadOnlyList<Token> lineTokens, CommandSchema schema, Dictionary<ArgumentSchema, object> values)
         {
             // 1. If there are not variadic args, we are done but must check for unexpected tokens
             if (!schema.TryGetVariadic(out var variadic))
@@ -381,7 +382,8 @@ namespace Bossy.Frontend.Parsing
                     return ParseStep.Fail(new TypeAdaptError(type, argTokens[0].Text, result.ErrorMessage));
                 }
                 
-                argTokens.RemoveRange(0, substream.Cursor);
+                var takeResult = TakeValueTokens(argTokens, substream.Cursor, variadic, lineTokens);
+                if (takeResult.IsError) return takeResult;
                 
                 // 3. Add to list
                 args.Add(value);
@@ -399,6 +401,31 @@ namespace Bossy.Frontend.Parsing
             return ParseStep.Ok();
         }
         
+        /*
+         * Removes the tokens an ordered value used. Switches are removed before ordered values are read, so the
+         * tokens of a value may have had a switch between them in the line, as in "vec 1 -f 2 3". That is an
+         * error, so a value's tokens must be next to each other in the line.
+         */
+        private static ParseStep TakeValueTokens(List<Token> argTokens, int count, ArgumentSchema argSchema, IReadOnlyList<Token> lineTokens)
+        {
+            for (var i = 1; i < count; i++)
+            {
+                var previousEnd = argTokens[i - 1].End;
+                var nextStart = argTokens[i].Start;
+
+                foreach (var token in lineTokens)
+                {
+                    if (token.Start >= previousEnd && token.End <= nextStart)
+                    {
+                        return ParseStep.Fail(new SplitValueError(token.Text, argSchema.Name));
+                    }
+                }
+            }
+
+            argTokens.RemoveRange(0, count);
+            return ParseStep.Ok();
+        }
+
         private static ParseStep ExpandAggregateFlags(List<Token> tokens, CommandSchema schema)
         {
             for (var i = 0; i < tokens.Count; i++)

@@ -58,8 +58,7 @@ namespace Bossy.Frontend.Autocomplete
             {
                 var token = _tokens[_index];
 
-                // R10: after "--", nothing is a switch
-                var result = !_cursor.Surrendered && token.IsSwitch ? ReadSwitch(token.Text) : ReadOrdered(token);
+                var result = IsSwitch(token) ? ReadSwitch(token.Text) : ReadOrdered(token);
 
                 if (result != null) return result;
             }
@@ -118,18 +117,15 @@ namespace Bossy.Frontend.Autocomplete
             _cursor.TakeSwitch(argument);
 
             // R16 to R18: the switch reads its value greedily from the tokens after it, as in the parser
-            var read = ReadValue(argument.Type, false);
+            var read = ReadValue(argument.Type, false, false);
 
-            switch (read.State)
+            if (read.State == ValueState.Read)
             {
-                case ValueState.Read:
-                    _index += read.TokensRead;
-                    return null;
-                case ValueState.Invalid:
-                    return CompletionResult.Error(new TypeAdaptError(argument.Type, _tokens[_index].Text, read.ErrorMessage).Message);
-                default:
-                    return CompleteValue(argument, read);
+                _index += read.TokensRead;
+                return null;
             }
+
+            return ValueNotRead(argument, argument.Type, read);
         }
 
         private CompletionResult ReadOrdered(Token token)
@@ -149,7 +145,7 @@ namespace Bossy.Frontend.Autocomplete
             // R20 to R23
             if (_cursor.TryGetNextOrdered(out var argument, out var positional))
             {
-                var read = ReadValue(argument.Type, true);
+                var read = ReadValue(argument.Type, true, true);
 
                 if (read.State == ValueState.Read)
                 {
@@ -165,16 +161,14 @@ namespace Bossy.Frontend.Autocomplete
                     return null;
                 }
 
-                return read.State == ValueState.Invalid
-                    ? CompletionResult.Error(new TypeAdaptError(argument.Type, token.Text, read.ErrorMessage).Message)
-                    : CompleteValue(argument, read);
+                return ValueNotRead(argument, argument.Type, read);
             }
 
             // R24
             if (_cursor.Variadic != null)
             {
                 var elementType = _cursor.Variadic.Type.GetElementType();
-                var read = ReadValue(elementType, true);
+                var read = ReadValue(elementType, true, true);
 
                 if (read.State == ValueState.Read)
                 {
@@ -183,13 +177,27 @@ namespace Bossy.Frontend.Autocomplete
                     return null;
                 }
 
-                return read.State == ValueState.Invalid
-                    ? CompletionResult.Error(new TypeAdaptError(elementType, token.Text, read.ErrorMessage).Message)
-                    : CompleteValue(_cursor.Variadic, read);
+                return ValueNotRead(_cursor.Variadic, elementType, read);
             }
 
             // Every argument is filled, so the parser rejects anything more
             return CompletionResult.Error(new UnexpectedTokensError(_tokens.Skip(_index).Select(t => t.Text).ToList()).Message);
+        }
+
+        private CompletionResult ValueNotRead(ArgumentSchema argument, Type type, ValueRead read)
+        {
+            return read.State switch
+            {
+                ValueState.Invalid => CompletionResult.Error(new TypeAdaptError(type, _tokens[_index].Text, read.ErrorMessage).Message),
+                ValueState.Split   => CompletionResult.Error(new SplitValueError(read.Text, argument.Name).Message),
+                _                  => CompleteValue(argument, read)
+            };
+        }
+
+        private bool IsSwitch(Token token)
+        {
+            // R10: after "--", nothing is a switch
+            return !_cursor.Surrendered && token.IsSwitch;
         }
 
         // --- Completing the slot ---
@@ -209,7 +217,7 @@ namespace Bossy.Frontend.Autocomplete
 
             if (_cursor.TryGetNextOrdered(out var argument, out var positional))
             {
-                var read = ReadValue(argument.Type, true);
+                var read = ReadValue(argument.Type, true, true);
 
                 // R22 at the cursor
                 if (!positional && _cursor.Variadic != null && read.IsCompleteAndInvalid)
@@ -223,7 +231,7 @@ namespace Bossy.Frontend.Autocomplete
 
             if (_cursor.Variadic != null)
             {
-                return CompleteValue(_cursor.Variadic, ReadValue(_cursor.Variadic.Type.GetElementType(), true));
+                return CompleteValue(_cursor.Variadic, ReadValue(_cursor.Variadic.Type.GetElementType(), true, true));
             }
 
             // R25: with no arguments left, only a subcommand can follow
@@ -346,13 +354,21 @@ namespace Bossy.Frontend.Autocomplete
         /*
          * Runs the type adapter on the tokens from the current index, plus the text typed in the slot, and works
          * out where the value ends: inside the tokens already typed, or at the slot because it reaches the cursor.
+         * An ordered value's tokens stop at the next switch, since the parser rejects a value split by a switch.
+         * A switch's own value reads greedily, switches included, as in the parser.
          */
-        private ValueRead ReadValue(Type type, bool requireExplicitBool)
+        private ValueRead ReadValue(Type type, bool requireExplicitBool, bool isOrdered)
         {
-            var available = _tokens.Count - _index;
-            var texts = _tokens.Skip(_index).Select(t => t.Text).ToList();
+            var available = 0;
+            while (_index + available < _tokens.Count && !(isOrdered && IsSwitch(_tokens[_index + available])))
+            {
+                available++;
+            }
 
-            if (!_slot.IsEmpty)
+            var splitBy = _index + available < _tokens.Count ? _tokens[_index + available].Text : null;
+            var texts = _tokens.Skip(_index).Take(available).Select(t => t.Text).ToList();
+
+            if (!_slot.IsEmpty && splitBy == null)
             {
                 texts.Add(_slot.Typed);
             }
@@ -374,6 +390,11 @@ namespace Bossy.Frontend.Autocomplete
             if (desired <= available)
             {
                 return ValueRead.Invalid(result.ErrorMessage);
+            }
+
+            if (splitBy != null)
+            {
+                return ValueRead.Split(splitBy);
             }
 
             var complete = desired <= texts.Count;
@@ -521,7 +542,12 @@ namespace Bossy.Frontend.Autocomplete
             /// <summary>
             /// The value reaches the cursor, so the slot is (part of) this value.
             /// </summary>
-            AtSlot
+            AtSlot,
+
+            /// <summary>
+            /// A switch comes before the value has all its tokens, which the parser rejects.
+            /// </summary>
+            Split
         }
 
         private readonly struct ValueRead
@@ -552,6 +578,8 @@ namespace Bossy.Frontend.Autocomplete
             public static ValueRead InTokens(int tokensRead) => new(ValueState.Read, tokensRead, null, true, true, 0, tokensRead, string.Empty);
 
             public static ValueRead Invalid(string errorMessage) => new(ValueState.Invalid, 0, errorMessage, false, true, 0, 0, string.Empty);
+
+            public static ValueRead Split(string splitBy) => new(ValueState.Split, 0, null, false, true, 0, 0, splitBy);
 
             public static ValueRead AtSlot(bool isValid, bool isComplete, int tokenNumber, int tokensDesired, string text) =>
                 new(ValueState.AtSlot, 0, null, isValid, isComplete, tokenNumber, tokensDesired, text);

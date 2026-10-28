@@ -38,6 +38,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
 
             var vec = CommandGenerator.WithName("vec")
                 .WithPositional("pos", typeof(Vector3))
+                .WithSwitch("fast", typeof(bool), 'f')
                 .Generate().GetType();
 
             var tag = CommandGenerator.WithName("tag")
@@ -467,6 +468,20 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         public void Complete_MultiTokenValueInvalid_HintsInvalidValue()
         {
             AssertHint(Complete("vec 1 2 x"), "current value '1 2 x' is invalid");
+        }
+
+        [Test]
+        public void Complete_SwitchInsideMultiTokenValue_ReturnsParserError()
+        {
+            AssertError(Complete("vec 1 -f 2 3"), "\"-f\" splits the value of argument \"pos\"");
+            AssertError(Complete("vec 1 -- 2 3"), "\"--\" splits the value of argument \"pos\"");
+        }
+
+        [Test]
+        public void Complete_SwitchAfterMultiTokenValue_IsAllowed()
+        {
+            AssertReady(Complete("vec -f 1 2 3 "), "Ready to execute");
+            AssertReady(Complete("vec 1 2 3 -f "), "Ready to execute");
         }
 
         [Test]

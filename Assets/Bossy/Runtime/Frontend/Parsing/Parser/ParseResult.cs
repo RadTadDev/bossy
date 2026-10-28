@@ -203,6 +203,23 @@ namespace Bossy.Frontend.Parsing
     }
     
     /// <summary>
+    /// A switch or other token splits the tokens of a multi-token value.
+    /// </summary>
+    internal class SplitValueError : ParseResult
+    {
+        private readonly string _token;
+        private readonly string _argName;
+
+        public override string Message => $"\"{_token}\" splits the value of argument \"{_argName}\". Keep a value's tokens together.";
+
+        public SplitValueError(string token, string argName)
+        {
+            _token = token;
+            _argName = argName;
+        }
+    }
+    
+    /// <summary>
     /// Invalid schema error.
     /// </summary>
     internal class InvalidSchemaError : ParseResult
