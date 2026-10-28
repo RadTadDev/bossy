@@ -128,6 +128,29 @@ namespace Bossy.Tests.FrontEnd.Parsing
                 new("vari", "description", variadicField, variadicField.GetCustomAttribute<VariadicAttribute>(), null),
             };
             var variadicSchema = new CommandSchema("variadic", "description", variadic.GetType(), variadicArgs);
+
+            // Variadics with validators, which apply to each element
+            var scripts = CommandGenerator.WithName("scripts")
+                .WithVariadic("files", typeof(string))
+                .Generate();
+            var scriptsField = scripts.GetType().GetField("files");
+            var scriptsArgs = new HashSet<ArgumentSchema>
+            {
+                new("files", "description", scriptsField, scriptsField.GetCustomAttribute<VariadicAttribute>(),
+                    new List<ArgumentValidationAttribute> { new EndsWithAttribute(".cs") }),
+            };
+            var scriptsSchema = new CommandSchema("scripts", "description", scripts.GetType(), scriptsArgs);
+
+            var volumes = CommandGenerator.WithName("volumes")
+                .WithVariadic("levels", typeof(int))
+                .Generate();
+            var volumesField = volumes.GetType().GetField("levels");
+            var volumesArgs = new HashSet<ArgumentSchema>
+            {
+                new("levels", "description", volumesField, volumesField.GetCustomAttribute<VariadicAttribute>(),
+                    new List<ArgumentValidationAttribute> { new Bossy.Command.RangeAttribute(0, 10) }),
+            };
+            var volumesSchema = new CommandSchema("volumes", "description", volumes.GetType(), volumesArgs);
             
             // All
             var all = CommandGenerator
@@ -207,6 +230,8 @@ namespace Bossy.Tests.FrontEnd.Parsing
                 optionalsSchema,
                 optionalsAndVariadicSchema,
                 variadicSchema,
+                scriptsSchema,
+                volumesSchema,
                 allSchema,
                 mixedSchema,
                 stringsSchema,
@@ -716,6 +741,49 @@ namespace Bossy.Tests.FrontEnd.Parsing
             Assert.That(_result.GetType(), Is.EqualTo(typeof(TypeAdaptError)));
         }
         
+        [Test]
+        public void Parse_VariadicValidator_PassesEveryElement()
+        {
+            _result = _parser.Parse("scripts a.cs b.cs", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+            Assert.That(_result.TryGetGraph(out var graph), Is.True);
+
+            var cmd = graph.ToArray()[0].Command;
+            Assert.That(cmd.GetType().GetField("files").GetValue(cmd), Is.EquivalentTo(new[] { "a.cs", "b.cs" }));
+        }
+
+        [Test]
+        public void Parse_VariadicValidator_OneElementFails()
+        {
+            _result = _parser.Parse("scripts a.cs b.txt", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ArgumentValidationError)));
+            Assert.That(_result.Message, Does.Contain("'b.txt' must end with '.cs'"));
+        }
+
+        [Test]
+        public void Parse_VariadicValidator_EmptyPasses()
+        {
+            _result = _parser.Parse("scripts", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+        }
+
+        [Test]
+        public void Parse_VariadicRange_AppliesToEachNumber()
+        {
+            _result = _parser.Parse("volumes 1 5 10", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+
+            _result = _parser.Parse("volumes 1 50", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ArgumentValidationError)));
+        }
+
+        [Test]
+        public void TryCheck_VariadicValidator_OneElementFails()
+        {
+            Assert.That(_parser.TryCheck("scripts a.cs b.txt", _ops, null, out var error), Is.False);
+            Assert.That(error.GetType(), Is.EqualTo(typeof(ArgumentValidationError)));
+        }
+
         [Test]
         public void Parse_NotVariadic_ExtraToken()
         {
