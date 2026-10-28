@@ -109,6 +109,7 @@ namespace Bossy
             
             // Custom
             _typeAdapterRegistry.RegisterAdapter(new ConfirmationAdapter());
+            _typeAdapterRegistry.RegisterAdapter(new CommandStringAdapter());
         }
         
         public IBossyRegisterStep WithAdapter<TAdapter>() where TAdapter : ITypeAdapter, new()
