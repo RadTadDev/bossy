@@ -126,7 +126,7 @@ public class HelpCommand : SimpleCommand
             return null;
         }
 
-        var parts = new List<string> { Format.Bold(schema.Name) };
+        var parts = new List<string> { Format.Bold(CommandPath(schema)) };
 
         var positionals = schema.GetOrderedPositionalArguments();
         var optionals   = schema.GetOrderedOptionalArguments();
@@ -143,6 +143,18 @@ public class HelpCommand : SimpleCommand
         }
 
         return string.Join(" ", parts);
+    }
+
+    // A subcommand cannot be run by its own name, so the usage starts from the root command
+    private static string CommandPath(CommandSchema schema)
+    {
+        var names = new List<string>();
+        for (var current = schema; current != null; current = current.ParentSchema)
+        {
+            names.Insert(0, current.Name);
+        }
+
+        return string.Join(" ", names);
     }
 
     private static string GetKindLabel(ArgumentAttribute attr)

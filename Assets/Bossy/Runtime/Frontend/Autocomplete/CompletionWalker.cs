@@ -26,6 +26,9 @@ namespace Bossy.Frontend.Autocomplete
         // The index of the next token to read
         private int _index;
 
+        // The first validator that threw during the walk, reported with the result
+        private SuggestionFailure _validatorFailure;
+
         /// <summary>
         /// Creates a walker for one command.
         /// </summary>
@@ -52,6 +55,14 @@ namespace Bossy.Frontend.Autocomplete
         /// <returns>The result.</returns>
         public CompletionResult Walk()
         {
+            var result = ReadTokens() ?? CompleteSlot();
+            return _validatorFailure != null ? result.WithFailure(_validatorFailure) : result;
+        }
+
+        // --- Reading tokens before the cursor ---
+
+        private CompletionResult ReadTokens()
+        {
             while (_index < _tokens.Count)
             {
                 var token = _tokens[_index];
@@ -61,10 +72,8 @@ namespace Bossy.Frontend.Autocomplete
                 if (result != null) return result;
             }
 
-            return CompleteSlot();
+            return null;
         }
-
-        // --- Reading tokens before the cursor ---
 
         private CompletionResult ReadSwitch(string text)
         {
@@ -120,9 +129,8 @@ namespace Bossy.Frontend.Autocomplete
 
             if (read.State == ValueState.Read)
             {
-                _cursor.Bind(argument, read.Value, read.Text);
                 _index += read.TokensRead;
-                return null;
+                return Bind(argument, read);
             }
 
             return ValueNotRead(argument, argument.Type, read);
@@ -150,9 +158,8 @@ namespace Bossy.Frontend.Autocomplete
                 if (read.State == ValueState.Read)
                 {
                     _cursor.TakeOrdered(argument);
-                    _cursor.Bind(argument, read.Value, read.Text);
                     _index += read.TokensRead;
-                    return null;
+                    return Bind(argument, read);
                 }
 
                 // R22: a value that does not fit an optional goes to the variadic instead, as in the parser
@@ -174,9 +181,8 @@ namespace Bossy.Frontend.Autocomplete
                 if (read.State == ValueState.Read)
                 {
                     _cursor.TakeVariadicValue();
-                    _cursor.Bind(_cursor.Variadic, read.Value, read.Text);
                     _index += Math.Max(1, read.TokensRead);
-                    return null;
+                    return Bind(_cursor.Variadic, read);
                 }
 
                 return ValueNotRead(_cursor.Variadic, elementType, read);
@@ -184,6 +190,18 @@ namespace Bossy.Frontend.Autocomplete
 
             // Every argument is filled, so the parser rejects anything more
             return CompletionResult.Error(new UnexpectedTokensError(_tokens.Skip(_index).Select(t => t.Text).ToList()).Message);
+        }
+
+        // A value before the cursor that fails a validator is an error once the user moves on, as in the parser
+        private CompletionResult Bind(ArgumentSchema argument, ValueRead read)
+        {
+            if (FailedValidator(argument, read.Value, out var message) != null)
+            {
+                return CompletionResult.Error(new ArgumentValidationError(message, argument.Name).Message);
+            }
+
+            _cursor.Bind(argument, read.Value, read.Text);
+            return null;
         }
 
         private CompletionResult ValueNotRead(ArgumentSchema argument, Type type, ValueRead read)
@@ -282,7 +300,16 @@ namespace Bossy.Frontend.Autocomplete
 
             // R17, R23: the value has all its tokens but does not parse
             var invalidValue = read.IsCompleteAndInvalid ? read.Text : null;
-            var hint = new ArgumentHint(argument, read.TokenNumber, read.TokensDesired, invalidValue);
+
+            // A value at the cursor that fails a validator is still being typed, so it is not an error yet
+            ArgumentValidationAttribute failedValidator = null;
+            string validationError = null;
+            if (read.State == ValueState.AtSlot && read.IsValid)
+            {
+                failedValidator = FailedValidator(argument, read.Value, out validationError);
+            }
+
+            var hint = new ArgumentHint(argument, read.TokenNumber, read.TokensDesired, invalidValue, failedValidator, validationError);
 
             return CompletionResult.Hint(HintText(hint), Rank(completions), hint, failure);
         }
@@ -376,7 +403,7 @@ namespace Bossy.Frontend.Autocomplete
                 var read = stream.Cursor;
                 return read <= available
                     ? ValueRead.InTokens(read, value, string.Join(" ", texts.Take(read)))
-                    : ValueRead.AtSlot(true, true, read, read, string.Join(" ", texts));
+                    : ValueRead.AtSlot(true, true, read, read, string.Join(" ", texts), value);
             }
 
             var desired = Math.Max(1, result.TokensDesired);
@@ -394,6 +421,39 @@ namespace Bossy.Frontend.Autocomplete
 
             var complete = desired <= texts.Count;
             return ValueRead.AtSlot(false, complete, available + 1, desired, valueText);
+        }
+
+        /*
+         * Runs an argument's validators on one value. A variadic's validators apply to each of its elements, and
+         * a variadic is read one element at a time, so the value is always one element. Validators are author code
+         * running on every keystroke, so one that throws is reported like a failing suggestion function, and the
+         * value is treated as passing it.
+         */
+        private ArgumentValidationAttribute FailedValidator(ArgumentSchema argument, object value, out string message)
+        {
+            message = null;
+
+            foreach (var validator in argument.Validators)
+            {
+                ArgumentValidationResult result;
+                try
+                {
+                    result = validator.Validate(value);
+                }
+                catch (Exception e)
+                {
+                    _validatorFailure ??= new SuggestionFailure(argument, e.Message, true);
+                    continue;
+                }
+
+                if (!result.Success)
+                {
+                    message = result.Message;
+                    return validator;
+                }
+            }
+
+            return null;
         }
 
         private List<Completion> ValueCompletions(ArgumentSchema argument, out SuggestionFailure failure)
@@ -483,6 +543,11 @@ namespace Bossy.Frontend.Autocomplete
                 text += "  invalid";
             }
 
+            if (hint.ValidationError != null)
+            {
+                text += hint.FailedConstraint >= 0 ? $"  fails: {hint.Constraints[hint.FailedConstraint]}" : "  fails validation";
+            }
+
             return text;
         }
 
@@ -567,8 +632,8 @@ namespace Bossy.Frontend.Autocomplete
 
             public static ValueRead Split(string splitBy) => new(ValueState.Split, 0, null, false, true, 0, 0, splitBy);
 
-            public static ValueRead AtSlot(bool isValid, bool isComplete, int tokenNumber, int tokensDesired, string text) =>
-                new(ValueState.AtSlot, 0, null, isValid, isComplete, tokenNumber, tokensDesired, text);
+            public static ValueRead AtSlot(bool isValid, bool isComplete, int tokenNumber, int tokensDesired, string text, object value = null) =>
+                new(ValueState.AtSlot, 0, null, isValid, isComplete, tokenNumber, tokensDesired, text, value);
         }
     }
 }

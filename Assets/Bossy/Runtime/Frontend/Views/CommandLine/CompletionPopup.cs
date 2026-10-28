@@ -133,7 +133,26 @@ namespace Bossy.Frontend
         /// <returns>The rich text.</returns>
         internal static string FailureText(SuggestionFailure failure)
         {
-            return $"Suggestions for {Format.Bold(Literal(failure.Argument.Name))} failed: {Literal(failure.Message)}";
+            var subject = failure.IsValidator ? "A validator for" : "Suggestions for";
+            return $"{subject} {Format.Bold(Literal(failure.Argument.Name))} failed: {Literal(failure.Message)}";
+        }
+
+        /// <summary>
+        /// Gets the rich text for an argument's constraints, with the one the value at the cursor fails in red.
+        /// The rest of the line keeps its color, since a value being typed fails most constraints on the way.
+        /// </summary>
+        /// <param name="hint">The hint about the argument.</param>
+        /// <returns>The rich text.</returns>
+        internal static string ConstraintsText(ArgumentHint hint)
+        {
+            var parts = new List<string>();
+            for (var i = 0; i < hint.Constraints.Count; i++)
+            {
+                var constraint = Literal(hint.Constraints[i]);
+                parts.Add(i == hint.FailedConstraint ? Format.Color(constraint, Format.Red) : constraint);
+            }
+
+            return string.Join(", ", parts);
         }
 
         /// <summary>
@@ -193,7 +212,8 @@ namespace Bossy.Frontend
          * pieces: the name and type, progress through a value that takes several tokens, the argument's kind,
          * its validators' constraints, whether the value is invalid, and the description, which is clipped to the
          * width that is left.
-         * The whole line turns red for an error or an invalid value.
+         * The whole line turns red for an error or an invalid value. A value that parses but fails a validator
+         * only turns that constraint red, since it is likely still being typed.
          */
         private void ShowStatus(CompletionResult result)
         {
@@ -232,7 +252,13 @@ namespace Bossy.Frontend
 
             if (hint.Constraints.Count > 0)
             {
-                AddStatusPart(Literal(string.Join(", ", hint.Constraints)), BossyTheme.CliStatusMutedClass);
+                AddStatusPart(ConstraintsText(hint), BossyTheme.CliStatusMutedClass);
+            }
+
+            // A validator that does not describe itself has no constraint to color, so its message is shown instead
+            if (hint.ValidationError != null && hint.FailedConstraint < 0)
+            {
+                AddStatusPart(Literal(hint.ValidationError), BossyTheme.CliStatusErrorClass);
             }
 
             if (hint.InvalidValue != null)

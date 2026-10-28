@@ -111,10 +111,26 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
                 .WithOptional("glossy", typeof(bool))
                 .Generate().GetType();
 
+            var script = CommandGenerator.WithName("script")
+                .WithPositional("file", typeof(string)).WithValidator(typeof(Bossy.Command.EndsWithAttribute), ".cs")
+                .Generate().GetType();
+
+            var scripts = CommandGenerator.WithName("scripts")
+                .WithVariadic("files", typeof(string)).WithValidator(typeof(Bossy.Command.EndsWithAttribute), ".cs")
+                .Generate().GetType();
+
+            var volume = CommandGenerator.WithName("volume")
+                .WithPositional("level", typeof(int)).WithValidator(typeof(Bossy.Command.RangeAttribute), 0f, 10f)
+                .Generate().GetType();
+
+            var shaky = CommandGenerator.WithName("shaky")
+                .WithPositional("thing", typeof(string)).WithValidator(typeof(ThrowingValidatorAttribute))
+                .Generate().GetType();
+
             var types = new List<Type>
             {
                 load, wait, vec, tag, pick, level, levelOpen, levelClose, broken, fragile, counted, created,
-                chain, path, echo, badName, badType, described, paint
+                chain, path, echo, badName, badType, described, paint, script, scripts, volume, shaky
             };
             var graph = CommandDependencyGraphBuilder.BuildGraph(types);
             var schemas = new SchemaRegistry(SchemaFactory.BuildCommandSchemas(graph));
@@ -808,6 +824,77 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
 
             AssertReady(result, "Ready");
             Assert.That(result.Completions.Select(c => c.DisplayText), Is.EquivalentTo(new[] { "true", "false" }));
+        }
+
+        // --- Validators ---
+
+        [Test]
+        public void Complete_ValueBeforeCursorFailsValidator_IsError()
+        {
+            var result = Complete("script foo.txt ");
+
+            AssertError(result, "(Argument 'file')");
+            Assert.That(result.Message, Does.Contain("must end with '.cs'"));
+        }
+
+        [Test]
+        public void Complete_ValueBeforeCursorPassesValidator_IsReady()
+        {
+            AssertReady(Complete("script Foo.cs "), "Ready");
+        }
+
+        [Test]
+        public void Complete_ValueAtCursorFailsValidator_MarksConstraintWithoutError()
+        {
+            var result = Complete("script Fo");
+
+            AssertHint(result, "file <string>  fails: ends with .cs");
+            Assert.That(result.Argument.InvalidValue, Is.Null);
+            Assert.That(result.Argument.ValidationError, Does.Contain("must end with '.cs'"));
+            Assert.That(result.Argument.FailedConstraint, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Complete_ValueAtCursorPassesValidator_HasNoValidationError()
+        {
+            var result = Complete("script Foo.cs");
+
+            Assert.That(result.Message, Is.EqualTo("file <string>"));
+            Assert.That(result.Argument.ValidationError, Is.Null);
+            Assert.That(result.Argument.FailedConstraint, Is.EqualTo(-1));
+        }
+
+        [Test]
+        public void Complete_PartialNumberOutOfRange_MarksConstraint()
+        {
+            Assert.That(Complete("volume 1").Argument.ValidationError, Is.Null);
+            Assert.That(Complete("volume 15").Argument.FailedConstraint, Is.EqualTo(0));
+            AssertError(Complete("volume 15 "), "(Argument 'level')");
+        }
+
+        [Test]
+        public void Complete_VariadicElements_AreValidatedOneByOne()
+        {
+            AssertReady(Complete("scripts a.cs b.cs "), "Ready");
+            AssertError(Complete("scripts a.cs b.txt "), "(Argument 'files')");
+            Assert.That(Complete("scripts a.cs b").Argument.FailedConstraint, Is.EqualTo(0));
+            Assert.That(Complete("scripts a.cs b.cs").Argument.ValidationError, Is.Null);
+        }
+
+        [Test]
+        public void Complete_ValidatorThrows_ReportsFailureAndTreatsValueAsValid()
+        {
+            var atCursor = Complete("shaky x");
+
+            AssertHint(atCursor, "thing <string>");
+            Assert.That(atCursor.Argument.ValidationError, Is.Null);
+            Assert.That(atCursor.SuggestionFailure.IsValidator, Is.True);
+            Assert.That(atCursor.SuggestionFailure.Message, Is.EqualTo(ThrowingValidatorAttribute.Message));
+
+            var moved = Complete("shaky x ");
+
+            AssertReady(moved, "Ready");
+            Assert.That(moved.SuggestionFailure.IsValidator, Is.True);
         }
 
         private CompletionResult Complete(string line)

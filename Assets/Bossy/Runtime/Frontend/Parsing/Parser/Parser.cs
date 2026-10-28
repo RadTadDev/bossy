@@ -533,7 +533,29 @@ namespace Bossy.Frontend.Parsing
             return ParseStep.Ok();
         }
 
+        /*
+         * A variadic's validators apply to each of its elements, so an empty variadic always passes. Every other
+         * argument is validated as a whole, even when its type is an array.
+         */
         private static ParseStep ValidateArgument(ArgumentSchema arg, object value)
+        {
+            if (arg.ArgumentAttribute is not VariadicAttribute)
+            {
+                return ValidateValue(arg, value);
+            }
+
+            if (value is not Array elements) return ParseStep.Ok();
+
+            foreach (var element in elements)
+            {
+                var result = ValidateValue(arg, element);
+                if (result.IsError) return result;
+            }
+
+            return ParseStep.Ok();
+        }
+
+        private static ParseStep ValidateValue(ArgumentSchema arg, object value)
         {
             foreach (var validator in arg.Validators)
             {
