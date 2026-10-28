@@ -11,7 +11,8 @@ namespace Bossy.Frontend.Parsing
     public static class Tokenizer
     {
         /// <summary>
-        /// Tokenizes a string input into a list of tokens.
+        /// Tokenizes a string input into a list of tokens. A quote with no closing quote runs to the end of its
+        /// segment, so it becomes a single token.
         /// </summary>
         /// <param name="line">The string to tokenize.</param>
         /// <param name="operators">A list of operators to split on.</param>
@@ -24,19 +25,19 @@ namespace Bossy.Frontend.Parsing
             var segments = SplitOnOperators(line, ops);
 
             var result = new List<Token>();
-            foreach (var (segment, isOperator) in segments)
+            foreach (var (segment, isOperator, start) in segments)
             {
                 if (isOperator)
                 {
-                    result.Add(new Token(segment, isOperator: true));
+                    result.Add(new Token(segment, isOperator: true, start: start, end: start + segment.Length));
                     continue;
                 }
 
-                var matches = Regex.Matches(segment, @"(?:\\.|""(?:\\.|[^""\\])*""|'(?:\\.|[^'\\])*'|\S)+");
+                var matches = Regex.Matches(segment, @"(?:\\.|""(?:\\.|[^""\\])*(?:""|\z)|'(?:\\.|[^'\\])*(?:'|\z)|\S)+");
                 foreach (Match match in matches)
                 {
                     var token = Regex.Replace(match.Value,
-                        @"""([^""\\]*(?:\\.[^""\\]*)*)""|'([^'\\]*(?:\\.[^'\\]*)*)'|\\(.)|(.)",
+                        @"""([^""\\]*(?:\\.[^""\\]*)*)(?:""|\z)|'([^'\\]*(?:\\.[^'\\]*)*)(?:'|\z)|\\(.)|(.)",
                         m => {
                             if (m.Groups[1].Success) return Unescape(m.Groups[1].Value);
                             if (m.Groups[2].Success) return Unescape(m.Groups[2].Value);
@@ -44,16 +45,18 @@ namespace Bossy.Frontend.Parsing
                             return m.Groups[4].Value;
                         });
                     var isQuoted = match.Value.IndexOfAny(new[] { '"', '\'', '\\' }) >= 0;
-                    result.Add(new Token(token, isQuoted: isQuoted));
+                    var tokenStart = start + match.Index;
+                    result.Add(new Token(token, isQuoted: isQuoted, start: tokenStart, end: tokenStart + match.Length));
                 }
             }
             return result;
         }
 
-        private static List<(string Text, bool IsOperator)> SplitOnOperators(string line, List<string> operators)
+        private static List<(string Text, bool IsOperator, int Start)> SplitOnOperators(string line, List<string> operators)
         {
-            var segments = new List<(string Text, bool IsOperator)>();
+            var segments = new List<(string Text, bool IsOperator, int Start)>();
             var current = new StringBuilder();
+            var currentStart = 0;
             bool inDouble = false, inSingle = false;
             int i = 0;
 
@@ -80,9 +83,10 @@ namespace Bossy.Frontend.Parsing
 
                     if (matched != null)
                     {
-                        if (current.Length > 0) { segments.Add((current.ToString(), false)); current.Clear(); }
-                        segments.Add((matched, true));
+                        if (current.Length > 0) { segments.Add((current.ToString(), false, currentStart)); current.Clear(); }
+                        segments.Add((matched, true, i));
                         i += matched.Length;
+                        currentStart = i;
                         continue;
                     }
                 }
@@ -91,7 +95,7 @@ namespace Bossy.Frontend.Parsing
                 i++;
             }
 
-            if (current.Length > 0) segments.Add((current.ToString(), false));
+            if (current.Length > 0) segments.Add((current.ToString(), false, currentStart));
             return segments;
         }
 

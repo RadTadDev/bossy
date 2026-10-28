@@ -138,6 +138,35 @@ namespace Bossy.Tests.FrontEnd.Parsing
             Assert.That(tokens.Select(t => t.IsQuoted), Is.EqualTo(new[] { false, false, true, true, true, true }));
         }
 
+        // Spans
+        [Test]
+        public void Tokenize_RecordsSpansIncludingQuotes()
+        {
+            var tokens = Tokenizer.Tokenize("load \"My Scene\" &&x", Ops);
+
+            Assert.That(tokens.Select(t => (t.Start, t.End)), Is.EqualTo(new[] { (0, 4), (5, 15), (16, 18), (18, 19) }));
+        }
+
+        // Unterminated quotes
+        [Test]
+        public void Tokenize_UnterminatedQuoteRunsToEndOfSegment()
+        {
+            var tokens = Tokenizer.Tokenize("load \"My Sc && x", Ops);
+
+            Assert.That(tokens.Select(t => t.Text), Is.EqualTo(new[] { "load", "My Sc && x" }));
+            Assert.That(tokens[1].IsQuoted, Is.True);
+            Assert.That(tokens[1].End, Is.EqualTo(16));
+        }
+
+        // Switch detection
+        [Test]
+        public void IsSwitch_RejectsQuotedTextNegativeNumbersAndOperators()
+        {
+            var tokens = Tokenizer.Tokenize("-a --b \"-c\" -5 -.5 - |", Ops);
+
+            Assert.That(tokens.Select(t => t.IsSwitch), Is.EqualTo(new[] { true, true, false, false, false, true, false }));
+        }
+
         private static List<string> Texts(string line, List<string> operators = null)
         {
             return Tokenizer.Tokenize(line, operators).Select(t => t.Text).ToList();

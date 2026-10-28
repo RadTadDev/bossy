@@ -869,5 +869,26 @@ namespace Bossy.Tests.FrontEnd.Parsing
             Assert.That(_result.TryGetGraph(out var graph), Is.True);
             Assert.That(graph.ToArray().Length, Is.EqualTo(5));
         }
+
+        [Test]
+        public void TryCheck_ValidInput_Succeeds()
+        {
+            Assert.That(_parser.TryCheck("root | switches --sw1 5 ; all 1 2", _ops, null, out var error), Is.True);
+            Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        public void TryCheck_InvalidInput_ReturnsSameErrorAsParse()
+        {
+            Assert.That(_parser.TryCheck("switches --sw1 abc", _ops, null, out var error), Is.False);
+            Assert.That(error.GetType(), Is.EqualTo(_parser.Parse("switches --sw1 abc", _ops).GetType()));
+        }
+
+        [Test]
+        public void Parse_UnterminatedQuote_IsValueWithoutTheQuote()
+        {
+            _result = _parser.Parse("strings \"hello world", _ops);
+            Assert.That(_result.GetType(), Is.EqualTo(typeof(ParseSucceeded)));
+        }
     }
 }
