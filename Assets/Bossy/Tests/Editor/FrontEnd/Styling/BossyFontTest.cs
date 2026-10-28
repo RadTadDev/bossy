@@ -64,11 +64,13 @@ namespace Bossy.Tests.FrontEnd.Styling
 
             yield return new EnterPlayMode();
 
-            // Entering play mode normally reloads scripts, so the font is created again inside play mode
+            // Entering play mode normally reloads scripts, so the font is created again inside play mode.
+            // Existing assets are renamed rather than destroyed, because open windows may still draw with them.
             typeof(BossyFont).GetField("_regular", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, null);
-            foreach (var existing in Resources.FindObjectsOfTypeAll<FontAsset>().Where(a => a.name.StartsWith("Bossy ")))
+            var existing = Resources.FindObjectsOfTypeAll<FontAsset>().Where(a => a.name.StartsWith("Bossy ")).ToList();
+            foreach (var font in existing)
             {
-                Object.DestroyImmediate(existing);
+                font.name = "Retired " + font.name;
             }
             var element = new VisualElement();
             BossyFont.ApplyTo(element);
@@ -78,6 +80,10 @@ namespace Bossy.Tests.FrontEnd.Styling
 
             EditorSettings.enterPlayModeOptionsEnabled = optionsEnabled;
             EditorSettings.enterPlayModeOptions = options;
+            foreach (var font in existing)
+            {
+                font.name = font.name.Substring("Retired ".Length);
+            }
 
             Assert.That(asset != null, Is.True, "Font asset was destroyed.");
             Assert.That(asset.material != null, Is.True, "Font material was destroyed.");
@@ -95,6 +101,21 @@ namespace Bossy.Tests.FrontEnd.Styling
             var weights = element.style.unityFontDefinition.value.fontAsset.fontWeightTable;
             Assert.That(weights[7].regularTypeface, Is.Not.Null);
             Assert.That(weights[4].italicTypeface, Is.Not.Null);
+        }
+
+        [Test]
+        public void EmptyGlyphs_PointOutsideClampedAtlas()
+        {
+            var element = new VisualElement();
+            BossyFont.ApplyTo(element);
+            var asset = element.style.unityFontDefinition.value.fontAsset;
+
+            // A quad drawn for an empty glyph inside the atlas picked up the edge of a neighbor, which showed as a speck in every space
+            var empty = asset.glyphLookupTable.Values.Where(g => g.glyphRect.width == 0 || g.glyphRect.height == 0).ToList();
+
+            Assert.That(empty, Is.Not.Empty, "The space glyph was not added.");
+            Assert.That(empty.All(g => g.glyphRect.x < 0 && g.glyphRect.y < 0), Is.True, "An empty glyph points inside the atlas.");
+            Assert.That(asset.atlasTextures.All(t => t.wrapMode == TextureWrapMode.Clamp), Is.True, "The atlas is not clamped.");
         }
     }
 }

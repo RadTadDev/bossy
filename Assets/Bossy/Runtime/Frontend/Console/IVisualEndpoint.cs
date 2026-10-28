@@ -3,9 +3,9 @@ using UnityEngine.UIElements;
 namespace Bossy.Frontend
 {
     /// <summary>
-    /// A frontend drawn with UI Toolkit, which can be shown in an editor window or at runtime.
+    /// A visual endpoint drawn with UI Toolkit, which can be shown in an editor window or at runtime.
     /// </summary>
-    internal interface IVisualEndpoint : ISessionEndpoint
+    internal interface IVisualEndpoint : IVisualEndpointCapabilities
     {
         /// <summary>
         /// The root of the frontend's UI.
@@ -18,7 +18,7 @@ namespace Bossy.Frontend
         public void Focus();
 
         /// <summary>
-        /// Called when the user presses the cancel keys, after the running command was cancelled.
+        /// Called when the user presses the cancel keys, after the running command was canceled.
         /// </summary>
         public void OnCancelPressed();
     }

@@ -1,5 +1,7 @@
+using System.IO;
 using System.Linq;
 using Bossy.Execution;
+using UnityEngine;
 
 namespace Bossy.Frontend
 {
@@ -9,9 +11,11 @@ namespace Bossy.Frontend
     internal sealed class SessionFactory
     {
         private const string ConsoleTitle = "Bossy";
-        
+        private const string HistoryFileName = "bossy_cli_history.txt";
+
         private readonly BossyContext _context;
         private readonly BossyPermissions _permissions;
+        private readonly CommandHistory _history;
 
         /// <summary>
         /// Creates a new session factory.
@@ -22,6 +26,7 @@ namespace Bossy.Frontend
         {
             _context = context;
             _permissions = permissions;
+            _history = new CommandHistory(Path.Combine(Application.persistentDataPath, HistoryFileName));
         }
 
         /// <summary>
@@ -31,12 +36,12 @@ namespace Bossy.Frontend
         /// <returns>The view. Call <see cref="SessionView.Start()"/> to run it.</returns>
         public SessionView CreateConsole(SessionView.CommandWindowOpener openCommandWindow)
         {
-            var frontend = new CliView(_context, CliView.InputVisibility.Always);
-            
+            var frontend = new CliView(_context, CliView.InputVisibility.Always, _history);
+
             return new SessionView(
                 ConsoleTitle,
                 frontend,
-                host => new Session(_context, _permissions, frontend, host),
+                host => new Session(_context, _permissions, frontend, host, _history, new()),
                 openCommandWindow,
                 _context.Settings.BossyInputSettings);
         }
@@ -50,9 +55,9 @@ namespace Bossy.Frontend
         /// <returns>The view. Call <see cref="SessionView.Start"/> to run it.</returns>
         public SessionView CreateCommandWindow(Session template, CommandGraph graph, SessionView.CommandWindowOpener openCommandWindow)
         {
-            var frontend = new CliView(_context, CliView.InputVisibility.WhenReading);
+            var frontend = new CliView(_context, CliView.InputVisibility.WhenReading, _history);
             var commandName = graph.ToArray().FirstOrDefault()?.Schema?.Name;
-            
+
             return new SessionView(
                 commandName == null ? ConsoleTitle : $"{ConsoleTitle}: {commandName}",
                 frontend,

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
 using Bossy.Execution;
@@ -32,8 +33,8 @@ namespace Bossy.Tests.Shell
             
             
             _context = new BossyContext(null, registry, null, null, null, null);
-            _session = new Session(_context, _permissions, new MockEndpoint(), null);
-            _executor = new CommandExecutor(_context, _permissions);
+            _session = MockSession.Create(_context, _permissions, new MockEndpoint());
+            _executor = new CommandExecutor(_context, _permissions, new MockExecutionListener());
         }
         
         [Test]
@@ -548,80 +549,52 @@ namespace Bossy.Tests.Shell
         }
 
         [Test]
-        public async Task Test_CommandView_PushedAndPopped()
+        public async Task Test_GroupsNotifyListenerAroundExecution()
         {
-            var host = new MockSessionHost();
-            var session = new Session(_context, _permissions, new MockEndpoint(), host);
+            var listener = new MockExecutionListener();
+            var executor = new CommandExecutor(_context, _permissions, listener);
 
             var graph = CommandGraph
                 .Create(false)
                 .Execute(new ViewCommand(), null)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, session, CancellationToken.None, new MockReadable(), new MockWriteable());
+            await executor.ExecuteAsync(graph, _session, CancellationToken.None, new MockReadable(), new MockWriteable());
 
-            Assert.That(host.Calls, Is.EqualTo(new[] { "push", "pop" }));
+            Assert.That(listener.Calls, Is.EqualTo(new[] { "start", "finish" }));
         }
 
         [Test]
-        public async Task Test_Windowed_OpensCommandWindow()
+        public async Task Test_SkippedGroup_WritesReasonWithoutNotifyingListener()
         {
-            var host = new MockSessionHost();
-            var session = new Session(_context, _permissions, new MockEndpoint(), host);
-
-            var graph = CommandGraph
-                .Create(true)
-                .Execute(new TrackingCommand(), null)
-                .Build();
-
-            await _executor.ExecuteAsync(graph, session, CancellationToken.None);
-
-            Assert.That(host.Calls, Is.EqualTo(new[] { "open" }));
-            Assert.That(host.OpenedGraph, Is.SameAs(graph));
-        }
-
-        [Test]
-        public async Task Test_Windowed_NoHost_WritesError()
-        {
-            var frontend = new MockEndpoint();
-            var session = new Session(_context, _permissions, frontend, null);
-            var tracker = new TrackingCommand();
-
-            var graph = CommandGraph
-                .Create(true)
-                .Execute(tracker, null)
-                .Build();
-
-            await _executor.ExecuteAsync(graph, session, CancellationToken.None);
-
-            Assert.That(tracker.WasCalled, Is.False);
-            Assert.That(frontend.Log, Is.Not.Empty);
-        }
-
-        [Test]
-        public async Task Test_ResetsFrontendCapabilitiesAfterCommand()
-        {
-            var frontend = new MockEndpoint();
-            var session = new Session(_context, _permissions, frontend, null);
+            var context = new BossyContext(null, new TypeAdapterRegistry(), null, null, new NullBinder(), null);
+            var listener = new MockExecutionListener();
+            var executor = new CommandExecutor(context, _permissions, listener);
+            var writer = new MockWriteable();
 
             var graph = CommandGraph
                 .Create(false)
-                .Execute(new SuccessfulCommand(), null)
+                .Execute(new UnboundCommand(), null)
                 .Build();
 
-            await _executor.ExecuteAsync(graph, session, CancellationToken.None);
+            await executor.ExecuteAsync(graph, _session, CancellationToken.None, new MockReadable(), writer);
 
-            Assert.That(frontend.ResetCount, Is.EqualTo(1));
+            Assert.That(writer.Log, Is.Not.Empty);
+            Assert.That(listener.Calls, Is.Empty);
         }
 
-        [Test]
-        public void Test_ClosingFrontendAsWriter_WritesNothing()
+        /// <summary>
+        /// A command with a binding nothing is registered for, so its group fails before it starts.
+        /// </summary>
+        private class UnboundCommand : SimpleCommand
         {
-            var frontend = new MockEndpoint();
+            [Bind]
+            private string _missing;
 
-            ((IWriteable)frontend).CloseWriter();
-
-            Assert.That(frontend.Log, Is.Empty);
+            protected override CommandStatus Execute(SimpleContext ctx)
+            {
+                return CommandStatus.Ok;
+            }
         }
     }
 }

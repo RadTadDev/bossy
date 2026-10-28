@@ -370,9 +370,9 @@ await foreach (T obj in ctx.ReadAllAsync<T>())
 }
 ```
 
-Note: You can test for specific capabilities via the following:
+Note: You can test the endpoint for optional capabilities via the following:
 ```csharp
-if (ctx.Capabilities is IClearable clearable)
+if (ctx.Endpoint is IClearable clearable)
 {
     
 }
@@ -384,10 +384,11 @@ You also have several fields that can be very useful:
 |------------------------|--------------------------------------------------------------|
 | `ctx.Bossy`            | Access to the Bossy instance, including the schema registry. |
 | `ctx.CancelationToken` | Gets the command's cancellation token.                       |
-| `ctx.Capabilities`     | Gets the front end Capabilities. See below.                  |
+| `ctx.Endpoint`         | Gets the endpoint this command reads from and writes to. See below. |
+| `ctx.Session`          | Gets the session running this command, including its history and aliases. |
 
 
-If you want to add your own capability to an existing front end, the CLI for example, do the following:
+If you want to add your own capability to an existing visual endpoint, the CLI for example, do the following:
 ```csharp
 // Make your capability interface
 public interface IMyNewCapability
@@ -399,7 +400,7 @@ public interface IMyNewCapability
 public partial class CliUserInterfaceView : IMyNewCapabilitiy { }
 
 // And you can now test for it:
-if (ctx.Capabilities is IMyNewCapability cap)
+if (ctx.Endpoint is IMyNewCapability cap)
 {
     cap.DoSomething();
 }

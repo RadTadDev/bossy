@@ -34,10 +34,7 @@ namespace Bossy.Frontend
         /// </summary>
         public string Title { get; }
 
-        private const string CommandViewClass = "bossy-command-view";
-        private const string CommandViewEnteringClass = "bossy-command-view--entering";
-
-        private readonly IVisualEndpoint _endpoint;
+        private readonly IVisualEndpoint _capabilities;
         private readonly CommandWindowOpener _openCommandWindow;
         private readonly Stack<VisualElement> _commandViews = new();
         private bool _disposed;
@@ -46,26 +43,26 @@ namespace Bossy.Frontend
         /// Creates a new session view.
         /// </summary>
         /// <param name="title">The title for a window or panel showing this view.</param>
-        /// <param name="endpoint">The frontend to show.</param>
+        /// <param name="capabilities">The frontend to show.</param>
         /// <param name="createSession">Creates the session given this view as its host.</param>
         /// <param name="openCommandWindow">Opens command windows for this session.</param>
         /// <param name="inputSettings">The input settings.</param>
-        public SessionView(string title, IVisualEndpoint endpoint, Func<ISessionHost, Session> createSession, CommandWindowOpener openCommandWindow, BossyInputSettings inputSettings)
+        public SessionView(string title, IVisualEndpoint capabilities,Func<ISessionHost, Session> createSession, CommandWindowOpener openCommandWindow, BossyInputSettings inputSettings)
         {
             Title = title;
-            _endpoint = endpoint;
+            _capabilities = capabilities;
             _openCommandWindow = openCommandWindow;
 
             Root = new VisualElement { name = "session-view" };
             Root.style.flexGrow = 1;
-            Root.Add(endpoint.Root);
+            Root.Add(capabilities.Root);
 
             Root.RegisterCallback<KeyDownEvent>(evt =>
             {
                 if (!inputSettings.CancelCommand.IsAsserted(evt)) return;
 
                 Session?.CancelCommand();
-                _endpoint?.OnCancelPressed();
+                _capabilities?.OnCancelPressed();
                 evt?.StopImmediatePropagation();
             }, TrickleDown.TrickleDown);
 
@@ -104,7 +101,7 @@ namespace Bossy.Frontend
             }
             else
             {
-                _endpoint.Focus();
+                _capabilities.Focus();
             }
         }
 
@@ -114,9 +111,9 @@ namespace Bossy.Frontend
 
             // Command views are placed on top of the frontend rather than replacing it, because removing
             // or hiding the frontend breaks UI Toolkit's focus tracking for it.
-            root.AddToClassList(CommandViewClass);
+            root.AddToClassList(BossyTheme.CommandViewClass);
             root.delegatesFocus = true;
-            Animations.In(root, CommandViewEnteringClass);
+            Animations.In(root, BossyTheme.CommandViewEnteringClass);
 
             _commandViews.Push(root);
             Root.Add(root);

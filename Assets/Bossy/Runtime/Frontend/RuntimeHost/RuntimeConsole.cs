@@ -23,7 +23,6 @@ namespace Bossy.Frontend
         private const float NewWindowCascadeOffset = 24f;
 
         // Matches the console's transition in BossyTheme.uss
-        private const string HiddenClass = "bossy-runtime-console--hidden";
         private const long SlideDurationMs = 160;
         private static readonly Vector2 FirstWindowPosition = new(40f, 40f);
 
@@ -124,12 +123,12 @@ namespace Bossy.Frontend
             {
                 _panelDisplayed = true;
                 panel.style.display = DisplayStyle.Flex;
-                Animations.In(panel, HiddenClass);
+                Animations.In(panel, BossyTheme.RuntimeConsoleHiddenClass);
             }
             else
             {
                 // Shown again while sliding out, so slide straight back in
-                panel.RemoveFromClassList(HiddenClass);
+                panel.RemoveFromClassList(BossyTheme.RuntimeConsoleHiddenClass);
             }
             
             _visible = true;
@@ -148,7 +147,7 @@ namespace Bossy.Frontend
             _visible = false;
             
             var panel = _overlay.ConsolePanel;
-            Animations.Out(panel, HiddenClass, SlideDurationMs, () =>
+            Animations.Out(panel, BossyTheme.RuntimeConsoleHiddenClass, SlideDurationMs, () =>
             {
                 // Unless it was shown again while sliding out
                 if (!_visible)

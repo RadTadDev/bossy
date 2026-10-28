@@ -39,6 +39,7 @@ namespace Bossy.Frontend
         /// <param name="sessionFactory">Creates sessions for the console and command windows.</param>
         public EditorConsole(SessionFactory sessionFactory)
         {
+            // A console built again, such as when domain reload is disabled, replaces the previous one
             Active?.Dispose();
             Active = this;
 

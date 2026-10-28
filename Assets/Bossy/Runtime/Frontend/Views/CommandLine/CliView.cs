@@ -14,10 +14,8 @@ namespace Bossy.Frontend
     /// The default command line frontend.
     /// </summary>
     internal class CliView : IVisualEndpoint,
-        IHistorical,
         IClearable,
         IModifiableOutputBuffer,
-        IAliasCapability,
         IModifiablePromptHeader
     {
         /// <summary>
@@ -38,18 +36,9 @@ namespace Bossy.Frontend
 
         public VisualElement Root { get; }
 
-        private const string LineClass = "bossy-cli__line";
-        private const string InputRowFocusedClass = "bossy-cli__input-row--focused";
-        private const string SuggestionsVisibleClass = "bossy-cli__suggestions--visible";
-        private const string SuggestionClass = "bossy-cli__suggestion";
-        private const string SelectedSuggestionClass = "bossy-cli__suggestion--selected";
-        private const string HintSuggestionClass = "bossy-cli__suggestion--hint";
-        private const string ErrorSuggestionClass = "bossy-cli__suggestion--error";
-
         private readonly BossyContext _context;
         private readonly InputVisibility _inputVisibility;
 
-        private readonly Dictionary<string, string> _aliases = new();
         private readonly Dictionary<Type, ICliDisplayAdapter> _displayAdapters = new();
 
         // Output
@@ -65,6 +54,7 @@ namespace Bossy.Frontend
         private ICliDisplayAdapter _currentReadOwner;
 
         // History
+        private readonly CommandHistory _history;
         private int _historyIndex;
 
         // Autocomplete
@@ -82,11 +72,13 @@ namespace Bossy.Frontend
         /// </summary>
         /// <param name="context">The Bossy context.</param>
         /// <param name="inputVisibility">When the input line is shown.</param>
-        public CliView(BossyContext context, InputVisibility inputVisibility)
+        /// <param name="history">The history to browse with the history keys.</param>
+        public CliView(BossyContext context, InputVisibility inputVisibility, CommandHistory history)
         {
             _context = context;
             _inputVisibility = inputVisibility;
-            _historyIndex = CliHistory.Lines.Count;
+            _history = history;
+            _historyIndex = _history.Lines.Count;
             _autocomplete = new AutocompleteEngine(_context, context.Settings.BossyCliSettings.ToOperatorList());
             _displayAdapters[typeof(OptionsPrompt)] = new OptionsPromptDisplayAdapter();
 
@@ -124,7 +116,7 @@ namespace Bossy.Frontend
 
         public void Write(object value)
         {
-            _outputBuffer.Add(Format.Render(DisplayObject(value)));
+            _outputBuffer.Add(DisplayObject(value));
             _output.RefreshItems();
             _output.ScrollToItem(_outputBuffer.Count - 1);
         }
@@ -133,6 +125,9 @@ namespace Bossy.Frontend
         {
             _requestingCommand = requestedType == typeof(CommandGraph);
             _readSource = new TaskCompletionSource<object>();
+
+            // Start browsing from the end, after anything the last command added to the history
+            _historyIndex = _history.Lines.Count;
 
             SetInputEnabled(true);
             FocusInput();
@@ -147,14 +142,6 @@ namespace Bossy.Frontend
             ResetHeader();
         }
 
-        public IEnumerable<string> GetHistory() => CliHistory.Lines;
-
-        public void ClearHistory()
-        {
-            CliHistory.Clear();
-            _historyIndex = 0;
-        }
-
         public void Clear()
         {
             ClearAutocomplete();
@@ -165,25 +152,9 @@ namespace Bossy.Frontend
 
         public void Overwrite(object value)
         {
-            _outputBuffer[^1] = Format.Render(value.ToString());
+            _outputBuffer[^1] = value.ToString();
             _output.RefreshItems();
             _output.ScrollToItem(_outputBuffer.Count - 1);
-        }
-
-        public Dictionary<string, string> GetAliases() => _aliases;
-
-        public bool AssignAlias(string alias, string value)
-        {
-            alias = alias.Trim();
-
-            if (alias.Any(c => !char.IsLetter(c))) return false;
-            _aliases[alias] = value;
-            return true;
-        }
-
-        public bool DeleteAlias(string alias)
-        {
-            return _aliases.Remove(alias);
         }
 
         public void SetPromptHeader(string header)
@@ -204,8 +175,8 @@ namespace Bossy.Frontend
             _input.selectAllOnMouseUp = false;
             _inputRow.focusable = true;
 
-            _input.RegisterCallback<FocusInEvent>(_ => _inputRow.AddToClassList(InputRowFocusedClass));
-            _input.RegisterCallback<FocusOutEvent>(_ => _inputRow.RemoveFromClassList(InputRowFocusedClass));
+            _input.RegisterCallback<FocusInEvent>(_ => _inputRow.AddToClassList(BossyTheme.CliInputRowFocusedClass));
+            _input.RegisterCallback<FocusOutEvent>(_ => _inputRow.RemoveFromClassList(BossyTheme.CliInputRowFocusedClass));
 
             var input = _context.Settings.BossyInputSettings;
             _input.RegisterCallback<KeyDownEvent>(evt =>
@@ -230,7 +201,7 @@ namespace Bossy.Frontend
                 else
                 {
                     // Reset the history index on any normal character press
-                    _historyIndex = CliHistory.Lines.Count;
+                    _historyIndex = _history.Lines.Count;
                 }
             }, TrickleDown.TrickleDown);
 
@@ -245,7 +216,7 @@ namespace Bossy.Frontend
             _output.makeItem = () =>
             {
                 var line = new Label { pickingMode = PickingMode.Ignore };
-                line.AddToClassList(LineClass);
+                line.AddToClassList(BossyTheme.CliLineClass);
                 return line;
             };
             _output.bindItem = (element, i) => ((Label)element).text = _outputBuffer[i];
@@ -289,33 +260,16 @@ namespace Bossy.Frontend
                 _currentReadOwner = null;
             }
 
-            CliHistory.Add(line);
-            _historyIndex = CliHistory.Lines.Count;
-
             SetInput(string.Empty);
             ClearAutocomplete();
 
-            if (_requestingCommand)
+            // Nothing runs, so keep reading. Unity's text field can end editing on enter, so focus it again.
+            // Other lines are handed over as typed; the session parses them.
+            if (_requestingCommand && string.IsNullOrWhiteSpace(line))
             {
-                // Read the operators each time so changed settings apply
-                var operators = _context.Settings.BossyCliSettings.ToOperatorList();
-                var parseResult = _context.Parser.Parse(line, operators, _aliases);
-
-                // Nothing runs, so keep reading. Unity's text field can end editing on enter, so focus it again.
-                if (parseResult.IsEmpty)
-                {
-                    Write(string.Empty);
-                    FocusInput();
-                    return;
-                }
-                if (!parseResult.TryGetGraph(out var graph))
-                {
-                    Write(Format.Error(parseResult.Message));
-                    FocusInput();
-                    return;
-                }
-
-                result = graph;
+                Write(string.Empty);
+                FocusInput();
+                return;
             }
 
             SetInputEnabled(false);
@@ -347,24 +301,24 @@ namespace Bossy.Frontend
 
         private void HistoryBack()
         {
-            if (_historyIndex == 0 || CliHistory.Lines.Count == 0) return;
+            if (_historyIndex == 0 || _history.Lines.Count == 0) return;
 
             ClearAutocomplete();
 
             _historyIndex--;
 
-            SetInput(CliHistory.Lines[_historyIndex]);
+            SetInput(_history.Lines[_historyIndex]);
         }
 
         private void HistoryForward()
         {
-            if (_historyIndex >= CliHistory.Lines.Count - 1 || CliHistory.Lines.Count == 0) return;
+            if (_historyIndex >= _history.Lines.Count - 1 || _history.Lines.Count == 0) return;
 
             ClearAutocomplete();
 
             _historyIndex++;
 
-            SetInput(CliHistory.Lines[_historyIndex]);
+            SetInput(_history.Lines[_historyIndex]);
         }
 
         private void OnValueUpdated(ChangeEvent<string> evt)
@@ -392,12 +346,12 @@ namespace Bossy.Frontend
                 return;
             }
 
-            _autocompleteContainer.AddToClassList(SuggestionsVisibleClass);
+            _autocompleteContainer.AddToClassList(BossyTheme.CliSuggestionsVisibleClass);
 
             // If the first suggestion is a hint or error, that's all we show
             if (first.IsHint || first.IsError)
             {
-                _autocompleteContainer.Add(MakeSuggestionLabel(first, first.IsHint ? HintSuggestionClass : ErrorSuggestionClass));
+                _autocompleteContainer.Add(MakeSuggestionLabel(first, first.IsHint ? BossyTheme.CliSuggestionHintClass : BossyTheme.CliSuggestionErrorClass));
                 return;
             }
 
@@ -410,7 +364,7 @@ namespace Bossy.Frontend
         private static Label MakeSuggestionLabel(Suggestion suggestion, string modifierClass)
         {
             var label = new Label(suggestion.DisplayText) { userData = suggestion };
-            label.AddToClassList(SuggestionClass);
+            label.AddToClassList(BossyTheme.CliSuggestionClass);
 
             if (modifierClass != null)
             {
@@ -438,10 +392,10 @@ namespace Bossy.Frontend
 
             var count = _autocompleteContainer.childCount;
             var previous = _autocompleteContainer[(_suggestionIndex - 1 + count) % count];
-            previous.RemoveFromClassList(SelectedSuggestionClass);
+            previous.RemoveFromClassList(BossyTheme.CliSuggestionSelectedClass);
 
             var current = _autocompleteContainer[_suggestionIndex];
-            current.AddToClassList(SelectedSuggestionClass);
+            current.AddToClassList(BossyTheme.CliSuggestionSelectedClass);
 
             // Changing the input would otherwise recompute the suggestions being cycled. The change event
             // can arrive after this key event finishes, so the flag is cleared on the next tick.
@@ -454,7 +408,7 @@ namespace Bossy.Frontend
 
         private void ClearAutocomplete()
         {
-            _autocompleteContainer.RemoveFromClassList(SuggestionsVisibleClass);
+            _autocompleteContainer.RemoveFromClassList(BossyTheme.CliSuggestionsVisibleClass);
             _autocompleteContainer.Clear();
             _suggestionIndex = 0;
         }

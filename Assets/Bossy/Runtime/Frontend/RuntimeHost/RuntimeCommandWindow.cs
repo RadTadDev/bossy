@@ -14,7 +14,6 @@ namespace Bossy.Frontend
         private const float MinHeight = 150f;
         
         // Matches the window's transition in BossyTheme.uss
-        private const string EnteringClass = "bossy-window--entering";
         private const long FadeDurationMs = 140;
 
         /// <summary>
@@ -34,8 +33,8 @@ namespace Bossy.Frontend
             _view = view;
 
             Root = ContentViewUtility.GetRootFromUxml("BossyRuntimeCommandWindow");
-            Root.RemoveFromClassList(EnteringClass);
-            Animations.In(Root, EnteringClass);
+            Root.RemoveFromClassList(BossyTheme.WindowEnteringClass);
+            Animations.In(Root, BossyTheme.WindowEnteringClass);
             Root.Q<Label>("title").text = view.Title;
             Root.Q<Button>("button-close").clicked += closeRequested;
             Root.Q("content-area").Add(view.Root);
@@ -72,7 +71,7 @@ namespace Bossy.Frontend
             }
             
             Root.pickingMode = PickingMode.Ignore;
-            Animations.Out(Root, EnteringClass, FadeDurationMs, Root.RemoveFromHierarchy);
+            Animations.Out(Root, BossyTheme.WindowEnteringClass, FadeDurationMs, Root.RemoveFromHierarchy);
         }
 
         private void WireDrag(VisualElement titleBar)

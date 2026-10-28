@@ -10,7 +10,7 @@ namespace Bossy.Execution
     /// <summary>
     /// A standard asynchronous communication stream.
     /// </summary>
-    public class AsyncPipe : IOHandler
+    public class AsyncPipe : IEndpoint
     {
         private readonly SemaphoreSlim _signal = new(0);
         private readonly ConcurrentQueue<object> _queue = new();

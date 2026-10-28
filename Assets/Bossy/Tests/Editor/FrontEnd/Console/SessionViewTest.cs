@@ -50,7 +50,6 @@ namespace Bossy.Tests.FrontEnd.Console
 
             Assert.That(view.Root.Q("cli-root"), Is.Not.Null);
             Assert.That(view.Root.Q<TextField>("input-field"), Is.Not.Null);
-            Assert.That(view.Session.Host, Is.SameAs(view));
         }
 
         [Test]

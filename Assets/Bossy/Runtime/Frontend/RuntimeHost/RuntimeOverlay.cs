@@ -69,7 +69,7 @@ namespace Bossy.Frontend
             // Let clicks reach the game wherever the overlay draws nothing
             Root.pickingMode = PickingMode.Ignore;
             BossyTheme.ApplyTo(Root);
-            Root.AddToClassList("bossy-overlay");
+            Root.AddToClassList(BossyTheme.OverlayClass);
 
             ConsolePanel = Root.Q("console-panel");
             WindowLayer = Root.Q("window-layer");

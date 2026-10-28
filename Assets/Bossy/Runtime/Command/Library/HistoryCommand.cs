@@ -1,5 +1,4 @@
 using Bossy.Command;
-using Bossy.Frontend;
 
 namespace Bossy.Runtime.Command.Library
 {
@@ -8,13 +7,7 @@ namespace Bossy.Runtime.Command.Library
     {
         protected override CommandStatus Execute(SimpleContext ctx)
         {
-            if (ctx.Capabilities is not IHistorical history)
-            {
-                ctx.Write("This front end does not support history.");
-                return CommandStatus.Error;
-            }
-
-            Format.Enumerate(history.GetHistory(), ctx);
+            Format.Enumerate(ctx.Session.History.Lines, ctx);
             
             return CommandStatus.Ok;
         }
@@ -26,13 +19,7 @@ namespace Bossy.Runtime.Command.Library
     {
         protected override CommandStatus Execute(SimpleContext ctx)
         {
-            if (ctx.Capabilities is not IHistorical history)
-            {
-                ctx.Write("This front end does not support history.");
-                return CommandStatus.Error;
-            }
-
-            history.ClearHistory();
+            ctx.Session.History.Clear();
             
             return CommandStatus.Ok;
         }

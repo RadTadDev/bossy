@@ -8,7 +8,7 @@ namespace Bossy.Runtime.Command.Library
     {
         protected override CommandStatus Execute(SimpleContext ctx)
         {
-            if (ctx.Capabilities is IClearable clearable)
+            if (ctx.Endpoint is IClearable clearable)
             {
                 clearable.Clear();
             }
