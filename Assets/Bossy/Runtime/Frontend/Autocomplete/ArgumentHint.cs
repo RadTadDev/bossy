@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Bossy.Schema;
 
 namespace Bossy.Frontend.Autocomplete
@@ -29,6 +31,12 @@ namespace Bossy.Frontend.Autocomplete
         public readonly string InvalidValue;
 
         /// <summary>
+        /// Short descriptions of the argument's validators, such as "ends with .cs". Validators that do not
+        /// describe themselves are left out.
+        /// </summary>
+        public readonly IReadOnlyList<string> Constraints;
+
+        /// <summary>
         /// True if the value takes more than one token, so <see cref="TokenNumber"/> shows progress.
         /// </summary>
         public bool HasProgress => TokensDesired > 1;
@@ -46,6 +54,10 @@ namespace Bossy.Frontend.Autocomplete
             TokenNumber = tokenNumber;
             TokensDesired = tokensDesired;
             InvalidValue = invalidValue;
+            Constraints = argument.Validators
+                .Select(v => v.Describe())
+                .Where(d => !string.IsNullOrWhiteSpace(d))
+                .ToList();
         }
     }
 }
