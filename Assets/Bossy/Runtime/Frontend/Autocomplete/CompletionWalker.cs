@@ -252,16 +252,11 @@ namespace Bossy.Frontend.Autocomplete
 
             // Every positional is filled, so the line can run. The optional parts stay discoverable.
             var completions = SubcommandCompletions();
-            var readyMessage = ReadyMessage();
+            SuggestionFailure failure = null;
             var next = _cursor.TryGetNextOrdered(out var optional, out _) ? optional : _cursor.Variadic;
             if (next != null)
             {
-                completions.AddRange(ValueCompletions(next, out var error));
-
-                if (error != null)
-                {
-                    readyMessage += $" · Suggestions failed: {error}";
-                }
+                completions.AddRange(ValueCompletions(next, out failure));
             }
 
             if (!_cursor.Surrendered)
@@ -269,25 +264,25 @@ namespace Bossy.Frontend.Autocomplete
                 completions.AddRange(_cursor.Switches.Select(s => SwitchCompletion(s, false)));
             }
 
-            return CompletionResult.Ready(readyMessage, Distinct(completions));
+            return CompletionResult.Ready(ReadyMessage(), Distinct(completions), failure);
         }
 
         private CompletionResult CompleteValue(ArgumentSchema argument, ValueRead read)
         {
             var completions = SubcommandCompletions();
-            string suggestionError = null;
+            SuggestionFailure failure = null;
 
             // Suggested values are whole values, so they only apply to the first token of a value
             if (read.TokenNumber == 1)
             {
-                completions.AddRange(ValueCompletions(argument, out suggestionError));
+                completions.AddRange(ValueCompletions(argument, out failure));
             }
 
             // R17, R23: the value has all its tokens but does not parse
             var invalidValue = read.IsCompleteAndInvalid ? read.Text : null;
-            var hint = new ArgumentHint(argument, read.TokenNumber, read.TokensDesired, invalidValue, suggestionError);
+            var hint = new ArgumentHint(argument, read.TokenNumber, read.TokensDesired, invalidValue);
 
-            return CompletionResult.Hint(HintText(hint), Rank(completions), hint);
+            return CompletionResult.Hint(HintText(hint), Rank(completions), hint, failure);
         }
 
         private CompletionResult CompleteSwitchName()
@@ -399,11 +394,12 @@ namespace Bossy.Frontend.Autocomplete
             return ValueRead.AtSlot(false, complete, available + 1, desired, valueText);
         }
 
-        private List<Completion> ValueCompletions(ArgumentSchema argument, out string error)
+        private List<Completion> ValueCompletions(ArgumentSchema argument, out SuggestionFailure failure)
         {
-            // Proposal 14: a failing suggestion function is reported through the error, never thrown
+            // Proposal 14: a failing suggestion function is reported through the failure, never thrown
             var key = string.Join("\u001f", _tokens.Take(_index).Select(t => t.Text).Prepend(_cursor.Schema.Name));
-            var values = _userSuggestions.Get(argument, _cursor.Schema.CommandType, key, MakeSuggestionContext, out error);
+            var values = _userSuggestions.Get(argument, _cursor.Schema.CommandType, key, MakeSuggestionContext, out var error);
+            failure = error != null ? new SuggestionFailure(argument, error) : null;
 
             return values.Select(v => MakeCompletion(Quote(v, _slot.IsQuoted), v, string.Empty, CompletionKind.Value)).ToList();
         }
@@ -473,9 +469,9 @@ namespace Bossy.Frontend.Autocomplete
         // --- Messages ---
 
         /*
-         * Proposal 4: a short plain status line for the argument being typed, such as "pos <Vector3> 2/3 · invalid".
+         * Proposal 4: a short plain status line for the argument being typed, such as "pos <Vector3> 2/3  invalid".
          * The description and the argument's kind are left out to keep it short; views that want them read the
-         * ArgumentHint instead.
+         * ArgumentHint instead. A failing suggestion function is reported apart, in CompletionResult.SuggestionFailure.
          */
         private static string HintText(ArgumentHint hint)
         {
@@ -488,12 +484,7 @@ namespace Bossy.Frontend.Autocomplete
 
             if (hint.InvalidValue != null)
             {
-                text += " · invalid";
-            }
-
-            if (hint.SuggestionError != null)
-            {
-                text += $" · Suggestions failed: {hint.SuggestionError}";
+                text += "  invalid";
             }
 
             return text;
@@ -515,7 +506,7 @@ namespace Bossy.Frontend.Autocomplete
                 parts.Add(switchCount == 1 ? "1 switch" : $"{switchCount} switches");
             }
 
-            return parts.Count == 0 ? "Ready" : $"Ready · {string.Join(", ", parts)}";
+            return parts.Count == 0 ? "Ready" : $"Ready  {string.Join(", ", parts)}";
         }
 
         private static char ShortName(ArgumentSchema argument)

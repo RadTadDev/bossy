@@ -63,5 +63,31 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
             Assert.That(FuzzyMatcher.Rank("get", new[] { "help" }, s => s), Is.Empty);
             Assert.That(FuzzyMatcher.Rank("laod", new[] { "load" }, s => s), Is.EqualTo(new[] { "load" }));
         }
+
+        [Test]
+        public void FindMatches_PrefixAndSubstring_ReturnOneRun()
+        {
+            Assert.That(FuzzyMatcher.FindMatches("LO", "load"), Is.EqualTo(new[] { new MatchRange(0, 2) }));
+            Assert.That(FuzzyMatcher.FindMatches("tal", "catalog"), Is.EqualTo(new[] { new MatchRange(2, 3) }));
+        }
+
+        [Test]
+        public void FindMatches_LaterSegment_ReturnsThatSegment()
+        {
+            Assert.That(FuzzyMatcher.FindMatches("log", "unity-log"), Is.EqualTo(new[] { new MatchRange(6, 3) }));
+        }
+
+        [Test]
+        public void FindMatches_Initials_ReturnOneRunPerLetter()
+        {
+            Assert.That(FuzzyMatcher.FindMatches("sa", "SetActive"), Is.EqualTo(new[] { new MatchRange(0, 1), new MatchRange(3, 1) }));
+        }
+
+        [Test]
+        public void FindMatches_FuzzyOrEmpty_ReturnsNothing()
+        {
+            Assert.That(FuzzyMatcher.FindMatches("laod", "load"), Is.Empty);
+            Assert.That(FuzzyMatcher.FindMatches("", "load"), Is.Empty);
+        }
     }
 }

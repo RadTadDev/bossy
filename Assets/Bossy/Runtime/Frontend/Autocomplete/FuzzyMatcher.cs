@@ -63,6 +63,38 @@ namespace Bossy.Frontend.Autocomplete
                 .ToList();
         }
 
+        /// <summary>
+        /// Finds the runs of a text that match a query, by the same tiers as <see cref="Rank{T}"/>. A fuzzy match
+        /// has no clear run of matching characters, so it gets no ranges.
+        /// </summary>
+        /// <param name="query">The typed text.</param>
+        /// <param name="text">The text to find matches in.</param>
+        /// <returns>The matching runs, in order. Empty if the query is empty or only matches fuzzily.</returns>
+        public static List<MatchRange> FindMatches(string query, string text)
+        {
+            var ranges = new List<MatchRange>();
+            if (string.IsNullOrEmpty(query) || string.IsNullOrEmpty(text)) return ranges;
+
+            var lowerQuery = query.ToLowerInvariant();
+            var lowerText = text.ToLowerInvariant();
+
+            if (lowerText.StartsWith(lowerQuery, StringComparison.Ordinal))
+            {
+                ranges.Add(new MatchRange(0, query.Length));
+                return ranges;
+            }
+
+            if (MatchesSegmentStart(lowerQuery, text, ranges)) return ranges;
+
+            var index = lowerText.IndexOf(lowerQuery, StringComparison.Ordinal);
+            if (index >= 0)
+            {
+                ranges.Add(new MatchRange(index, query.Length));
+            }
+
+            return ranges;
+        }
+
         private static Tier GetTier(string lowerQuery, string text, out float score, HashSet<string> queryTrigrams, List<int> levenshteinRow)
         {
             score = 0;
@@ -70,7 +102,7 @@ namespace Bossy.Frontend.Autocomplete
 
             if (lowerText == lowerQuery) return Tier.Exact;
             if (lowerText.StartsWith(lowerQuery, StringComparison.Ordinal)) return Tier.Prefix;
-            if (MatchesSegmentStart(lowerQuery, text)) return Tier.SegmentStart;
+            if (MatchesSegmentStart(lowerQuery, text, null)) return Tier.SegmentStart;
             if (lowerText.Contains(lowerQuery)) return Tier.Substring;
 
             score = Math.Max(TrigramScore(queryTrigrams, lowerText), LevenshteinScore(lowerQuery, lowerText, levenshteinRow));
@@ -81,24 +113,34 @@ namespace Bossy.Frontend.Autocomplete
          * A segment starts after a separator or at a lower-to-upper case change, so "unity-log" and "SetActive"
          * both have two segments. The query matches if a later segment starts with it ("log" -> "unity-log") or
          * if it spells out the first letters of the segments ("ul" -> "unity-log", "sa" -> "SetActive").
+         * The matched characters are added to the ranges, if given.
          */
-        private static bool MatchesSegmentStart(string lowerQuery, string text)
+        private static bool MatchesSegmentStart(string lowerQuery, string text, List<MatchRange> ranges)
         {
-            var initials = new List<char>();
+            var initials = new List<int>();
 
             for (var i = 0; i < text.Length; i++)
             {
                 if (!IsSegmentStart(text, i)) continue;
 
-                initials.Add(char.ToLowerInvariant(text[i]));
+                initials.Add(i);
 
                 if (i > 0 && string.Compare(text, i, lowerQuery, 0, lowerQuery.Length, StringComparison.OrdinalIgnoreCase) == 0)
                 {
+                    ranges?.Add(new MatchRange(i, lowerQuery.Length));
                     return true;
                 }
             }
 
-            return lowerQuery.Length > 1 && new string(initials.ToArray()).StartsWith(lowerQuery, StringComparison.Ordinal);
+            if (lowerQuery.Length < 2 || initials.Count < lowerQuery.Length) return false;
+
+            for (var k = 0; k < lowerQuery.Length; k++)
+            {
+                if (char.ToLowerInvariant(text[initials[k]]) != lowerQuery[k]) return false;
+            }
+
+            ranges?.AddRange(initials.Take(lowerQuery.Length).Select(i => new MatchRange(i, 1)));
+            return true;
         }
 
         private static bool IsSegmentStart(string text, int i)

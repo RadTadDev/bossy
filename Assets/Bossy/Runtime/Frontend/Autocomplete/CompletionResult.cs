@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Bossy.Frontend.Autocomplete
 {
@@ -34,16 +35,24 @@ namespace Bossy.Frontend.Autocomplete
         public readonly ArgumentHint Argument;
 
         /// <summary>
+        /// The failure of the suggestion function of the argument being completed, otherwise null. It is kept out
+        /// of <see cref="Message"/>, since the rest of the result is still valid.
+        /// </summary>
+        public readonly SuggestionFailure SuggestionFailure;
+
+        /// <summary>
         /// True if there is nothing to show.
         /// </summary>
         public bool IsEmpty => MessageKind == CompletionMessageKind.None && Completions.Count == 0;
 
-        private CompletionResult(string message, CompletionMessageKind messageKind, IReadOnlyList<Completion> completions, ArgumentHint argument = null)
+        private CompletionResult(string message, CompletionMessageKind messageKind, IReadOnlyList<Completion> completions,
+            ArgumentHint argument = null, SuggestionFailure suggestionFailure = null)
         {
             Message = message;
             MessageKind = messageKind;
             Completions = completions;
             Argument = argument;
+            SuggestionFailure = suggestionFailure;
         }
 
         /// <summary>
@@ -62,10 +71,12 @@ namespace Bossy.Frontend.Autocomplete
         /// <param name="message">The hint.</param>
         /// <param name="completions">The completions, best first.</param>
         /// <param name="argument">Details about the argument the hint is about, if any.</param>
+        /// <param name="suggestionFailure">The failure of the argument's suggestion function, if it threw.</param>
         /// <returns>The result.</returns>
-        public static CompletionResult Hint(string message, IReadOnlyList<Completion> completions = null, ArgumentHint argument = null)
+        public static CompletionResult Hint(string message, IReadOnlyList<Completion> completions = null, ArgumentHint argument = null,
+            SuggestionFailure suggestionFailure = null)
         {
-            return new CompletionResult(message, CompletionMessageKind.Hint, completions ?? Array.Empty<Completion>(), argument);
+            return new CompletionResult(message, CompletionMessageKind.Hint, completions ?? Array.Empty<Completion>(), argument, suggestionFailure);
         }
 
         /// <summary>
@@ -73,10 +84,11 @@ namespace Bossy.Frontend.Autocomplete
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="completions">The completions, best first.</param>
+        /// <param name="suggestionFailure">The failure of the next argument's suggestion function, if it threw.</param>
         /// <returns>The result.</returns>
-        public static CompletionResult Ready(string message, IReadOnlyList<Completion> completions = null)
+        public static CompletionResult Ready(string message, IReadOnlyList<Completion> completions = null, SuggestionFailure suggestionFailure = null)
         {
-            return new CompletionResult(message, CompletionMessageKind.Ready, completions ?? Array.Empty<Completion>());
+            return new CompletionResult(message, CompletionMessageKind.Ready, completions ?? Array.Empty<Completion>(), null, suggestionFailure);
         }
 
         /// <summary>
@@ -90,6 +102,18 @@ namespace Bossy.Frontend.Autocomplete
         }
 
         /// <summary>
+        /// Makes a copy of this result whose completions carry the runs of their display text that match a query.
+        /// </summary>
+        /// <param name="query">The typed text.</param>
+        /// <returns>The new result.</returns>
+        internal CompletionResult WithMatches(string query)
+        {
+            if (string.IsNullOrEmpty(query) || Completions.Count == 0) return this;
+
+            return new CompletionResult(Message, MessageKind, Completions.Select(c => c.WithMatches(query)).ToList(), Argument, SuggestionFailure);
+        }
+
+        /// <summary>
         /// Makes a copy of this result with a completion added first. Errors stay without completions.
         /// </summary>
         /// <param name="completion">The completion to add.</param>
@@ -100,7 +124,7 @@ namespace Bossy.Frontend.Autocomplete
 
             var completions = new List<Completion> { completion };
             completions.AddRange(Completions);
-            return new CompletionResult(Message, MessageKind, completions, Argument);
+            return new CompletionResult(Message, MessageKind, completions, Argument, SuggestionFailure);
         }
     }
 }

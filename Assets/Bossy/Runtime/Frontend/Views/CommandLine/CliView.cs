@@ -56,12 +56,7 @@ namespace Bossy.Frontend
 
         // Autocomplete
         private readonly AutocompleteEngine _autocomplete;
-        private readonly VisualElement _autocompleteContainer;
-        private readonly List<Label> _completionLabels = new();
-        private CompletionResult _completions = CompletionResult.Empty;
-        private string _completedLine = string.Empty;
-        private int _suggestionIndex;
-        private bool _cyclingSuggestions;
+        private readonly CompletionPopup _completions;
 
         // Prompt header
         private readonly Label _promptHeaderElement;
@@ -85,7 +80,7 @@ namespace Bossy.Frontend
             Root = ContentViewUtility.GetRootFromUxml("BossyCli");
 
             _promptHeaderElement = Root.Q<Label>("prompt-label");
-            _autocompleteContainer = Root.Q("auto-complete");
+            _completions = new CompletionPopup(Root.Q("auto-complete"));
             _inputRow = Root.Q("input-row");
             _input = Root.Q<TextField>("input-field");
             _output = Root.Q<ListView>("output-list");
@@ -187,9 +182,30 @@ namespace Bossy.Frontend
             var input = _context.Settings.BossyInputSettings;
             _input.RegisterCallback<KeyDownEvent>(evt =>
             {
+                // Enter always submits. The suggestion keys win over the history keys only while there are rows.
                 if (input.SubmitCommand.IsAsserted(evt))
                 {
                     Submit();
+                }
+                else if (_completions.List.HasRows && input.NextSuggestion.IsAsserted(evt))
+                {
+                    _completions.MoveHighlight(1);
+                    evt.StopImmediatePropagation();
+                }
+                else if (_completions.List.HasRows && input.PreviousSuggestion.IsAsserted(evt))
+                {
+                    _completions.MoveHighlight(-1);
+                    evt.StopImmediatePropagation();
+                }
+                else if (input.AcceptSuggestion.IsAsserted(evt))
+                {
+                    AcceptSuggestion();
+                    evt.StopImmediatePropagation();
+                }
+                else if (_completions.IsOpen && input.CloseSuggestions.IsAsserted(evt))
+                {
+                    _completions.Close();
+                    evt.StopImmediatePropagation();
                 }
                 else if (input.HistoryBack.IsAsserted(evt))
                 {
@@ -198,11 +214,6 @@ namespace Bossy.Frontend
                 else if (input.HistoryForward.IsAsserted(evt))
                 {
                     HistoryForward();
-                }
-                else if (input.CycleSuggestions.IsAsserted(evt))
-                {
-                    CycleSuggestions();
-                    evt.StopImmediatePropagation();
                 }
                 else
                 {
@@ -271,15 +282,19 @@ namespace Bossy.Frontend
             });
         }
 
+        /*
+         * Setting the input from code does not send a change event, so it never opens suggestions by itself.
+         * History lines stay quiet that way, and the up and down keys keep browsing history.
+         */
         private void SetInput(string value)
         {
-            _input.value = value;
+            _input.SetValueWithoutNotify(value);
             _input.schedule.Execute(MoveCursorToEnd);
         }
 
         private void SetInput(string value, int cursorIndex)
         {
-            _input.value = value;
+            _input.SetValueWithoutNotify(value);
             _input.schedule.Execute(() =>
             {
                 _input.cursorIndex = cursorIndex;
@@ -317,105 +332,46 @@ namespace Bossy.Frontend
 
         private void OnValueUpdated(ChangeEvent<string> evt)
         {
-            if (!_requestingCommand || !_reading || _cyclingSuggestions) return;
-
-            if (string.IsNullOrWhiteSpace(evt.newValue))
-            {
-                ClearAutocomplete();
-                return;
-            }
+            if (!_requestingCommand || !_reading) return;
 
             ShowCompletions(evt.newValue, _input.cursorIndex);
         }
 
         private void ShowCompletions(string line, int cursorIndex)
         {
-            ClearAutocomplete();
-
-            var result = _autocomplete.Complete(line, cursorIndex);
-            if (result.IsEmpty)
+            if (string.IsNullOrWhiteSpace(line))
             {
+                ClearAutocomplete();
                 return;
             }
 
-            // Completions replace spans of the line they were made for, so keep it while they are cycled
-            _completions = result;
-            _completedLine = line;
-            _autocompleteContainer.AddToClassList(BossyTheme.CliSuggestionsVisibleClass);
-
-            if (result.MessageKind != CompletionMessageKind.None)
-            {
-                var modifier = result.MessageKind == CompletionMessageKind.Error
-                    ? BossyTheme.CliSuggestionErrorClass
-                    : BossyTheme.CliSuggestionHintClass;
-                var description = result.Argument?.Argument.Description;
-                var message = string.IsNullOrWhiteSpace(description)
-                    ? result.Message
-                    : $"{result.Message}  {Format.Color(description, Format.Gray)}";
-                _autocompleteContainer.Add(MakeSuggestionLabel(message, modifier));
-            }
-
-            foreach (var completion in result.Completions)
-            {
-                var text = string.IsNullOrEmpty(completion.Description)
-                    ? completion.DisplayText
-                    : $"{completion.DisplayText}  {Format.Color(completion.Description, Format.Gray)}";
-                var label = MakeSuggestionLabel(text, null);
-
-                _completionLabels.Add(label);
-                _autocompleteContainer.Add(label);
-            }
+            _completions.Show(new CompletionList(_autocomplete.Complete(line, cursorIndex), line, cursorIndex));
         }
 
-        private static Label MakeSuggestionLabel(string text, string modifierClass)
+        /*
+         * Accepting puts the highlighted completion in the line and shows the completions for the next token at
+         * once, so pressing the accept key again and again chains through a command. With the list hidden, the
+         * key brings it back instead.
+         */
+        private void AcceptSuggestion()
         {
-            var label = new Label(text);
-            label.AddToClassList(BossyTheme.CliSuggestionClass);
+            if (!_requestingCommand || !_reading) return;
 
-            if (modifierClass != null)
-            {
-                label.AddToClassList(modifierClass);
-            }
-
-            return label;
-        }
-
-        private void CycleSuggestions()
-        {
-            // If autocomplete is not open, try opening it
-            if (_autocompleteContainer.childCount == 0)
+            if (!_completions.IsOpen)
             {
                 ShowCompletions(_input.value, _input.cursorIndex);
                 return;
             }
 
-            // Messages cannot be applied
-            var count = _completionLabels.Count;
-            if (count == 0)
-            {
-                return;
-            }
+            if (!_completions.List.TryAccept(out var line, out var cursor)) return;
 
-            _completionLabels[(_suggestionIndex - 1 + count) % count].RemoveFromClassList(BossyTheme.CliSuggestionSelectedClass);
-            _completionLabels[_suggestionIndex].AddToClassList(BossyTheme.CliSuggestionSelectedClass);
-
-            // Changing the input would otherwise recompute the suggestions being cycled. The change event
-            // can arrive after this key event finishes, so the flag is cleared on the next tick.
-            var completion = _completions.Completions[_suggestionIndex];
-            _cyclingSuggestions = true;
-            SetInput(completion.ApplyTo(_completedLine), completion.CursorAfterApply);
-            _input.schedule.Execute(() => _cyclingSuggestions = false);
-
-            _suggestionIndex = (_suggestionIndex + 1) % count;
+            SetInput(line, cursor);
+            ShowCompletions(line, cursor);
         }
 
         private void ClearAutocomplete()
         {
-            _autocompleteContainer.RemoveFromClassList(BossyTheme.CliSuggestionsVisibleClass);
-            _autocompleteContainer.Clear();
-            _completionLabels.Clear();
-            _completions = CompletionResult.Empty;
-            _suggestionIndex = 0;
+            _completions.Close();
         }
     }
 }

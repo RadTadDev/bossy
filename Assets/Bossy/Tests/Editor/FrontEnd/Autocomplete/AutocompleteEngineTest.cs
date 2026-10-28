@@ -65,6 +65,10 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
                 .WithPositional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.Throws), typeof(TestSuggestions))
                 .Generate().GetType();
 
+            var fragile = CommandGenerator.WithName("fragile")
+                .WithOptional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.Throws), typeof(TestSuggestions))
+                .Generate().GetType();
+
             var counted = CommandGenerator.WithName("counted")
                 .WithPositional("thing", typeof(string)).WithSuggestions(nameof(TestSuggestions.Counted), typeof(TestSuggestions))
                 .Generate().GetType();
@@ -73,7 +77,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
                 .WithConstructorCall(typeof(ConstructionCounter).GetMethod(nameof(ConstructionCounter.Increment)))
                 .Generate().GetType();
 
-            var types = new List<Type> { load, wait, vec, tag, pick, level, levelOpen, levelClose, broken, counted, created };
+            var types = new List<Type> { load, wait, vec, tag, pick, level, levelOpen, levelClose, broken, fragile, counted, created };
             var graph = CommandDependencyGraphBuilder.BuildGraph(types);
             var schemas = new SchemaRegistry(SchemaFactory.BuildCommandSchemas(graph));
 
@@ -158,6 +162,25 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
             Assert.That(result.Completions[0].Kind, Is.EqualTo(CompletionKind.Command));
             Assert.That(result.Completions[0].ApplyTo(line), Is.EqualTo("load "));
             Assert.That(Applied(line, result).Skip(1), Is.EqualTo(new[] { "laod \"Main Menu\"", "laod Level1", "laod Level2" }));
+        }
+
+        [Test]
+        public void Complete_TypedText_IsReportedAsMatchRanges()
+        {
+            var result = Complete("load Lev");
+
+            var level = result.Completions.First(c => c.DisplayText == "Level1");
+            Assert.That(level.MatchRanges, Is.EqualTo(new[] { new MatchRange(0, 3) }));
+        }
+
+        [Test]
+        public void Complete_MisspelledCommandFix_HasNoMatchRanges()
+        {
+            var result = Complete("laod Lev");
+
+            Assert.That(result.Completions[0].Kind, Is.EqualTo(CompletionKind.Command));
+            Assert.That(result.Completions[0].MatchRanges, Is.Empty);
+            Assert.That(result.Completions[1].MatchRanges, Is.Not.Empty);
         }
 
         [Test]
@@ -506,7 +529,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         {
             var result = Complete("load Level1 --force ");
 
-            AssertReady(result, "Ready · 2 switches");
+            AssertReady(result, "Ready  2 switches");
             Assert.That(Applied("load Level1 --force ", result), Is.EquivalentTo(new[]
             {
                 "load Level1 --force --verbose",
@@ -592,13 +615,30 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         }
 
         [Test]
-        public void Complete_SuggestionFunctionThrows_ReportsItInHint()
+        public void Complete_SuggestionFunctionThrows_ReportsItApartFromHint()
         {
             var result = Complete("broken ");
 
             Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Hint));
-            Assert.That(result.Message, Does.Contain("Suggestions failed: Broken on purpose"));
-            Assert.That(result.Argument.SuggestionError, Is.EqualTo("Broken on purpose"));
+            Assert.That(result.Message, Is.EqualTo("thing <string>"));
+            Assert.That(result.SuggestionFailure.Argument.Name, Is.EqualTo("thing"));
+            Assert.That(result.SuggestionFailure.Message, Is.EqualTo("Broken on purpose"));
+        }
+
+        [Test]
+        public void Complete_SuggestionFunctionThrowsWhenReady_ReportsItApartFromReady()
+        {
+            var result = Complete("fragile ");
+
+            Assert.That(result.MessageKind, Is.EqualTo(CompletionMessageKind.Ready));
+            Assert.That(result.Message, Is.EqualTo("Ready  1 optional"));
+            Assert.That(result.SuggestionFailure.Message, Is.EqualTo("Broken on purpose"));
+        }
+
+        [Test]
+        public void Complete_SuggestionFunctionWorks_HasNoFailure()
+        {
+            Assert.That(Complete("load ").SuggestionFailure, Is.Null);
         }
 
         [Test]
@@ -631,7 +671,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
 
         private static void AssertInvalid(CompletionResult result, string argumentName, string invalidValue)
         {
-            AssertHint(result, "· invalid");
+            AssertHint(result, "  invalid");
             Assert.That(result.Argument.Argument.Name, Is.EqualTo(argumentName));
             Assert.That(result.Argument.InvalidValue, Is.EqualTo(invalidValue));
         }

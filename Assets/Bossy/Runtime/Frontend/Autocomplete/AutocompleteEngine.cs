@@ -75,6 +75,17 @@ namespace Bossy.Frontend.Autocomplete
 
         private CompletionResult CompleteCommandAtCursor(string line, List<Token> before, CompletionSlot slot)
         {
+            var result = CompleteSlot(line, before, slot, out var correction);
+            result = result.WithMatches(slot.Typed);
+
+            // The correction replaces the command name, not the slot, so it has no matches to show
+            return correction != null ? result.WithFirst(correction) : result;
+        }
+
+        private CompletionResult CompleteSlot(string line, List<Token> before, CompletionSlot slot, out Completion correction)
+        {
+            correction = null;
+
             // Proposal 2: a leading window operator only marks the job as windowed, so completion carries on after it
             if (before.Count > 0 && IsWindowOperator(before[0]))
             {
@@ -121,13 +132,13 @@ namespace Bossy.Frontend.Autocomplete
                 return CompletionResult.Error(new NoMatchingCommandError(commandToken.Text).Message);
             }
 
-            var result = new CompletionWalker(_context, _operators, _userSuggestions, schema, segment.Skip(1).ToList(), slot).Walk();
+            if (corrected)
+            {
+                correction = new Completion(commandToken.Start, commandToken.End, schema.Name, schema.Name,
+                    $"Replaces '{commandToken.Text}'", CompletionKind.Command);
+            }
 
-            if (!corrected) return result;
-
-            var correction = new Completion(commandToken.Start, commandToken.End, schema.Name, schema.Name,
-                $"Replaces '{commandToken.Text}'", CompletionKind.Command);
-            return result.WithFirst(correction);
+            return new CompletionWalker(_context, _operators, _userSuggestions, schema, segment.Skip(1).ToList(), slot).Walk();
         }
 
         private CompletionResult CompleteCommandName(CompletionSlot slot)
