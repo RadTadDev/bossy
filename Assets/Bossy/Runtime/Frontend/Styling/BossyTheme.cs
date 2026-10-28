@@ -106,9 +106,19 @@ namespace Bossy.Frontend
         public const string CliStatusErrorClass = "bossy-cli__status-part--error";
 
         /// <summary>
-        /// A status line piece warning that the typed value is invalid.
+        /// The autocomplete status line while rows show under it, which adds a divider.
         /// </summary>
-        public const string CliStatusWarningClass = "bossy-cli__status-part--warning";
+        public const string CliStatusDividedClass = "bossy-cli__status--divided";
+
+        /// <summary>
+        /// The autocomplete status line while the line has an error or the typed value is invalid.
+        /// </summary>
+        public const string CliStatusErrorStateClass = "bossy-cli__status--error";
+
+        /// <summary>
+        /// The tab above the suggestions while it reports a failing suggestion function. Its transition slides it up.
+        /// </summary>
+        public const string CliSuggestionFailureVisibleClass = "bossy-cli__suggestion-failure--visible";
 
         /// <summary>
         /// A dimmed status line piece, such as value progress or the argument kind.

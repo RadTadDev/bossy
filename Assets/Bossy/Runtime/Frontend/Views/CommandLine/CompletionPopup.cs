@@ -28,6 +28,7 @@ namespace Bossy.Frontend
         private const int VisibleRows = 8;
 
         private readonly VisualElement _container;
+        private readonly Label _failure;
         private readonly VisualElement _status;
         private readonly ListView _rows;
         private readonly List<Completion> _completions = new();
@@ -35,13 +36,15 @@ namespace Bossy.Frontend
         /// <summary>
         /// Creates a popup inside the CLI's autocomplete container.
         /// </summary>
-        /// <param name="container">The container, holding the status line and list elements from BossyCli.uxml.</param>
+        /// <param name="container">The container, holding the failure tab, status line and list elements from BossyCli.uxml.</param>
         public CompletionPopup(VisualElement container)
         {
             _container = container;
+            _failure = container.Q<Label>("completion-failure");
             _status = container.Q("completion-status");
             _rows = container.Q<ListView>("completion-list");
 
+            _failure.pickingMode = PickingMode.Ignore;
             SetUpRows();
         }
 
@@ -62,9 +65,11 @@ namespace Bossy.Frontend
             _container.AddToClassList(BossyTheme.CliSuggestionsVisibleClass);
 
             ShowStatus(list.Result);
+            ShowFailure(list.Result.SuggestionFailure);
 
             _completions.Clear();
             _completions.AddRange(list.Result.Completions);
+            _status.EnableInClassList(BossyTheme.CliStatusDividedClass, _completions.Count > 0);
             _rows.style.display = _completions.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             _rows.style.height = Math.Min(_completions.Count, VisibleRows) * RowHeight;
             _rows.RefreshItems();
@@ -91,6 +96,7 @@ namespace Bossy.Frontend
             List = CompletionList.Empty;
             _container.RemoveFromClassList(BossyTheme.CliSuggestionsVisibleClass);
             _status.Clear();
+            ShowFailure(null);
             _completions.Clear();
             _rows.RefreshItems();
         }
@@ -118,6 +124,16 @@ namespace Bossy.Frontend
 
             builder.Append(Literal(text[index..]));
             return builder.ToString();
+        }
+
+        /// <summary>
+        /// Gets the rich text for the tab that reports a failing suggestion function.
+        /// </summary>
+        /// <param name="failure">The failure.</param>
+        /// <returns>The rich text.</returns>
+        internal static string FailureText(SuggestionFailure failure)
+        {
+            return $"Suggestions for {Format.Bold(Literal(failure.Argument.Name))} failed: {Literal(failure.Message)}";
         }
 
         /// <summary>
@@ -176,13 +192,17 @@ namespace Bossy.Frontend
          * Errors replace the list, so they are the whole status line. A hint about an argument is laid out in
          * pieces: the name and type, progress through a value that takes several tokens, the argument's kind,
          * whether the value is invalid, and the description, which is clipped to the width that is left.
+         * The whole line turns red for an error or an invalid value.
          */
         private void ShowStatus(CompletionResult result)
         {
+            var hint = result.Argument;
+
             _status.Clear();
             _status.style.display = result.MessageKind == CompletionMessageKind.None ? DisplayStyle.None : DisplayStyle.Flex;
+            _status.EnableInClassList(BossyTheme.CliStatusErrorStateClass,
+                result.MessageKind == CompletionMessageKind.Error || hint?.InvalidValue != null);
 
-            var hint = result.Argument;
             if (result.MessageKind != CompletionMessageKind.Hint || hint == null)
             {
                 var kindClass = result.MessageKind switch
@@ -211,18 +231,35 @@ namespace Bossy.Frontend
 
             if (hint.InvalidValue != null)
             {
-                AddStatusPart("invalid", BossyTheme.CliStatusWarningClass);
-            }
-
-            if (hint.SuggestionError != null)
-            {
-                AddStatusPart(Literal($"Suggestions failed: {hint.SuggestionError}"), BossyTheme.CliStatusErrorClass, BossyTheme.CliStatusClipClass);
+                AddStatusPart("invalid", BossyTheme.CliStatusErrorClass);
             }
 
             if (!string.IsNullOrWhiteSpace(argument.Description))
             {
                 AddStatusPart(Literal(argument.Description), BossyTheme.CliStatusMutedClass, BossyTheme.CliStatusClipClass);
             }
+        }
+
+        /*
+         * The tab is shown on the next tick, so that its hidden style has been applied once and the change to the
+         * visible style runs its slide transition, even when the popup opens in the same frame.
+         */
+        private void ShowFailure(SuggestionFailure failure)
+        {
+            if (failure == null)
+            {
+                _failure.RemoveFromClassList(BossyTheme.CliSuggestionFailureVisibleClass);
+                return;
+            }
+
+            _failure.text = FailureText(failure);
+            _failure.schedule.Execute(() =>
+            {
+                if (List.Result.SuggestionFailure != null)
+                {
+                    _failure.AddToClassList(BossyTheme.CliSuggestionFailureVisibleClass);
+                }
+            });
         }
 
         private void AddStatusPart(string text, params string[] classes)

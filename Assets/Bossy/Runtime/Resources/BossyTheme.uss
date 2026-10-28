@@ -12,12 +12,13 @@
     --bossy-text: #e8e6dc;
     --bossy-text-muted: #a3a197;
     --bossy-text-faint: #6f6d66;
-    --bossy-accent: #d97757;
-    --bossy-accent-soft: rgba(217, 119, 87, 0.2);
+    --bossy-accent: #5798d9;
+    --bossy-accent-soft: rgba(87, 152, 217, 0.2);
     --bossy-blue: #8fb8de;
     --bossy-green: #9fca8b;
     --bossy-yellow: #e3c47e;
     --bossy-red: #e58a84;
+    --bossy-red-soft: rgba(229, 138, 132, 0.16);
     --bossy-font-size: 14px;
     --bossy-radius: 8px;
 
@@ -99,11 +100,6 @@
     right: 0;
     bottom: 100%;
     margin-bottom: 6px;
-    padding: 4px;
-    background-color: var(--bossy-surface-raised);
-    border-width: 1px;
-    border-color: var(--bossy-border);
-    border-radius: var(--bossy-radius);
     opacity: 0;
     visibility: hidden;
     transition-property: opacity;
@@ -115,12 +111,72 @@
     visibility: visible;
 }
 
+.bossy-cli__suggestion-box {
+    padding: 4px;
+    background-color: var(--bossy-surface-raised);
+    border-width: 1px;
+    border-color: var(--bossy-border);
+    border-radius: var(--bossy-radius);
+}
+
+/*
+ * A tab that slides up from behind the suggestion box when a suggestion function throws, so the status line
+ * stays about the command. It is hidden behind the top of the box until shown.
+ */
+.bossy-cli__suggestion-failure {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 100%;
+    margin: 0;
+    padding: 3px 8px;
+    background-color: var(--bossy-surface-raised);
+    border-width: 1px 1px 0 1px;
+    border-color: var(--bossy-red);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    color: var(--bossy-red);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    translate: 0 100%;
+    opacity: 0;
+    transition-property: translate, opacity;
+    transition-duration: 180ms;
+    transition-timing-function: ease-out;
+}
+
+.bossy-cli__suggestion-failure--visible {
+    translate: 0 0;
+    opacity: 1;
+}
+
 /* The status line describes the argument being typed, or says the line is ready, or shows an error */
 .bossy-cli__status {
     flex-direction: row;
     align-items: center;
     padding: 3px 8px;
+    border-radius: 4px;
     overflow: hidden;
+}
+
+/* Set while rows show under the status line, so it reads as a header rather than a row */
+.bossy-cli__status--divided {
+    margin-bottom: 4px;
+    border-bottom-width: 1px;
+    border-color: var(--bossy-border);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding-bottom: 5px;
+}
+
+/* Set when the line has an error or the typed value is invalid */
+.bossy-cli__status--error {
+    background-color: var(--bossy-red-soft);
+}
+
+.bossy-cli__status--error > .bossy-cli__status-part--hint {
+    color: var(--bossy-red);
 }
 
 .bossy-cli__status-part {
@@ -141,10 +197,6 @@
 
 .bossy-cli__status-part--error {
     color: var(--bossy-red);
-}
-
-.bossy-cli__status-part--warning {
-    color: var(--bossy-yellow);
 }
 
 .bossy-cli__status-part--muted {

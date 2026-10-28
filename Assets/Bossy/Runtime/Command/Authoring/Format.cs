@@ -57,7 +57,7 @@ namespace Bossy.Command
         /// <summary>
         /// Bossy accent, used for the prompt.
         /// </summary>
-        public static Color Accent = new(0.85f, 0.47f, 0.34f);
+        public static Color Accent = new(0.34f, 0.60f, 0.85f);
         
         /// <summary>
         /// Prints an enumerated list by prepending numbers.

@@ -26,7 +26,7 @@ using RangeAttribute = Bossy.Command.RangeAttribute;
  *   demo tag hello              optional int rejects "hello", so it goes to the variadic
  *   demo pick <Tab>             40 values, no cap; try "it5", "i10", "tem"
  *   demo slow <type slowly>     function sleeps 300 ms but runs once per value slot
- *   demo broken <Tab>           "Suggestions failed: ..." in the status line, nothing in the Unity console
+ *   demo broken <Tab>           a red "Suggestions for thing failed" tab slides up, nothing in the Unity console
  *   demo chain fruit <Tab>      second value's suggestions depend on the first
  *   demo file x.txt             EndsWith validator: parse error on run, not in autocomplete
  *   demo flags -fqv             aggregated bools; -fqn is an error (n takes a value)

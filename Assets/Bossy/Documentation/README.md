@@ -635,7 +635,7 @@ In the editor the command opens in a separate editor window. At runtime it opens
 
 ## Auto Complete
 
-The autocomplete system suggests command names, aliases, subcommands, switches and values based on what you have typed before the cursor. Above the suggestions, a status line describes the argument you are typing: its name and type (for example `scene <string>`), progress through a value that takes several words (`position <Vector3> 2/3`), a small tag for optional arguments (`opt`), switches (`switch`) and variadic arguments (`var`), a warning if the typed value is invalid, and the argument's description. If the line will not parse, the status line shows the error instead of the list. The characters you typed are highlighted in each suggestion, and each suggestion shows its description on the right.
+The autocomplete system suggests command names, aliases, subcommands, switches and values based on what you have typed before the cursor. Above the suggestions, a status line describes the argument you are typing: its name and type (for example `scene <string>`), progress through a value that takes several words (`position <Vector3> 2/3`), a small tag for optional arguments (`opt`), switches (`switch`) and variadic arguments (`var`), and the argument's description. The status line turns red when the typed value is invalid (marked `invalid`), and when the line will not parse it shows the error instead of the list. The characters you typed are highlighted in each suggestion, and each suggestion shows its description on the right.
 
 While suggestions are showing:
 
@@ -686,7 +686,7 @@ where `MySuggesters.MyFunction` is a public static method on `MySuggesters`.
 
 All suggestion functions must be <b>static</b> and return a collection of strings from which `IEnumerable<string>` is assignable (`List<string>`, `string[]`, and others are valid).
 
-A suggestion function runs once when you start typing a value, and its results are reused while you type that value, so it can do expensive work such as searching the project. It runs again when anything typed before the value changes. If it throws, the status line shows `Suggestions failed:` with the exception message. Nothing is written to the Unity console.
+A suggestion function runs once when you start typing a value, and its results are reused while you type that value, so it can do expensive work such as searching the project. It runs again when anything typed before the value changes. If it throws, a small red tab slides up above the suggestions saying which argument's suggestions failed and the exception message. The status line and the rest of the suggestions are unaffected, and nothing is written to the Unity console.
 
 This method is fine for simple cases where the suggestion does not depend on the state of the input or need additional resources. However, you have the option to take in a context object for more complex cases. The single argument allowed must be of type `SuggestionContext`. Consider the following example from the `help` command:
 

@@ -1,6 +1,7 @@
 using Bossy.Command;
 using Bossy.Frontend;
 using Bossy.Frontend.Autocomplete;
+using Bossy.Schema;
 using NUnit.Framework;
 
 namespace Bossy.Tests.FrontEnd.Views
@@ -34,6 +35,16 @@ namespace Bossy.Tests.FrontEnd.Views
             var text = CompletionPopup.HighlightMatches("load", new[] { new MatchRange(2, 5) });
 
             Assert.That(text, Is.EqualTo("<noparse>load</noparse>"));
+        }
+
+        [Test]
+        public void FailureText_NamesArgumentAndReason()
+        {
+            var argument = new ArgumentSchema("scene", "", null, new PositionalAttribute(0, ""), null);
+
+            var text = CompletionPopup.FailureText(new SuggestionFailure(argument, "No <assets>"));
+
+            Assert.That(text, Is.EqualTo($"Suggestions for {Format.Bold("<noparse>scene</noparse>")} failed: <noparse>No <assets></noparse>"));
         }
 
         [Test]

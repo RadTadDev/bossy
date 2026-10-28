@@ -3,8 +3,12 @@
         <ui:ListView name="output-list" class="bossy-cli__output"/>
         <ui:VisualElement name="input-row" class="bossy-cli__input-row">
             <ui:VisualElement name="auto-complete" class="bossy-cli__suggestions">
-                <ui:VisualElement name="completion-status" class="bossy-cli__status"/>
-                <ui:ListView name="completion-list" class="bossy-cli__suggestion-list"/>
+                <!-- Comes before the box so it is drawn behind it and can slide out from under it -->
+                <ui:Label name="completion-failure" class="bossy-cli__suggestion-failure"/>
+                <ui:VisualElement name="completion-box" class="bossy-cli__suggestion-box">
+                    <ui:VisualElement name="completion-status" class="bossy-cli__status"/>
+                    <ui:ListView name="completion-list" class="bossy-cli__suggestion-list"/>
+                </ui:VisualElement>
             </ui:VisualElement>
             <ui:Label name="prompt-label" text="&gt;" class="bossy-cli__prompt"/>
             <ui:TextField name="input-field" class="bossy-cli__input"/>
