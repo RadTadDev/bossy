@@ -260,7 +260,7 @@ namespace Bossy.Frontend.Autocomplete
 
                 if (error != null)
                 {
-                    readyMessage += $" · Suggestions failed: {error}";
+                    readyMessage += $"  Suggestions failed: {error}";
                 }
             }
 
@@ -473,7 +473,7 @@ namespace Bossy.Frontend.Autocomplete
         // --- Messages ---
 
         /*
-         * Proposal 4: a short plain status line for the argument being typed, such as "pos <Vector3> 2/3 · invalid".
+         * Proposal 4: a short plain status line for the argument being typed, such as "pos <Vector3> 2/3  invalid".
          * The description and the argument's kind are left out to keep it short; views that want them read the
          * ArgumentHint instead.
          */
@@ -488,12 +488,12 @@ namespace Bossy.Frontend.Autocomplete
 
             if (hint.InvalidValue != null)
             {
-                text += " · invalid";
+                text += "  invalid";
             }
 
             if (hint.SuggestionError != null)
             {
-                text += $" · Suggestions failed: {hint.SuggestionError}";
+                text += $"  Suggestions failed: {hint.SuggestionError}";
             }
 
             return text;
@@ -515,7 +515,7 @@ namespace Bossy.Frontend.Autocomplete
                 parts.Add(switchCount == 1 ? "1 switch" : $"{switchCount} switches");
             }
 
-            return parts.Count == 0 ? "Ready" : $"Ready · {string.Join(", ", parts)}";
+            return parts.Count == 0 ? "Ready" : $"Ready  {string.Join(", ", parts)}";
         }
 
         private static char ShortName(ArgumentSchema argument)

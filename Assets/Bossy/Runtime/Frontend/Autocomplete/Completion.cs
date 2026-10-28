@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace Bossy.Frontend.Autocomplete
 {
     /// <summary>
@@ -36,6 +39,12 @@ namespace Bossy.Frontend.Autocomplete
         public readonly CompletionKind Kind;
 
         /// <summary>
+        /// The runs of <see cref="DisplayText"/> that matched the typed text, in order, so views can highlight them.
+        /// Empty if nothing was typed or the match was fuzzy.
+        /// </summary>
+        public readonly IReadOnlyList<MatchRange> MatchRanges;
+
+        /// <summary>
         /// The cursor position just past the inserted text, once the completion is applied.
         /// </summary>
         public int CursorAfterApply => Start + InsertText.Length;
@@ -50,6 +59,12 @@ namespace Bossy.Frontend.Autocomplete
         /// <param name="description">A description shown beside the completion.</param>
         /// <param name="kind">What this completion completes.</param>
         public Completion(int start, int end, string insertText, string displayText, string description, CompletionKind kind)
+            : this(start, end, insertText, displayText, description, kind, Array.Empty<MatchRange>())
+        {
+        }
+
+        private Completion(int start, int end, string insertText, string displayText, string description, CompletionKind kind,
+            IReadOnlyList<MatchRange> matchRanges)
         {
             Start = start;
             End = end;
@@ -57,6 +72,7 @@ namespace Bossy.Frontend.Autocomplete
             DisplayText = displayText;
             Description = description ?? string.Empty;
             Kind = kind;
+            MatchRanges = matchRanges;
         }
 
         /// <summary>
@@ -67,6 +83,16 @@ namespace Bossy.Frontend.Autocomplete
         public string ApplyTo(string line)
         {
             return line[..Start] + InsertText + line[End..];
+        }
+
+        /// <summary>
+        /// Makes a copy of this completion with the runs of its display text that match a query.
+        /// </summary>
+        /// <param name="query">The typed text.</param>
+        /// <returns>The new completion.</returns>
+        internal Completion WithMatches(string query)
+        {
+            return new Completion(Start, End, InsertText, DisplayText, Description, Kind, FuzzyMatcher.FindMatches(query, DisplayText));
         }
     }
 }

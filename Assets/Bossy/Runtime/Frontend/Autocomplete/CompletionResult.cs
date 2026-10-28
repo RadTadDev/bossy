@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Bossy.Frontend.Autocomplete
 {
@@ -87,6 +88,18 @@ namespace Bossy.Frontend.Autocomplete
         public static CompletionResult Error(string message)
         {
             return new CompletionResult(message, CompletionMessageKind.Error, Array.Empty<Completion>());
+        }
+
+        /// <summary>
+        /// Makes a copy of this result whose completions carry the runs of their display text that match a query.
+        /// </summary>
+        /// <param name="query">The typed text.</param>
+        /// <returns>The new result.</returns>
+        internal CompletionResult WithMatches(string query)
+        {
+            if (string.IsNullOrEmpty(query) || Completions.Count == 0) return this;
+
+            return new CompletionResult(Message, MessageKind, Completions.Select(c => c.WithMatches(query)).ToList(), Argument);
         }
 
         /// <summary>

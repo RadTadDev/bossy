@@ -161,6 +161,25 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         }
 
         [Test]
+        public void Complete_TypedText_IsReportedAsMatchRanges()
+        {
+            var result = Complete("load Lev");
+
+            var level = result.Completions.First(c => c.DisplayText == "Level1");
+            Assert.That(level.MatchRanges, Is.EqualTo(new[] { new MatchRange(0, 3) }));
+        }
+
+        [Test]
+        public void Complete_MisspelledCommandFix_HasNoMatchRanges()
+        {
+            var result = Complete("laod Lev");
+
+            Assert.That(result.Completions[0].Kind, Is.EqualTo(CompletionKind.Command));
+            Assert.That(result.Completions[0].MatchRanges, Is.Empty);
+            Assert.That(result.Completions[1].MatchRanges, Is.Not.Empty);
+        }
+
+        [Test]
         public void Complete_AliasName_IsSuggestedWithItsExpansion()
         {
             _aliases["ld"] = "load Level1";
@@ -506,7 +525,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         {
             var result = Complete("load Level1 --force ");
 
-            AssertReady(result, "Ready · 2 switches");
+            AssertReady(result, "Ready  2 switches");
             Assert.That(Applied("load Level1 --force ", result), Is.EquivalentTo(new[]
             {
                 "load Level1 --force --verbose",
@@ -631,7 +650,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
 
         private static void AssertInvalid(CompletionResult result, string argumentName, string invalidValue)
         {
-            AssertHint(result, "· invalid");
+            AssertHint(result, "  invalid");
             Assert.That(result.Argument.Argument.Name, Is.EqualTo(argumentName));
             Assert.That(result.Argument.InvalidValue, Is.EqualTo(invalidValue));
         }
