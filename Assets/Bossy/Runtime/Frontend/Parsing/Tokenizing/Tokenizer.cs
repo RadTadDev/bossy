@@ -16,19 +16,19 @@ namespace Bossy.Frontend.Parsing
         /// <param name="line">The string to tokenize.</param>
         /// <param name="operators">A list of operators to split on.</param>
         /// <returns>The list of tokens.</returns>
-        public static List<string> Tokenize(string line, IEnumerable<string> operators = null)
+        public static List<Token> Tokenize(string line, IEnumerable<string> operators = null)
         {
-            if (string.IsNullOrWhiteSpace(line)) return new List<string>();
+            if (string.IsNullOrWhiteSpace(line)) return new List<Token>();
 
             var ops = operators?.OrderByDescending(o => o.Length).ToList() ?? new List<string>();
             var segments = SplitOnOperators(line, ops);
 
-            var result = new List<string>();
-            foreach (var segment in segments)
+            var result = new List<Token>();
+            foreach (var (segment, isOperator) in segments)
             {
-                if (ops.Contains(segment))
+                if (isOperator)
                 {
-                    result.Add(segment);
+                    result.Add(new Token(segment, isOperator: true));
                     continue;
                 }
 
@@ -43,15 +43,16 @@ namespace Bossy.Frontend.Parsing
                             if (m.Groups[3].Success) return m.Groups[3].Value == "\\" ? "\\" : m.Groups[3].Value;
                             return m.Groups[4].Value;
                         });
-                    result.Add(token);
+                    var isQuoted = match.Value.IndexOfAny(new[] { '"', '\'', '\\' }) >= 0;
+                    result.Add(new Token(token, isQuoted: isQuoted));
                 }
             }
             return result;
         }
 
-        private static List<string> SplitOnOperators(string line, List<string> operators)
+        private static List<(string Text, bool IsOperator)> SplitOnOperators(string line, List<string> operators)
         {
-            var segments = new List<string>();
+            var segments = new List<(string Text, bool IsOperator)>();
             var current = new StringBuilder();
             bool inDouble = false, inSingle = false;
             int i = 0;
@@ -79,8 +80,8 @@ namespace Bossy.Frontend.Parsing
 
                     if (matched != null)
                     {
-                        if (current.Length > 0) { segments.Add(current.ToString()); current.Clear(); }
-                        segments.Add(matched);
+                        if (current.Length > 0) { segments.Add((current.ToString(), false)); current.Clear(); }
+                        segments.Add((matched, true));
                         i += matched.Length;
                         continue;
                     }
@@ -90,7 +91,7 @@ namespace Bossy.Frontend.Parsing
                 i++;
             }
 
-            if (current.Length > 0) segments.Add(current.ToString());
+            if (current.Length > 0) segments.Add((current.ToString(), false));
             return segments;
         }
 

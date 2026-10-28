@@ -65,7 +65,7 @@ namespace Bossy.Frontend.Autocomplete
         {
             // The predicted line can be non null when predicting graphs
             var predictedLine = prefix ?? string.Empty;
-            var stream = new TokenStream(Tokenizer.Tokenize(line, _operators.ToEnumerable()));
+            var stream = new TokenStream(Tokenizer.Tokenize(line, _operators.ToEnumerable()).Select(t => t.Text));
             
             // Returns a bool indicating whether to continue or not
             if (!HandleResolvingCommand(predictNext, stream, predictedLine, out var schema, out var cmdSuggestions))
@@ -868,7 +868,7 @@ namespace Bossy.Frontend.Autocomplete
                     return false;
                 }
 
-                var completion = new ReadOnlyCompletionContext(context, Tokenizer.Tokenize(predictedLine));
+                var completion = new ReadOnlyCompletionContext(context, Tokenizer.Tokenize(predictedLine).Select(t => t.Text).ToList());
                 args = new object[] { new SuggestionContext(_context, context.Schema, completion) };
             }
             

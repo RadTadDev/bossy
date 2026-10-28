@@ -294,6 +294,8 @@ Multiple boolean switches can be combined:
 > mycommand -vr
 ```
 
+Only boolean switches can be combined. A switch that takes a value must be written on its own, so `mycommand -vi 5` is an error, while `mycommand -v -i 5` works.
+
 Non boolean switches require values:
 
 ```csharp
@@ -315,6 +317,9 @@ private float _increment;
 cmd -- my variadic list --consumed
 ```
 will send all arguments, including `--consumed` to the variadic argument.
+- A dash followed by a number, such as `-5` or `-1.5`, is a negative number, never a switch. Switch short names are always letters, so `mycommand -i -5` passes `-5` as the value of `-i`.
+- Quoting or escaping makes text literal. A quoted switch such as `"-v"` or `\-v` is a plain value, not a switch, and a quoted `"--"` does not stop switch parsing.
+- The same goes for operators. `print "!"` prints `!` instead of running `print` in a window, and `print "a | b"` prints `a | b` instead of piping.
 
 ---
 

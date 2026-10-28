@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -90,18 +91,26 @@ namespace Bossy.Frontend.Parsing
                     : aliases.TryGetValue(m.Value, out var alias) ? alias : m.Value));
         }
 
-        private ParseStep<List<ParseNode>> MakePipeline(List<string> tokens, OperatorList operators, out bool isWindowed)
+        private ParseStep<List<ParseNode>> MakePipeline(List<Token> tokens, OperatorList operators, out bool isWindowed)
         {
             var pipeline = new List<ParseNode>();
-            var current = new List<string>();
+            var current = new List<Token>();
             string lastOperator = null;
             isWindowed = false;
-            
+
             for (var i = 0; i < tokens.Count; i++)
             {
-                var token = tokens[i];
+                var token = tokens[i].Text;
                 var isFirst = i == 0;
                 var isLast = i == tokens.Count - 1;
+
+                // Quoted text that looks like an operator is a plain value
+                if (!tokens[i].IsOperator)
+                {
+                    current.Add(tokens[i]);
+                    lastOperator = null;
+                    continue;
+                }
 
                 if (token == operators.WindowOperator)
                 {
@@ -115,28 +124,19 @@ namespace Bossy.Frontend.Parsing
                     continue;
                 }
 
-                var link = TokenToLink(operators, token);
-                if (link.HasValue)
+                if (lastOperator != null)
                 {
-                    if (lastOperator != null)
-                    {
-                        return ParseStep<List<ParseNode>>.Fail(new ContiguousOperatorsError(lastOperator, token));
-                    }
-
-                    if (isFirst || isLast)
-                    {
-                        return ParseStep<List<ParseNode>>.Fail(new BadOperatorPositionError(token));
-                    }
-
-                    pipeline.Add(new ParseNode(current, link.Value));
-                    current = new List<string>();
-                    lastOperator = token;
+                    return ParseStep<List<ParseNode>>.Fail(new ContiguousOperatorsError(lastOperator, token));
                 }
-                else
+
+                if (isFirst || isLast)
                 {
-                    current.Add(token);
-                    lastOperator = null;
+                    return ParseStep<List<ParseNode>>.Fail(new BadOperatorPositionError(token));
                 }
+
+                pipeline.Add(new ParseNode(current, TokenToLink(operators, token)));
+                current = new List<Token>();
+                lastOperator = token;
             }
 
             if (current.Count > 0)
@@ -146,18 +146,18 @@ namespace Bossy.Frontend.Parsing
             return ParseStep<List<ParseNode>>.Ok(pipeline);
         }
         
-        private CommandGraphLink? TokenToLink(OperatorList operators, string token)
+        private CommandGraphLink TokenToLink(OperatorList operators, string token)
         {
             if (token == operators.ThenOperator) return CommandGraphLink.Then;
             if (token == operators.AndOperator) return CommandGraphLink.And;
             if (token == operators.OrOperator) return CommandGraphLink.Or;
             if (token == operators.PipeOperator) return CommandGraphLink.Pipe;
-            return null;
+            throw new ArgumentOutOfRangeException(nameof(token), token, "Token is not a linking operator.");
         }
 
-        private ParseStep<(ICommand, CommandSchema)> ParseCommand(IEnumerable<string> tokens)
+        private ParseStep<(ICommand, CommandSchema)> ParseCommand(IReadOnlyList<Token> tokens)
         {
-            var stream = new TokenStream(tokens);
+            var stream = new TokenStream(Texts(tokens));
             
             var result = GetSchema(stream);
             if (result.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(result.Error);
@@ -166,11 +166,12 @@ namespace Bossy.Frontend.Parsing
             // Begin parsing command as per schema
             var command = schema.Instantiate();
             
-            // 1. Explode remaining tokens into arg list
-            var argTokens = stream.Explode();
+            // 1. Collect the tokens after the command path into the arg list
+            var argTokens = tokens.Skip(stream.Cursor).ToList();
             
             // 2. Expand aggregate flags
-            ExpandAggregateFlags(argTokens);
+            var aggregateResult = ExpandAggregateFlags(argTokens, schema);
+            if (aggregateResult.IsError) return ParseStep<(ICommand, CommandSchema)>.Fail(aggregateResult.Error);
             
             // 3. Foreach flag starting with - or -- ensure match in schema
             var switchResult = ParseSwitches(argTokens, schema, command);
@@ -191,21 +192,22 @@ namespace Bossy.Frontend.Parsing
             return ParseStep<(ICommand, CommandSchema)>.Ok((command, schema));
         }
 
-        private ParseStep ParseSwitches(List<string> argTokens, CommandSchema schema, ICommand command)
+        private ParseStep ParseSwitches(List<Token> argTokens, CommandSchema schema, ICommand command)
         {
             var idx = 0;
             
             while (idx < argTokens.Count)
             {
                 ArgumentSchema argSchema;
-                var token = argTokens[idx];
                 
                 // 1. Only match with - or -- style arguments
-                if (!token.StartsWith("-"))
+                if (!IsSwitch(argTokens[idx]))
                 {
                     idx++;
                     continue;
                 }
+                
+                var token = argTokens[idx].Text;
                 
                 // 2. Get matching argument in schema
                 if (token.StartsWith("--"))
@@ -232,13 +234,13 @@ namespace Bossy.Frontend.Parsing
                 
                 // 3. Remove name from tokens and create greedy substream
                 argTokens.RemoveAt(idx);
-                var substream = new TokenStream(argTokens.GetRange(idx, argTokens.Count - idx));
+                var substream = new TokenStream(Texts(argTokens.GetRange(idx, argTokens.Count - idx)));
                 
                 // 4. Parse and remove consumed tokens 
                 var adaptResult = _adapterRegistry.TryConvert(argSchema.Type, substream, out var value);
                 if (!adaptResult.Success)
                 {
-                    token = argTokens.Count > idx ? argTokens[idx] : "(null)";
+                    token = argTokens.Count > idx ? argTokens[idx].Text : "(null)";
                     return ParseStep.Fail(new TypeAdaptError(argSchema.Type, token, adaptResult.ErrorMessage));
                 }
                 
@@ -251,7 +253,7 @@ namespace Bossy.Frontend.Parsing
             return ParseStep.Ok();
         }
 
-        private ParseStep ParsePositionals(List<string> argTokens, CommandSchema schema, ICommand command)
+        private ParseStep ParsePositionals(List<Token> argTokens, CommandSchema schema, ICommand command)
         {
             var positionals = schema.GetOrderedPositionalArguments();
 
@@ -265,11 +267,11 @@ namespace Bossy.Frontend.Parsing
                 }
                 
                 // 3. Try parsing the tokens to the argument schema and remove consumed tokens
-                var substream = new TokenStream(argTokens);
+                var substream = new TokenStream(Texts(argTokens));
                 var adaptResult = _adapterRegistry.TryConvert(argSchema.Type, substream, out var value, true);
                 if (!adaptResult.Success)
                 {
-                    return ParseStep.Fail(new TypeAdaptError(argSchema.Type, argTokens[0], adaptResult.ErrorMessage));
+                    return ParseStep.Fail(new TypeAdaptError(argSchema.Type, argTokens[0].Text, adaptResult.ErrorMessage));
                 }
                 
                 argTokens.RemoveRange(0, substream.Cursor);
@@ -281,7 +283,7 @@ namespace Bossy.Frontend.Parsing
             return ParseStep.Ok();
         }
         
-        private ParseStep ParseOptionals(List<string> argTokens, CommandSchema schema, ICommand command)
+        private ParseStep ParseOptionals(List<Token> argTokens, CommandSchema schema, ICommand command)
         {
             var optionals = schema.GetOrderedOptionalArguments();
 
@@ -292,14 +294,14 @@ namespace Bossy.Frontend.Parsing
                 if (argTokens.Count <= 0) return ParseStep.Ok();
                 
                 // 3. Try parsing the tokens to the argument schema and remove consumed tokens
-                var substream = new TokenStream(argTokens);
+                var substream = new TokenStream(Texts(argTokens));
                 var adaptResult = _adapterRegistry.TryConvert(argSchema.Type, substream, out var value, true);
 
                 if (!adaptResult.Success)
                 {
                     if (!schema.TryGetVariadic(out _))
                     {
-                        return ParseStep.Fail(new TypeAdaptError(argSchema.Type, argTokens[0], adaptResult.ErrorMessage));
+                        return ParseStep.Fail(new TypeAdaptError(argSchema.Type, argTokens[0].Text, adaptResult.ErrorMessage));
                     }
                     return ParseStep.Ok();
                 }
@@ -313,13 +315,13 @@ namespace Bossy.Frontend.Parsing
             return ParseStep.Ok();
         }
 
-        private ParseStep ParseVariadic(List<string> argTokens, CommandSchema schema, ICommand command)
+        private ParseStep ParseVariadic(List<Token> argTokens, CommandSchema schema, ICommand command)
         {
             // 1. If there are not variadic args, we are done but must check for unexpected tokens
             if (!schema.TryGetVariadic(out var variadic))
             {
                 return argTokens.Count > 0 
-                    ? ParseStep.Fail(new UnexpectedTokensError(argTokens))
+                    ? ParseStep.Fail(new UnexpectedTokensError(Texts(argTokens).ToList()))
                     :  ParseStep.Ok();
             }
 
@@ -331,11 +333,11 @@ namespace Bossy.Frontend.Parsing
             // 2. Loop over all remaining tokens to put into variadic args
             while (argTokens.Count > 0)
             {
-                var substream = new TokenStream(argTokens);
+                var substream = new TokenStream(Texts(argTokens));
                 var result = _adapterRegistry.TryConvert(type, substream, out var value, true);
                 if (!result.Success)
                 {
-                    return ParseStep.Fail(new TypeAdaptError(type, argTokens[0], result.ErrorMessage));
+                    return ParseStep.Fail(new TypeAdaptError(type, argTokens[0].Text, result.ErrorMessage));
                 }
                 
                 argTokens.RemoveRange(0, substream.Cursor);
@@ -356,19 +358,60 @@ namespace Bossy.Frontend.Parsing
             return ParseStep.Ok();
         }
         
-        private static void ExpandAggregateFlags(List<string> tokens)
+        private static ParseStep ExpandAggregateFlags(List<Token> tokens, CommandSchema schema)
         {
             for (var i = 0; i < tokens.Count; i++)
             {
-                var token = tokens[i];
+                if (!IsSwitch(tokens[i])) continue;
+                
+                var token = tokens[i].Text;
 
-                if (!token.StartsWith("-") || token.StartsWith("--") || token.Length <= 2) continue;
+                // Nothing after "--" is a switch, so nothing after it is expanded
+                if (token == "--") return ParseStep.Ok();
 
-                var flags = token[1..].Select(f => $"-{f}").ToList();
+                if (token.StartsWith("--") || token.Length <= 2) continue;
+
+                // Only bool switches can be combined, since any other switch needs a value after it
+                foreach (var shortName in token[1..])
+                {
+                    if (!schema.TryFindSwitch(shortName, out var argSchema))
+                    {
+                        return ParseStep.Fail(new InvalidSwitchError($"-{shortName}"));
+                    }
+
+                    if (argSchema.Type != typeof(bool))
+                    {
+                        return ParseStep.Fail(new NonBoolAggregateSwitchError(token, shortName));
+                    }
+                }
+
+                var flags = token[1..].Select(f => new Token($"-{f}")).ToList();
                 tokens.RemoveAt(i);
                 tokens.InsertRange(i, flags);
                 i += flags.Count - 1;
             }
+
+            return ParseStep.Ok();
+        }
+
+        private static bool IsSwitch(Token token)
+        {
+            // Quoted text is always a value, and so are negative numbers
+            return !token.IsQuoted && token.Text.StartsWith("-") && !IsNegativeNumber(token.Text);
+        }
+
+        private static IEnumerable<string> Texts(IEnumerable<Token> tokens)
+        {
+            return tokens.Select(t => t.Text);
+        }
+
+        private static bool IsNegativeNumber(string token)
+        {
+            // Short switch names are always letters, so a dash followed by a number is never a switch
+            return token.Length > 1
+                   && token[0] == '-'
+                   && (char.IsDigit(token[1]) || token[1] == '.')
+                   && double.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
         }
 
         private ParseStep<CommandSchema> GetSchema(TokenStream stream)
