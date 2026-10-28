@@ -635,7 +635,18 @@ In the editor the command opens in a separate editor window. At runtime it opens
 
 ## Auto Complete
 
-The autocomplete system suggests command names, aliases, subcommands, switches and values based on what you have typed before the cursor. Above the suggestions, a status line describes the argument you are typing (for example `scene <string>` followed by its description, or `position <Vector3> 2/3` while typing a value that takes several words), or shows an error if the line will not parse. Cycle through the suggestions with the `tab` key; if the list is not showing, `tab` also brings it up. A suggestion replaces the whole word at the cursor and keeps anything you typed after it.
+The autocomplete system suggests command names, aliases, subcommands, switches and values based on what you have typed before the cursor. Above the suggestions, a status line describes the argument you are typing: its name and type (for example `scene <string>`), progress through a value that takes several words (`position <Vector3> 2/3`), a small tag for optional arguments (`opt`), switches (`switch`) and variadic arguments (`var`), a warning if the typed value is invalid, and the argument's description. If the line will not parse, the status line shows the error instead of the list. The characters you typed are highlighted in each suggestion, and each suggestion shows its description on the right.
+
+While suggestions are showing:
+
+| Key          | Action                                                                                         |
+|--------------|------------------------------------------------------------------------------------------------|
+| `down`, `up` | Move the highlight. The first suggestion is highlighted to begin with.                         |
+| `tab`        | Accept the highlighted suggestion and add a space, so the next suggestions show straight away. |
+| `escape`     | Hide the suggestions. Press `tab` to bring them back.                                          |
+| `enter`      | Run the line as typed. It never accepts a suggestion.                                          |
+
+When the list is hidden or shows only a status line, `up` and `down` browse your history instead. A suggestion replaces the whole word at the cursor and keeps anything you typed after it.
 
 Suggestions are ranked: exact matches first, then prefixes, then matches at the start of a word segment (`ul` finds `unity-log`), then matches anywhere in the name, and finally close misspellings. A misspelled command still gets suggestions for the closest command, and the fix is offered as the first suggestion.
 
