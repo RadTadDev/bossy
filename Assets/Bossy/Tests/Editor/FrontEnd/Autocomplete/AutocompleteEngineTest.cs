@@ -13,7 +13,8 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
 {
     /// <summary>
     /// Tests the <see cref="AutocompleteEngine"/>. The rule numbers (R1 to R31, B1 to B9, and the numbered
-    /// proposals) match the comments in <see cref="CompletionWalker"/> and <see cref="AutocompleteEngine"/>.
+    /// proposals) match the comments in <see cref="CompletionWalker"/> and <see cref="AutocompleteEngine"/>, and are
+    /// listed in Documentation/AutocompleteRules.md.
     /// </summary>
     internal class AutocompleteEngineTest
     {

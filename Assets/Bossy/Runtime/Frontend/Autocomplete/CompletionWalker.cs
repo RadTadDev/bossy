@@ -11,8 +11,8 @@ namespace Bossy.Frontend.Autocomplete
     /// <summary>
     /// Walks the tokens of one command, the way the parser binds them, and completes the slot at the cursor.
     /// Each token before the cursor is either read and the walk goes on, or it ends the walk with a result,
-    /// such as an error. Rule numbers (R1 to R31, B1 to B9) and proposal numbers refer to the autocomplete design
-    /// rules, each pinned by a test in AutocompleteEngineTest.
+    /// such as an error. Rule numbers (R1 to R31, B1 to B9) and proposal numbers refer to the rule catalogue in
+    /// Documentation/AutocompleteRules.md, each pinned by a test in AutocompleteEngineTest.
     /// </summary>
     internal class CompletionWalker
     {
