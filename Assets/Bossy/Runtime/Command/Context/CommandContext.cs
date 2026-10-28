@@ -38,9 +38,8 @@ namespace Bossy.Command
             IWriteable writer,
             bool allowRetry,
             CancellationToken token
-        ) : base(writer, context)
+        ) : base(session, writer, context)
         {
-            Session = session;
             _reader = reader;
             _allowRetry = allowRetry;
             _token = token;

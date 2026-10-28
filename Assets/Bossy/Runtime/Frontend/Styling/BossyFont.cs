@@ -36,9 +36,13 @@ namespace Bossy.Frontend
         private const int AtlasPadding = 4;
         private const int AtlasSize = 1024;
 
-        // The space and non-breaking space, whose glyphs are empty. They are added when the font is created so they
-        // can be moved off the atlas.
-        private static readonly string EmptyGlyphCharacters = " " + (char)0x00A0;
+        // Characters whose glyphs are empty: tab, line feed, carriage return, space, non-breaking space and zero-width
+        // space. They are added when the font is created so they can be moved off the atlas. Text can reach any of them,
+        // for example through line breaks, and UI Toolkit measures empty text with a zero-width space.
+        private static readonly string EmptyGlyphCharacters = new(new[]
+        {
+            (char)0x0009, (char)0x000A, (char)0x000D, (char)0x0020, (char)0x00A0, (char)0x200B
+        });
 
         // Outside the atlas, past the bottom left corner, so that a quad drawn for an empty glyph samples only the
         // clamped edge texel. No glyph writes that texel, because glyphs are packed at least one texel in.

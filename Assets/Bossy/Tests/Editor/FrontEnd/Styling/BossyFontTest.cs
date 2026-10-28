@@ -113,8 +113,10 @@ namespace Bossy.Tests.FrontEnd.Styling
             // A quad drawn for an empty glyph inside the atlas picked up the edge of a neighbor, which showed as a speck in every space
             var empty = asset.glyphLookupTable.Values.Where(g => g.glyphRect.width == 0 || g.glyphRect.height == 0).ToList();
 
+            var inside = empty.Where(g => g.glyphRect.x >= 0 || g.glyphRect.y >= 0).Select(g => $"glyph {g.index} at ({g.glyphRect.x},{g.glyphRect.y})");
+
             Assert.That(empty, Is.Not.Empty, "The space glyph was not added.");
-            Assert.That(empty.All(g => g.glyphRect.x < 0 && g.glyphRect.y < 0), Is.True, "An empty glyph points inside the atlas.");
+            Assert.That(inside, Is.Empty, "Empty glyphs point inside the atlas.");
             Assert.That(asset.atlasTextures.All(t => t.wrapMode == TextureWrapMode.Clamp), Is.True, "The atlas is not clamped.");
         }
     }
