@@ -268,73 +268,99 @@ namespace Bossy.Command
 
         private async Task<T> ReadInternalAsync<T>(IReadable input, IReadOnlyList<ReadChoice> choices = null)
         {
-            object response;
-            var triedAdapting = false;
-            TypeAdapterResult adapterResult = default;
-
             // Choice prompts always retry, so the user can pick one of the options
             var canRetry = _allowRetry || choices != null;
 
-            do
+            while (true)
             {
                 _token.ThrowIfCancellationRequested();
 
-                response = await input.ReadAsync(new ReadRequest(typeof(T), choices), _token);
+                var response = await input.ReadAsync(new ReadRequest(typeof(T), choices), _token);
 
                 if (response == CloseWriterSentinel.Object)
                 {
                     throw new BossyStreamClosedException();
                 }
 
-                if (choices != null && response is string text && TryPickChoice(text, choices, out var picked))
+                if (TryInterpret(response, choices, out T value, out var error))
                 {
-                    return (T)picked;
+                    return value;
                 }
 
-                if (response is T original && (choices == null || IsChoice(original, choices)))
+                if (!canRetry)
                 {
-                    return original;
+                    throw new BossyNotAdaptableException(error);
                 }
 
-                if (response is string textual)
-                {
-                    triedAdapting = true;
-                    adapterResult = Bossy.TypeAdapterRegistry.TryConvert(textual, out T typed, true);
+                Writer.Write($"{error}\nPlease enter a valid response:");
+            }
+        }
 
-                    if (adapterResult.Success && (choices == null || IsChoice(typed, choices)))
-                    {
-                        return typed;
-                    }
-                }
+        /// <summary>
+        /// Converts a response to the requested type, or describes why it cannot be converted.
+        /// </summary>
+        private bool TryInterpret<T>(object response, IReadOnlyList<ReadChoice> choices, out T value, out string error)
+        {
+            if (choices != null && response is string text && TryPickChoice(text, choices, out var picked))
+            {
+                value = (T)picked;
+                error = null;
+                return true;
+            }
 
-                // Catch and allow all numeric conversions
+            if (!TryConvertResponse(response, out value, out error))
+            {
+                return false;
+            }
+
+            if (choices != null && !IsChoice(value, choices))
+            {
+                error = $"\"{value}\" is not one of the options.";
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Converts a response to the requested type, ignoring choices.
+        /// </summary>
+        private bool TryConvertResponse<T>(object response, out T value, out string error)
+        {
+            if (response is T typed)
+            {
+                value = typed;
+                error = null;
+                return true;
+            }
+
+            if (response is string textual)
+            {
+                var result = Bossy.TypeAdapterRegistry.TryConvert(textual, out value, true);
+                error = result.Success ? null : $"Could not parse response to type \"{typeof(T).GetFriendlyName()}\":\n{result.ErrorMessage}";
+                return result.Success;
+            }
+
+            // Numbers and other simple values convert directly. Enums are excluded because Convert.ChangeType cannot produce them.
+            if (response is IConvertible && typeof(IConvertible).IsAssignableFrom(typeof(T)) && !typeof(T).IsEnum)
+            {
                 try
                 {
-                    var casted = (T)Convert.ChangeType(response, typeof(T));
-
-                    if (choices == null || IsChoice(casted, choices))
-                    {
-                        return casted;
-                    }
+                    value = (T)Convert.ChangeType(response, typeof(T));
+                    error = null;
+                    return true;
                 }
-                catch
+                catch (Exception exception) when (exception is OverflowException or InvalidCastException)
                 {
-                    // Cast failed, ignore
+                    // Out of range for the requested type, reported below
                 }
-
-                if (canRetry)
-                {
-                    Writer.Write($"\"{response}\" of type \"{response.GetType().GetFriendlyName()}\" could not be converted to type \"{typeof(T).GetFriendlyName()}. Please enter a valid response:");
-                }
-
-            } while (canRetry);
-
-            if (triedAdapting)
-            {
-                throw new BossyNotAdaptableException($"Could not parse response to type \"{typeof(T).GetFriendlyName()}\":\n{adapterResult.ErrorMessage}");
             }
-            
-            throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type {typeof(T).GetFriendlyName()}");
+
+            var responseType = response?.GetType().GetFriendlyName() ?? "null";
+
+            value = default;
+            error = $"\"{response}\" of type \"{responseType}\" could not be converted to type \"{typeof(T).GetFriendlyName()}\"";
+            return false;
         }
         
         /// <summary>

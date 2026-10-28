@@ -22,16 +22,24 @@ namespace Bossy.Frontend.Parsing
         public TypeAdapterResult TryConvert<T>(string input, out T output, bool requireExplicitBool = false)
         {
             var stream = new TokenStream(input);
-            
-            output = default;
-            
-            var result = TryConvert(typeof(T), stream, out var obj);
 
-            if (result.Success)
+            output = default;
+
+            var result = TryConvert(typeof(T), stream, out var obj, requireExplicitBool);
+
+            if (!result.Success)
             {
-                output = (T)obj;
+                return result;
             }
-            
+
+            // The whole input has to be the value, so anything left over is an error
+            if (stream.Remaining > 0)
+            {
+                stream.TryConsume(stream.Remaining, out var leftover);
+                return TypeAdapterResult.Fail($"Unexpected input \"{string.Join(" ", leftover)}\" after the value", 0);
+            }
+
+            output = (T)obj;
             return result;
         }
         
