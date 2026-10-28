@@ -39,8 +39,6 @@ namespace Bossy.Frontend
         private readonly BossyContext _context;
         private readonly InputVisibility _inputVisibility;
 
-        private readonly Dictionary<Type, ICliDisplayAdapter> _displayAdapters = new();
-
         // Output
         private readonly ListView _output;
         private readonly List<string> _outputBuffer = new() { string.Empty };
@@ -51,7 +49,6 @@ namespace Bossy.Frontend
         private TaskCompletionSource<object> _readSource;
         private bool _reading;
         private bool _requestingCommand;
-        private ICliDisplayAdapter _currentReadOwner;
 
         // History
         private readonly CommandHistory _history;
@@ -80,7 +77,6 @@ namespace Bossy.Frontend
             _history = history;
             _historyIndex = _history.Lines.Count;
             _autocomplete = new AutocompleteEngine(_context, context.Settings.BossyCliSettings.ToOperatorList());
-            _displayAdapters[typeof(OptionsPrompt)] = new OptionsPromptDisplayAdapter();
 
             Root = ContentViewUtility.GetRootFromUxml("BossyCli");
 
@@ -116,7 +112,7 @@ namespace Bossy.Frontend
 
         public void Write(object value)
         {
-            _outputBuffer.Add(DisplayObject(value));
+            _outputBuffer.Add(value.ToString());
             _output.RefreshItems();
             _output.ScrollToItem(_outputBuffer.Count - 1);
         }
@@ -125,6 +121,12 @@ namespace Bossy.Frontend
         {
             _requestingCommand = request.RequestedType == typeof(CommandGraph);
             _readSource = new TaskCompletionSource<object>();
+
+            // Choices are numbered from 1, and the reader maps the typed number back to the choice
+            for (var i = 0; request.Choices != null && i < request.Choices.Count; i++)
+            {
+                Write($"{i + 1}: {request.Choices[i].Display}");
+            }
 
             // Start browsing from the end, after anything the last command added to the history
             _historyIndex = _history.Lines.Count;
@@ -232,33 +234,11 @@ namespace Bossy.Frontend
             _inputRow.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
-        private string DisplayObject(object value)
-        {
-            if (_displayAdapters.TryGetValue(value.GetType(), out var adapter))
-            {
-                if (adapter.OwnsRead())
-                {
-                    _currentReadOwner = adapter;
-                }
-                return adapter.Display(value);
-            }
-
-            return value.ToString();
-        }
-
         private void Submit()
         {
             var line = _input.value;
 
             Write($"{Format.Color($"{_promptHeader}>", Format.Accent)} {line}");
-
-            object result = line;
-
-            if (_currentReadOwner != null)
-            {
-                result = _currentReadOwner.Read(line);
-                _currentReadOwner = null;
-            }
 
             SetInput(string.Empty);
             ClearAutocomplete();
@@ -274,7 +254,7 @@ namespace Bossy.Frontend
 
             SetInputEnabled(false);
             _inputRow.Focus();
-            _readSource.TrySetResult(result);
+            _readSource.TrySetResult(line);
         }
 
         private void FocusInput()

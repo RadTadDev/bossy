@@ -259,73 +259,75 @@ namespace Bossy.Command
         /// <returns>The selected choice.</returns>
         public async Task<T> PromptWithOptions<T>(IEnumerable<Option<T>> options, string prompt = null)
         {
-            var list = options.ToList();
-            
-            while (true)
-            {
-                Write(prompt ?? "Chose one of the following options:");
-                
-                Write(OptionsPrompt.Create(list));
-                
-                var choice = await ReadAsync<T>();
-                
-                if (list.Select(o => o.Value).Contains(choice))
-                {
-                    return choice;
-                }
-            }
+            var choices = options.Select(o => new ReadChoice(o.Display, o.Value)).ToList();
+
+            Write(prompt ?? "Chose one of the following options:");
+
+            return await ReadInternalAsync<T>(_reader, choices);
         }
 
-        private async Task<T> ReadInternalAsync<T>(IReadable input)
+        private async Task<T> ReadInternalAsync<T>(IReadable input, IReadOnlyList<ReadChoice> choices = null)
         {
             object response;
             var triedAdapting = false;
             TypeAdapterResult adapterResult = default;
 
+            // Choice prompts always retry, so the user can pick one of the options
+            var canRetry = _allowRetry || choices != null;
+
             do
             {
                 _token.ThrowIfCancellationRequested();
 
-                response = await input.ReadAsync(new ReadRequest(typeof(T)), _token);
-            
+                response = await input.ReadAsync(new ReadRequest(typeof(T), choices), _token);
+
                 if (response == CloseWriterSentinel.Object)
                 {
                     throw new BossyStreamClosedException();
                 }
 
-                if (response is T original)
+                if (choices != null && response is string text && TryPickChoice(text, choices, out var picked))
+                {
+                    return (T)picked;
+                }
+
+                if (response is T original && (choices == null || IsChoice(original, choices)))
                 {
                     return original;
                 }
-                
+
                 if (response is string textual)
                 {
                     triedAdapting = true;
                     adapterResult = Bossy.TypeAdapterRegistry.TryConvert(textual, out T typed, true);
-            
-                    if (adapterResult.Success)
+
+                    if (adapterResult.Success && (choices == null || IsChoice(typed, choices)))
                     {
                         return typed;
                     }
                 }
-            
-                // Catch and allow all numeric conversions 
+
+                // Catch and allow all numeric conversions
                 try
                 {
                     var casted = (T)Convert.ChangeType(response, typeof(T));
-                    return casted;
+
+                    if (choices == null || IsChoice(casted, choices))
+                    {
+                        return casted;
+                    }
                 }
                 catch
                 {
                     // Cast failed, ignore
                 }
 
-                if (_allowRetry)
+                if (canRetry)
                 {
                     Writer.Write($"\"{response}\" of type \"{response.GetType().GetFriendlyName()}\" could not be converted to type \"{typeof(T).GetFriendlyName()}. Please enter a valid response:");
                 }
-                
-            } while (_allowRetry);
+
+            } while (canRetry);
 
             if (triedAdapting)
             {
@@ -335,6 +337,27 @@ namespace Bossy.Command
             throw new BossyNotAdaptableException($"Type \"{response.GetType()}\" could not be converted to type {typeof(T).GetFriendlyName()}");
         }
         
+        /// <summary>
+        /// Picks a choice from its 1-based number, as shown to the user.
+        /// </summary>
+        private static bool TryPickChoice(string text, IReadOnlyList<ReadChoice> choices, out object value)
+        {
+            value = null;
+
+            if (!int.TryParse(text, out var number) || number < 1 || number > choices.Count)
+            {
+                return false;
+            }
+
+            value = choices[number - 1].Value;
+            return true;
+        }
+
+        private static bool IsChoice<T>(T value, IReadOnlyList<ReadChoice> choices)
+        {
+            return choices.Any(choice => object.Equals(choice.Value, value));
+        }
+
         private static async IAsyncEnumerable<T> Empty<T>()
         {
             await Task.CompletedTask;
