@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Bossy.Execution;
 using Bossy.Frontend;
 
 namespace Bossy.Tests.Utils
@@ -39,7 +40,7 @@ namespace Bossy.Tests.Utils
             _log.Add(value);
         }
 
-        public Task<object> ReadAsync(Type requestedType, CancellationToken token)
+        public Task<object> ReadAsync(ReadRequest request, CancellationToken token)
         {
             return _input.Count > 0
                 ? Task.FromResult(_input.Dequeue())

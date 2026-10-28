@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Bossy.Frontend;
 using Bossy.Execution;
 using UnityEngine;
@@ -13,30 +14,42 @@ namespace Bossy.Command
         /// Holds Bossy utilities and managers.
         /// </summary>
         public readonly BossyContext Bossy;
-        
-        /// <summary>
-        /// The session running this command. Gives access to its history and aliases.
-        /// </summary>
-        public Session Session { get; internal set; }
 
         /// <summary>
         /// The endpoint this command reads from and writes to.
         /// Use this to test for optional capabilities, such as <see cref="IClearable"/>, by casting it.
         /// </summary>
-        public IEndpoint Endpoint => Session?.Endpoint;
+        public IEndpoint Endpoint => Session.Endpoint;
 
+        /// <summary>
+        /// The command history for this session.
+        /// </summary>
+        public CommandHistory History => Session.History;
+
+        /// <summary>
+        /// The aliases for this session.
+        /// </summary>
+        public Dictionary<string, string> Aliases => Session.Aliases;
+        
         /// <summary>
         /// The output writer
         /// </summary>
-        protected IWriteable Writer;
+        protected readonly IWriteable Writer;
+
+        /// <summary>
+        /// The session running this command. Gives access to its history and aliases.
+        /// </summary>
+        protected readonly Session Session;
 
         /// <summary>
         /// Creates a new simple context.
         /// </summary>
+        /// <param name="session">The session running this context.</param>
         /// <param name="writer">The output writer.</param>
         /// <param name="bossyContext">The Bossy context.</param>
-        public SimpleContext(IWriteable writer, BossyContext bossyContext)
+        public SimpleContext(Session session, IWriteable writer, BossyContext bossyContext)
         {
+            Session = session;
             Writer = writer;
             Bossy = bossyContext;
         }
@@ -118,6 +131,16 @@ namespace Bossy.Command
         public bool IsEditMode()
         {
             return !IsRuntime();
+        }
+
+
+        /// <summary>
+        /// Tells if this command is running in a window.
+        /// </summary>
+        /// <returns>True if in a window, otherwise false.</returns>
+        public bool IsWindowed()
+        {
+            return Session.IsWindowed;
         }
     }
 }

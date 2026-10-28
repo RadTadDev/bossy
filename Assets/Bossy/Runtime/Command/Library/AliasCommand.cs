@@ -30,7 +30,7 @@ namespace Bossy.Runtime.Command.Library
                 return CommandStatus.Error;
             }
             
-            ctx.Session.Aliases[alias] = value;
+            ctx.Aliases[alias] = value;
             ctx.Write($"Added alias {alias} = {value}.");
             return CommandStatus.Ok;
         }
@@ -44,7 +44,7 @@ namespace Bossy.Runtime.Command.Library
 
         protected override CommandStatus Execute(SimpleContext ctx)
         {
-            if (ctx.Session.Aliases.Remove(_alias))
+            if (ctx.Aliases.Remove(_alias))
             {
                 ctx.Write($"Removed alias {_alias}.");
             }

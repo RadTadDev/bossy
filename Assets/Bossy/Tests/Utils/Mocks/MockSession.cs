@@ -15,10 +15,11 @@ namespace Bossy.Tests.Utils
         /// <param name="permissions">The permissions manager.</param>
         /// <param name="endpoint">The endpoint to read from and write to.</param>
         /// <param name="host">Where the session's UI lives, or null if it has none.</param>
+        /// <param name="isWindowed">True if the session should act as if it runs in a command window.</param>
         /// <returns>The session.</returns>
-        public static Session Create(BossyContext context, BossyPermissions permissions, IEndpoint endpoint, ISessionHost host = null)
+        public static Session Create(BossyContext context, BossyPermissions permissions, IEndpoint endpoint, ISessionHost host = null, bool isWindowed = false)
         {
-            return new Session(context, permissions, endpoint, host, new CommandHistory(null), new());
+            return new Session(context, permissions, endpoint, host, new CommandHistory(null), new(), isWindowed);
         }
     }
 }

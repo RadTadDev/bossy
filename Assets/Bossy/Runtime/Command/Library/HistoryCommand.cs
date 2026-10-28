@@ -7,7 +7,7 @@ namespace Bossy.Runtime.Command.Library
     {
         protected override CommandStatus Execute(SimpleContext ctx)
         {
-            Format.Enumerate(ctx.Session.History.Lines, ctx);
+            Format.Enumerate(ctx.History.Lines, ctx);
             
             return CommandStatus.Ok;
         }
@@ -19,7 +19,7 @@ namespace Bossy.Runtime.Command.Library
     {
         protected override CommandStatus Execute(SimpleContext ctx)
         {
-            ctx.Session.History.Clear();
+            ctx.History.Clear();
             
             return CommandStatus.Ok;
         }

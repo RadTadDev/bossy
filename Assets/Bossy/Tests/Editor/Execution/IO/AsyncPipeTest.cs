@@ -20,10 +20,10 @@ namespace Bossy.Tests.Shell
             pipe.Write("test");
             pipe.Write(false);
 
-            var number = await pipe.ReadAsync(typeof(int), CancellationToken.None);
-            var word = await pipe.ReadAsync(typeof(string), CancellationToken.None);
-            var boolean = await pipe.ReadAsync(typeof(bool), CancellationToken.None);
-            
+            var number = await pipe.ReadAsync(new ReadRequest(typeof(int)), CancellationToken.None);
+            var word = await pipe.ReadAsync(new ReadRequest(typeof(string)), CancellationToken.None);
+            var boolean = await pipe.ReadAsync(new ReadRequest(typeof(bool)), CancellationToken.None);
+
             Assert.That(number, Is.EqualTo(1));
             Assert.That(word, Is.EqualTo("test"));
             Assert.That(boolean, Is.EqualTo(false));
@@ -46,10 +46,10 @@ namespace Bossy.Tests.Shell
 
             _ = DelayedWriteAsync(pipe);
             
-            var number = await pipe.ReadAsync(typeof(int), CancellationToken.None);
-            var word = await pipe.ReadAsync(typeof(string), CancellationToken.None);
-            var boolean = await pipe.ReadAsync(typeof(bool), CancellationToken.None);
-            
+            var number = await pipe.ReadAsync(new ReadRequest(typeof(int)), CancellationToken.None);
+            var word = await pipe.ReadAsync(new ReadRequest(typeof(string)), CancellationToken.None);
+            var boolean = await pipe.ReadAsync(new ReadRequest(typeof(bool)), CancellationToken.None);
+
             Assert.That(number, Is.EqualTo(1));
             Assert.That(word, Is.EqualTo("test"));
             Assert.That(boolean, Is.EqualTo(false));
@@ -57,7 +57,7 @@ namespace Bossy.Tests.Shell
 
         private async Task CancelRead(AsyncPipe pipe, CancellationToken token)
         {
-            await pipe.ReadAsync(null, token);
+            await pipe.ReadAsync(new ReadRequest(typeof(object)), token);
         }
         
         [Test]

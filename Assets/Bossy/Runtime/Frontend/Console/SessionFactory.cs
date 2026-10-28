@@ -41,7 +41,7 @@ namespace Bossy.Frontend
             return new SessionView(
                 ConsoleTitle,
                 frontend,
-                host => new Session(_context, _permissions, frontend, host, _history, new()),
+                host => new Session(_context, _permissions, frontend, host, _history, new(), false),
                 openCommandWindow,
                 _context.Settings.BossyInputSettings);
         }
@@ -61,7 +61,7 @@ namespace Bossy.Frontend
             return new SessionView(
                 commandName == null ? ConsoleTitle : $"{ConsoleTitle}: {commandName}",
                 frontend,
-                host => template.Clone(frontend, host),
+                host => template.CloneToWindow(frontend, host),
                 openCommandWindow,
                 _context.Settings.BossyInputSettings);
         }

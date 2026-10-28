@@ -1,15 +1,6 @@
 namespace Bossy.Command
 {
-    public interface IOptionGetter
-    {
-        /// <summary>
-        /// Read a value from an option.
-        /// </summary>
-        /// <returns>The option value.</returns>
-        public object Read();
-    }
-    
-    public class Option<T> : IOptionGetter
+    public class Option<T>
     {
         /// <summary>
         /// The value of this option.
@@ -25,11 +16,6 @@ namespace Bossy.Command
         {
             Value = value;
             Display = display;
-        }
-
-        public object Read()
-        {
-            return Value;
         }
     }
 }

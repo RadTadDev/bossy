@@ -6,7 +6,6 @@ using System.Reflection.Emit;
 using System.Threading.Tasks;
 using Bossy.Command;
 using Bossy.Schema.Registry;
-using Bossy.Execution;
 
 namespace Bossy.Tests.Utils
 {
@@ -22,7 +21,8 @@ namespace Bossy.Tests.Utils
         private int _optionalIndex;
 
         private List<ArgumentFieldRecord> _arguments = new();
-        
+        private string _output;
+
         private CommandGenerator(string name)
         {
             _name = name;
@@ -220,6 +220,17 @@ namespace Bossy.Tests.Utils
         }
         
         /// <summary>
+        /// Makes the command write text to its output when it runs.
+        /// </summary>
+        /// <param name="text">The text to write.</param>
+        /// <returns>The generator.</returns>
+        public CommandGenerator WithOutput(string text)
+        {
+            _output = text;
+            return this;
+        }
+
+        /// <summary>
         /// Generates a command object.
         /// </summary>
         /// <returns>The generated command.</returns>
@@ -289,6 +300,16 @@ namespace Bossy.Tests.Utils
                 .MakeGenericMethod(typeof(CommandStatus));
 
             var il = methodBuilder.GetILGenerator();
+
+            if (_output != null)
+            {
+                // ctx.Write(_output)
+                var writeMethod = typeof(CommandContext).GetMethod(nameof(CommandContext.Write), new[] { typeof(object) });
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Ldstr, _output);
+                il.Emit(OpCodes.Callvirt, writeMethod);
+            }
+
             il.Emit(OpCodes.Ldc_I4_0);
             il.Emit(OpCodes.Call, fromResultMethod);
             il.Emit(OpCodes.Ret);

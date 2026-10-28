@@ -110,8 +110,97 @@ namespace Bossy.Tests.Shell
             var ctx = new CommandContext(_session, _context, reader, writer, true, CancellationToken.None);
 
             var first = await ctx.ReadAsync<int>();
-            
+
             Assert.That(first, Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task Test_ReadAsync_RetryShowsAdapterError()
+        {
+            var items = new List<object> { "x", "5" };
+            var reader = new MockReadable(items);
+            var writer = new MockWriteable();
+
+            var ctx = new CommandContext(_session, _context, reader, writer, true, CancellationToken.None);
+
+            var first = await ctx.ReadAsync<int>();
+
+            Assert.That(first, Is.EqualTo(5));
+            Assert.That(writer.Log[0].ToString(), Does.Contain("Expected int"));
+        }
+
+        [Test]
+        public void Test_ReadAsync_RejectsTrailingInput()
+        {
+            var reader = new MockReadable(new List<object> { "3 4" });
+            var writer = new MockWriteable();
+
+            var ctx = new CommandContext(_session, _context, reader, writer, false, CancellationToken.None);
+
+            var exception = Assert.ThrowsAsync<BossyNotAdaptableException>(async () => await ctx.ReadAsync<int>());
+
+            Assert.That(exception.Message, Does.Contain("Unexpected input \"4\""));
+        }
+
+        [Test]
+        public void Test_ReadAsync_BoolRequiresExplicitValue()
+        {
+            var reader = new MockReadable(new List<object> { "" });
+            var writer = new MockWriteable();
+
+            var ctx = new CommandContext(_session, _context, reader, writer, false, CancellationToken.None);
+
+            Assert.ThrowsAsync<BossyNotAdaptableException>(async () => await ctx.ReadAsync<bool>());
+        }
+
+        [Test]
+        public void Test_ReadAsync_RejectsOutOfRangeNumber()
+        {
+            var reader = new MockReadable(new List<object> { 300 });
+            var writer = new MockWriteable();
+
+            var ctx = new CommandContext(_session, _context, reader, writer, false, CancellationToken.None);
+
+            Assert.ThrowsAsync<BossyNotAdaptableException>(async () => await ctx.ReadAsync<byte>());
+        }
+
+        [Test]
+        public async Task Test_ReadAsync_StringKeepsWholeLine()
+        {
+            var reader = new MockReadable(new List<object> { "hello there" });
+            var writer = new MockWriteable();
+
+            var ctx = new CommandContext(_session, _context, reader, writer, false, CancellationToken.None);
+
+            var first = await ctx.ReadAsync<string>();
+
+            Assert.That(first, Is.EqualTo("hello there"));
+        }
+
+        [Test]
+        public async Task Test_PromptWithOptions_PicksByNumber()
+        {
+            var reader = new MockReadable(new List<object> { "2" });
+            var writer = new MockWriteable();
+
+            var ctx = new CommandContext(_session, _context, reader, writer, false, CancellationToken.None);
+
+            var choice = await ctx.PromptWithOptions(new[] { new Option<string>("a", "Alpha"), new Option<string>("b", "Beta") });
+
+            Assert.That(choice, Is.EqualTo("b"));
+        }
+
+        [Test]
+        public async Task Test_PromptWithOptions_RetriesInvalidChoice()
+        {
+            var reader = new MockReadable(new List<object> { "9", "b" });
+            var writer = new MockWriteable();
+
+            var ctx = new CommandContext(_session, _context, reader, writer, false, CancellationToken.None);
+
+            var choice = await ctx.PromptWithOptions(new[] { new Option<string>("a", "Alpha"), new Option<string>("b", "Beta") });
+
+            Assert.That(choice, Is.EqualTo("b"));
         }
     }
 }

@@ -36,9 +36,15 @@ namespace Bossy.Frontend
         private const int AtlasPadding = 4;
         private const int AtlasSize = 1024;
 
-        // The space and non-breaking space, whose glyphs are empty. They are added when the font is created so they
-        // can be moved off the atlas.
-        private static readonly string EmptyGlyphCharacters = " " + (char)0x00A0;
+        // Characters whose glyphs are empty: tab, line feed, carriage return, space, non-breaking space, em quad,
+        // zero-width space and byte order mark. They are added when the font is created and moved off the atlas by
+        // character. Text can reach any of them, for example through line breaks, and UI Toolkit measures empty text
+        // with a zero-width space. A glyph the text engine adds later for an empty character is not moved, so it would
+        // stay at the atlas origin.
+        private static readonly string EmptyGlyphCharacters = new(new[]
+        {
+            (char)0x0009, (char)0x000A, (char)0x000D, (char)0x0020, (char)0x00A0, (char)0x2001, (char)0x200B, (char)0xFEFF
+        });
 
         // Outside the atlas, past the bottom left corner, so that a quad drawn for an empty glyph samples only the
         // clamped edge texel. No glyph writes that texel, because glyphs are packed at least one texel in.
@@ -119,7 +125,7 @@ namespace Bossy.Frontend
         }
 
         /// <summary>
-        /// Points empty glyphs, such as the space, at a rect outside the atlas.
+        /// Points each empty character, such as the space, at a rect outside the atlas.
         /// </summary>
         /// <remarks>
         /// Empty glyphs get a zero size rect at the atlas origin. UI Toolkit still draws a quad for them, padded on
@@ -135,9 +141,11 @@ namespace Bossy.Frontend
 
             asset.TryAddCharacters(EmptyGlyphCharacters, out _);
 
-            foreach (var glyph in asset.glyphLookupTable.Values)
+            foreach (var character in EmptyGlyphCharacters)
             {
-                if (glyph.glyphRect.width == 0 || glyph.glyphRect.height == 0)
+                // A character the font does not contain has no glyph to move
+                if (asset.characterLookupTable.TryGetValue(character, out var entry) &&
+                    asset.glyphLookupTable.TryGetValue(entry.glyphIndex, out var glyph))
                 {
                     glyph.glyphRect = OffAtlasRect;
                 }

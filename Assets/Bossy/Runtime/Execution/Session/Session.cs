@@ -19,6 +19,11 @@ namespace Bossy.Execution
         public readonly IEndpoint Endpoint;
 
         /// <summary>
+        /// Tells if this session is running in a window.
+        /// </summary>
+        public readonly bool IsWindowed;
+        
+        /// <summary>
         /// The command lines this session has entered. Command windows opened by this session share it.
         /// </summary>
         public CommandHistory History { get; }
@@ -44,13 +49,16 @@ namespace Bossy.Execution
         /// <param name="host">Where this session's UI lives, or null if it has none.</param>
         /// <param name="history">The command history to record into.</param>
         /// <param name="aliases">The aliases to expand before parsing.</param>
-        internal Session(BossyContext context, BossyPermissions permissions, IEndpoint endpoint, ISessionHost host, CommandHistory history, Dictionary<string, string> aliases)
+        /// <param name="isWindowed">True if this session runs in a command window.</param>
+        internal Session(BossyContext context, BossyPermissions permissions, IEndpoint endpoint, ISessionHost host, CommandHistory history, Dictionary<string, string> aliases, bool isWindowed)
         {
             _context = context;
             _permissions = permissions;
             Endpoint = endpoint;
             History = history;
             Aliases = aliases;
+            IsWindowed = isWindowed;
+            
             _dispatcher = new GraphDispatcher(context, permissions, endpoint, host);
         }
 
@@ -76,7 +84,7 @@ namespace Bossy.Execution
         {
             while (!_sessionCancellationSource.IsCancellationRequested)
             {
-                var response = await Endpoint.ReadAsync(typeof(CommandGraph), _sessionCancellationSource.Token);
+                var response = await Endpoint.ReadAsync(new ReadRequest(typeof(CommandGraph)), _sessionCancellationSource.Token);
 
                 // Command lines are parsed here so aliases apply to every endpoint. Graphs are accepted as is.
                 CommandGraph graph;
@@ -131,9 +139,9 @@ namespace Bossy.Execution
         /// <param name="endpoint">The endpoint of the new session.</param>
         /// <param name="host">Where the new session's UI lives.</param>
         /// <returns>The cloned session.</returns>
-        internal Session Clone(IEndpoint endpoint, ISessionHost host)
+        internal Session CloneToWindow(IEndpoint endpoint, ISessionHost host)
         {
-            return new Session(_context, _permissions, endpoint, host, History, Aliases);
+            return new Session(_context, _permissions, endpoint, host, History, Aliases, true);
         }
 
         /// <summary>

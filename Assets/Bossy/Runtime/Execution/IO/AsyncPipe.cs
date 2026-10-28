@@ -1,9 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
-using Bossy.Utils;
 
 namespace Bossy.Execution
 {
@@ -15,7 +13,7 @@ namespace Bossy.Execution
         private readonly SemaphoreSlim _signal = new(0);
         private readonly ConcurrentQueue<object> _queue = new();
 
-        public async Task<object> ReadAsync(Type requestedType, CancellationToken token)
+        public async Task<object> ReadAsync(ReadRequest request, CancellationToken token)
         {
             await _signal.WaitAsync(token);
 

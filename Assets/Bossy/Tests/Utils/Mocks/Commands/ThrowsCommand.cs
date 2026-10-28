@@ -1,6 +1,5 @@
 using System;
 using Bossy.Command;
-using Bossy.Execution;
 
 namespace Bossy.Tests.Utils.Commands
 {

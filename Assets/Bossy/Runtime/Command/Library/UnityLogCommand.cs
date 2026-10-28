@@ -18,7 +18,7 @@ namespace Bossy.Runtime.Command.Library
         
         public async Task<CommandStatus> ExecuteAsync(CommandContext ctx)
         {
-            ctx.Write("Consider using this command in its own window by typing 'unity-log start!'");
+            ctx.Write("Consider using this command in its own window by typing 'unity-log!'");
 
             Application.LogCallback action = (m, s, t) => OnLog(m, s, t, ctx);
             Application.logMessageReceived += action;

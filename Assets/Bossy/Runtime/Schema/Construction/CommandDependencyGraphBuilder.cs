@@ -25,7 +25,7 @@ namespace Bossy.Schema
 
             foreach (var type in commandTypes)
             {
-                var parentType = type.GetCustomAttribute<CommandAttribute>()!.ParentType;
+                var parentType = type.GetCustomAttribute<CommandAttribute>().ParentType;
                 
                 if (!graph.Contains(type))
                 {

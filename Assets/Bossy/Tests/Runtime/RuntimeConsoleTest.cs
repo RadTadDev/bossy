@@ -1,13 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Command;
-using Bossy.Execution;
 using Bossy.Frontend;
 using Bossy.Frontend.Parsing;
 using Bossy.Schema;
 using Bossy.Schema.Registry;
 using Bossy.Settings;
+using Bossy.Tests.Utils;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -213,7 +212,8 @@ namespace Bossy.Tests.Runtime
 
         private static SessionFactory CreateSessionFactory()
         {
-            var graph = CommandDependencyGraphBuilder.BuildGraph(new List<System.Type> { typeof(HelloCommand) });
+            var helloType = CommandGenerator.WithName("hello").WithOutput("hello").Generate().GetType();
+            var graph = CommandDependencyGraphBuilder.BuildGraph(new List<System.Type> { helloType });
             var schemas = new SchemaRegistry(SchemaFactory.BuildCommandSchemas(graph));
             var adapters = new TypeAdapterRegistry();
             var settings = new SettingsManager(new EmptySettingsSource());
@@ -228,16 +228,6 @@ namespace Bossy.Tests.Runtime
         {
             public string LoadJson() => string.Empty;
             public void SaveJson(string json) { }
-        }
-    }
-
-    [Command("hello", "Writes hello.")]
-    internal class HelloCommand : SimpleCommand
-    {
-        protected override CommandStatus Execute(SimpleContext ctx)
-        {
-            ctx.Write("hello");
-            return CommandStatus.Ok;
         }
     }
 }
