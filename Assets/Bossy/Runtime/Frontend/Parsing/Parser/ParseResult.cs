@@ -246,4 +246,42 @@ namespace Bossy.Frontend.Parsing
             Message = $"(Argument '{argName}') {message}";
         }
     }
+
+    /// <summary>
+    /// A command string argument holds a command that would not parse.
+    /// </summary>
+    internal class InvalidCommandStringError : ParseResult
+    {
+        public override string Message => $"(Argument '{_argName}') Invalid command: {Reason}";
+
+        /// <summary>
+        /// Why the inner command would not parse.
+        /// </summary>
+        public string Reason { get; }
+
+        private readonly string _argName;
+
+        public InvalidCommandStringError(ParseResult inner, string argName)
+        {
+            // An unquoted command is one token, so it cannot carry the arguments its command needs
+            var advice = inner is MissingPositionalError ? " Quote the command to give it arguments." : string.Empty;
+            Reason = inner.Message + advice;
+            _argName = argName;
+        }
+    }
+
+    /// <summary>
+    /// Command strings are nested deeper than allowed, as with an alias that expands to itself.
+    /// </summary>
+    internal class CommandStringTooDeepError : ParseResult
+    {
+        private readonly int _maxDepth;
+
+        public override string Message => $"Commands are nested more than {_maxDepth} levels deep.";
+
+        public CommandStringTooDeepError(int maxDepth)
+        {
+            _maxDepth = maxDepth;
+        }
+    }
 }

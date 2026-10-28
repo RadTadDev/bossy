@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using Bossy.Command;
 using Bossy.Schema.Registry;
 using Bossy.Schema;
@@ -16,6 +15,9 @@ namespace Bossy.Frontend.Parsing
     /// </summary>
     public class Parser
     {
+        // How deep command strings may nest, as in watch "watch 'get x'". This also stops an alias that expands to itself.
+        private const int MaxCommandStringDepth = 8;
+
         private readonly SchemaRegistry _schemaRegistry;
         private readonly TypeAdapterRegistry _adapterRegistry;
         
@@ -34,7 +36,7 @@ namespace Bossy.Frontend.Parsing
         /// <returns>True is parsing was successful, otherwise false.</returns>
         public ParseResult Parse(string input, OperatorList operators, Dictionary<string, string> aliases = null)
         {
-            var bindResult = Bind(input, operators, aliases, out var isWindowed);
+            var bindResult = Bind(input, operators, aliases, 0, out var isWindowed);
             if (bindResult.IsError) return bindResult.Error;
             var pipeline = bindResult.Value;
 
@@ -51,7 +53,7 @@ namespace Bossy.Frontend.Parsing
             // 2. Run validators on the arguments left at their default values
             foreach (var node in pipeline)
             {
-                var argResult = ValidateDefaultArguments(node);
+                var argResult = ValidateDefaultArguments(node, operators, aliases, 0);
                 if (argResult.IsError) return argResult.Error;
             }
 
@@ -70,24 +72,20 @@ namespace Bossy.Frontend.Parsing
         /// <returns>True if the input would parse, otherwise false.</returns>
         internal bool TryCheck(string input, OperatorList operators, Dictionary<string, string> aliases, out ParseResult error)
         {
-            var bindResult = Bind(input, operators, aliases, out _);
+            var bindResult = Bind(input, operators, aliases, 0, out _);
             error = bindResult.Error;
             return !bindResult.IsError;
         }
 
-        private ParseStep<List<ParseNode>> Bind(string input, OperatorList operators, Dictionary<string, string> aliases, out bool isWindowed)
+        private ParseStep<List<ParseNode>> Bind(string input, OperatorList operators, Dictionary<string, string> aliases, int depth, out bool isWindowed)
         {
             isWindowed = false;
             if (string.IsNullOrWhiteSpace(input)) return ParseStep<List<ParseNode>>.Fail(new EmptyInputError());
 
-            // 1. Expand macros
-            if (ShouldExpandAliases(input, aliases))
-            {
-                input = ExpandAliases(input, aliases);
-            }
+            // 1. Tokenize and expand macros
+            var tokens = AliasExpander.Expand(Tokenizer.Tokenize(input, operators.ToEnumerable()), aliases, operators);
 
             // 2. Split into nodes
-            var tokens = Tokenizer.Tokenize(input, operators.ToEnumerable());
             var pipelineResult = MakePipeline(tokens, operators, out isWindowed);
             if (pipelineResult.IsError) return pipelineResult;
 
@@ -105,33 +103,11 @@ namespace Bossy.Frontend.Parsing
             // 4. Run validators on the bound values
             foreach (var node in pipeline)
             {
-                var argResult = ValidateBoundArguments(node);
+                var argResult = ValidateBoundArguments(node, operators, aliases, depth);
                 if (argResult.IsError) return ParseStep<List<ParseNode>>.Fail(argResult.Error);
             }
 
             return pipelineResult;
-        }
-
-        private bool ShouldExpandAliases(string input, Dictionary<string, string> aliases)
-        {
-            if (aliases == null) return false;
-
-            // Don't expand if this command is the alias remove command
-            input = input.Trim();
-
-            if (!input.StartsWith("alias")) return true;
-            
-            input = input["alias".Length..].Trim();
-
-            return !input.StartsWith("remove");
-        }
-        
-        private static string ExpandAliases(string input, Dictionary<string, string> aliases)
-        {
-            return string.Join(" ", Regex.Matches(input, @"""[^""]*""|(\S+)")
-                .Select(m => m.Value.StartsWith("\"")
-                    ? m.Value
-                    : aliases.TryGetValue(m.Value, out var alias) ? alias : m.Value));
         }
 
         private ParseStep<List<ParseNode>> MakePipeline(List<Token> tokens, OperatorList operators, out bool isWindowed)
@@ -208,7 +184,16 @@ namespace Bossy.Frontend.Parsing
 
             // 1. Collect the tokens after the command path into the arg list
             var argTokens = tokens.Skip(stream.Cursor).ToList();
-            
+
+            // An alias typed as an argument of a command that takes a command string stays one value
+            if (schema.Arguments.Any(a => CommandString.IsCommandStringType(a.Type)))
+            {
+                for (var i = 0; i < argTokens.Count; i++)
+                {
+                    AliasExpander.Collapse(argTokens, i);
+                }
+            }
+
             // 2. Expand aggregate flags
             var aggregateResult = ExpandAggregateFlags(argTokens, schema);
             if (aggregateResult.IsError) return ParseStep<CommandSchema>.Fail(aggregateResult.Error);
@@ -507,18 +492,18 @@ namespace Bossy.Frontend.Parsing
             return ParseStep<CommandSchema>.Ok(schema);
         }
 
-        private static ParseStep ValidateBoundArguments(ParseNode node)
+        private ParseStep ValidateBoundArguments(ParseNode node, OperatorList operators, Dictionary<string, string> aliases, int depth)
         {
             foreach (var (arg, value) in node.Values)
             {
-                var result = ValidateArgument(arg, value);
+                var result = ValidateArgument(arg, value, operators, aliases, depth);
                 if (result.IsError) return result;
             }
 
             return ParseStep.Ok();
         }
 
-        private static ParseStep ValidateDefaultArguments(ParseNode node)
+        private ParseStep ValidateDefaultArguments(ParseNode node, OperatorList operators, Dictionary<string, string> aliases, int depth)
         {
             var bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic;
             foreach (var arg in node.Schema.Arguments)
@@ -526,7 +511,7 @@ namespace Bossy.Frontend.Parsing
                 if (node.Values.ContainsKey(arg)) continue;
 
                 var field = node.Command.GetType().GetField(arg.FieldInfo.Name, bindingFlags);
-                var result = ValidateArgument(arg, field!.GetValue(node.Command));
+                var result = ValidateArgument(arg, field!.GetValue(node.Command), operators, aliases, depth);
                 if (result.IsError) return result;
             }
 
@@ -537,26 +522,33 @@ namespace Bossy.Frontend.Parsing
          * A variadic's validators apply to each of its elements, so an empty variadic always passes. Every other
          * argument is validated as a whole, even when its type is an array.
          */
-        private static ParseStep ValidateArgument(ArgumentSchema arg, object value)
+        private ParseStep ValidateArgument(ArgumentSchema arg, object value, OperatorList operators, Dictionary<string, string> aliases, int depth)
         {
             if (arg.ArgumentAttribute is not VariadicAttribute)
             {
-                return ValidateValue(arg, value);
+                return ValidateValue(arg, value, operators, aliases, depth);
             }
 
             if (value is not Array elements) return ParseStep.Ok();
 
             foreach (var element in elements)
             {
-                var result = ValidateValue(arg, element);
+                var result = ValidateValue(arg, element, operators, aliases, depth);
                 if (result.IsError) return result;
             }
 
             return ParseStep.Ok();
         }
 
-        private static ParseStep ValidateValue(ArgumentSchema arg, object value)
+        private ParseStep ValidateValue(ArgumentSchema arg, object value, OperatorList operators, Dictionary<string, string> aliases, int depth)
         {
+            // A command string must parse on its own. One left empty is up to the command.
+            if (value is CommandString { IsEmpty: false } command)
+            {
+                var error = CheckCommandString(command, operators, aliases, depth);
+                if (error != null) return ParseStep.Fail(new InvalidCommandStringError(error, arg.Name));
+            }
+
             foreach (var validator in arg.Validators)
             {
                 var result = validator.Validate(value);
@@ -568,6 +560,20 @@ namespace Bossy.Frontend.Parsing
             }
 
             return ParseStep.Ok();
+        }
+
+        /*
+         * Checks an inner command without creating it, using the outer line's operators and aliases. Inner commands
+         * are created when they run.
+         */
+        private ParseResult CheckCommandString(CommandString command, OperatorList operators, Dictionary<string, string> aliases, int depth)
+        {
+            if (depth >= MaxCommandStringDepth)
+            {
+                return new CommandStringTooDeepError(MaxCommandStringDepth);
+            }
+
+            return Bind(command.Text, operators, aliases, depth + 1, out _).Error;
         }
 
         private static CommandGraph BuildGraph(List<ParseNode> pipeline, bool isWindowed)
