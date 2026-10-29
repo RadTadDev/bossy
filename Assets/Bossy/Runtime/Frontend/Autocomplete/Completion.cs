@@ -94,5 +94,17 @@ namespace Bossy.Frontend.Autocomplete
         {
             return new Completion(Start, End, InsertText, DisplayText, Description, Kind, FuzzyMatcher.FindMatches(query, DisplayText));
         }
+
+        /// <summary>
+        /// Makes a copy of this completion that replaces another span with other text, keeping what it shows.
+        /// </summary>
+        /// <param name="start">The index where the replaced span starts.</param>
+        /// <param name="end">The index just past the end of the replaced span.</param>
+        /// <param name="insertText">The text that replaces the span.</param>
+        /// <returns>The new completion.</returns>
+        internal Completion MovedTo(int start, int end, string insertText)
+        {
+            return new Completion(start, end, insertText, DisplayText, Description, Kind, MatchRanges);
+        }
     }
 }

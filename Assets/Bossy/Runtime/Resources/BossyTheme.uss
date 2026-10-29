@@ -66,14 +66,19 @@
 }
 
 .bossy-cli__prompt {
+    flex-shrink: 0;
     margin: 0 8px 0 0;
     padding: 0;
     color: var(--bossy-accent);
     -unity-font-style: bold;
 }
 
+/* A zero basis and min width keep a long line inside the row, so the field scrolls instead of growing past it */
 .bossy-cli__input {
     flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
     margin: 0;
     padding: 0;
     min-height: 0;
@@ -82,6 +87,7 @@
 }
 
 .bossy-cli__input > #unity-text-input {
+    overflow: hidden;
     margin: 0;
     padding: 0;
     border-width: 0;

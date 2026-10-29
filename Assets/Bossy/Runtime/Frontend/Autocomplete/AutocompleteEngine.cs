@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using Bossy.Command;
 using Bossy.Frontend.Parsing;
 using Bossy.Schema;
 using Bossy.Schema.Registry;
@@ -46,7 +48,7 @@ namespace Bossy.Frontend.Autocomplete
 
             try
             {
-                return CompleteLine(line, cursorPosition);
+                return CompleteLine(line, cursorPosition, null);
             }
             finally
             {
@@ -54,7 +56,60 @@ namespace Bossy.Frontend.Autocomplete
             }
         }
 
-        private CompletionResult CompleteLine(string line, int cursorPosition)
+        /// <summary>
+        /// Lists the command names and aliases that can fill a slot.
+        /// </summary>
+        /// <param name="slot">The slot.</param>
+        /// <returns>The completions, unranked.</returns>
+        internal List<Completion> CommandNameCompletions(CompletionSlot slot)
+        {
+            var candidates = _context.SchemaRegistry.GetValidSchemas()
+                .Select(s => new Completion(slot.Start, slot.End, s.Name + slot.Suffix, s.Name, s.Description, CompletionKind.Command))
+                .ToList();
+
+            if (_aliases != null)
+            {
+                candidates.AddRange(_aliases.Select(a =>
+                    new Completion(slot.Start, slot.End, a.Key + slot.Suffix, a.Key, a.Value, CompletionKind.Alias)));
+            }
+
+            return candidates;
+        }
+
+        /// <summary>
+        /// Checks whether a command string would parse, the way the parser checks it.
+        /// </summary>
+        /// <param name="command">The command string.</param>
+        /// <returns>The parse error, or null if it would parse.</returns>
+        internal ParseResult CheckCommandString(CommandString command)
+        {
+            return _parser.TryCheck(command.Text, _operators, _aliases, out var error) ? null : error;
+        }
+
+        /*
+         * Completes the command inside a slot that opens a quote, as in: watch "get -n |. The text inside the quote
+         * is completed as a line of its own, and the completions are moved back into this line. Values inside use
+         * the other kind of quote, and inserted text is escaped for the quote around it. Returns null if the slot
+         * does not open a quote.
+         */
+        internal CompletionResult CompleteQuotedCommand(string line, CompletionSlot slot)
+        {
+            if (!TryUnquote(line, slot, out var quote, out var inner, out var positions))
+            {
+                return null;
+            }
+
+            var innerCursor = positions.Take(inner.Length).Count(p => p < slot.Cursor);
+            var result = CompleteLine(inner, innerCursor, quote);
+
+            var moved = result.Completions
+                .Select(c => c.MovedTo(positions[c.Start], positions[c.End], Escape(c.InsertText, quote)))
+                .ToList();
+
+            return result.WithCompletions(moved);
+        }
+
+        private CompletionResult CompleteLine(string line, int cursorPosition, char? enclosingQuote)
         {
             var cursor = Math.Clamp(cursorPosition, 0, line.Length);
             var tokens = Tokenizer.Tokenize(line, _operators.ToEnumerable());
@@ -74,29 +129,29 @@ namespace Bossy.Frontend.Autocomplete
                 before.Add(token);
             }
 
-            // R3
-            if (before.Count == 0 && atCursor == null)
-            {
-                return CompletionResult.Empty;
-            }
-
             var slot = atCursor.HasValue
-                ? CompletionSlot.ForToken(atCursor.Value, TypedText(line, atCursor.Value, cursor))
+                ? CompletionSlot.ForToken(atCursor.Value, TypedText(line, atCursor.Value, cursor), cursor)
                 : CompletionSlot.At(cursor, cursor < line.Length && !char.IsWhiteSpace(line[cursor]));
 
-            return CompleteCommandAtCursor(line, before, slot);
+            // R3, except inside an open quote for a command string, which is waiting for a command
+            if (before.Count == 0 && atCursor == null)
+            {
+                return enclosingQuote.HasValue ? CompleteCommandName(slot) : CompletionResult.Empty;
+            }
+
+            return CompleteCommandAtCursor(line, before, slot, enclosingQuote);
         }
 
-        private CompletionResult CompleteCommandAtCursor(string line, List<Token> before, CompletionSlot slot)
+        private CompletionResult CompleteCommandAtCursor(string line, List<Token> before, CompletionSlot slot, char? enclosingQuote)
         {
-            var result = CompleteSlot(line, before, slot, out var correction);
-            result = result.WithMatches(slot.Typed);
+            var result = CompleteSlot(line, before, slot, enclosingQuote, out var correction);
+            result = result.WithMatches(slot);
 
             // The correction replaces the command name, not the slot, so it has no matches to show
             return correction != null ? result.WithFirst(correction) : result;
         }
 
-        private CompletionResult CompleteSlot(string line, List<Token> before, CompletionSlot slot, out Completion correction)
+        private CompletionResult CompleteSlot(string line, List<Token> before, CompletionSlot slot, char? enclosingQuote, out Completion correction)
         {
             correction = null;
 
@@ -152,23 +207,16 @@ namespace Bossy.Frontend.Autocomplete
                     $"Replaces '{commandToken.Text}'", CompletionKind.Command);
             }
 
-            return new CompletionWalker(_context, _operators, _userSuggestions, schema, segment.Skip(1).ToList(), slot).Walk();
+            // Values inside a quoted command string use the other kind of quote
+            var quote = enclosingQuote == '"' ? '\'' : '"';
+            var walker = new CompletionWalker(_context, _operators, _userSuggestions, this, schema, segment.Skip(1).ToList(), line, slot, quote);
+            return walker.Walk();
         }
 
         private CompletionResult CompleteCommandName(CompletionSlot slot)
         {
             // R4, R5: command names and aliases, fuzzy ranked
-            var candidates = _context.SchemaRegistry.GetValidSchemas()
-                .Select(s => new Completion(slot.Start, slot.End, s.Name + slot.Suffix, s.Name, s.Description, CompletionKind.Command))
-                .ToList();
-
-            if (_aliases != null)
-            {
-                candidates.AddRange(_aliases.Select(a =>
-                    new Completion(slot.Start, slot.End, a.Key + slot.Suffix, a.Key, a.Value, CompletionKind.Alias)));
-            }
-
-            var ranked = FuzzyMatcher.Rank(slot.Typed, candidates, c => c.DisplayText);
+            var ranked = FuzzyMatcher.Rank(slot.Typed, CommandNameCompletions(slot), c => c.DisplayText);
 
             // Proposal 8
             return ranked.Count > 0
@@ -203,32 +251,13 @@ namespace Bossy.Frontend.Autocomplete
         }
 
         /*
-         * B4: aliases are expanded the way the parser expands them: every unquoted word that names an alias,
-         * except in "alias remove". The expanded tokens keep the span of the alias they replace. Returns null if
-         * an expansion contains an operator, since the command boundaries would then differ from the typed line.
+         * B4: aliases are expanded the way the parser expands them. Returns null if an expansion contains an
+         * operator, since the command boundaries would then differ from the typed line.
          */
         private List<Token> ExpandAliases(List<Token> tokens)
         {
-            if (_aliases == null || _aliases.Count == 0) return tokens;
-            if (tokens.Count >= 2 && tokens[0].Text == "alias" && tokens[1].Text == "remove") return tokens;
-
-            var result = new List<Token>();
-            foreach (var token in tokens)
-            {
-                if (token.IsQuoted || !_aliases.TryGetValue(token.Text, out var expansion))
-                {
-                    result.Add(token);
-                    continue;
-                }
-
-                foreach (var expanded in Tokenizer.Tokenize(expansion, _operators.ToEnumerable()))
-                {
-                    if (expanded.IsOperator) return null;
-                    result.Add(new Token(expanded.Text, isQuoted: expanded.IsQuoted, start: token.Start, end: token.End));
-                }
-            }
-
-            return result;
+            var expanded = AliasExpander.Expand(tokens, _aliases, _operators);
+            return expanded.Any(t => t.IsOperator) ? null : expanded;
         }
 
         private bool IsWindowOperator(Token token)
@@ -240,6 +269,47 @@ namespace Bossy.Frontend.Autocomplete
         {
             // Retokenizing the part before the cursor removes its quotes and escapes, even if a quote is still open
             return string.Concat(Tokenizer.Tokenize(line[token.Start..cursor]).Select(t => t.Text));
+        }
+
+        /*
+         * Reads a slot made of one quoted string, closed or not, the way the tokenizer reads it. Positions maps each
+         * character of the inner text to its index in the line, plus one last entry for the end of the inner text.
+         * An escaped character maps to its backslash, so replacing it replaces the escape too.
+         */
+        private static bool TryUnquote(string line, CompletionSlot slot, out char quote, out string inner, out int[] positions)
+        {
+            quote = slot.IsEmpty ? '\0' : line[slot.Start];
+            inner = null;
+            positions = null;
+            if (quote != '"' && quote != '\'') return false;
+
+            var text = new StringBuilder();
+            var map = new List<int>();
+            var i = slot.Start + 1;
+            while (i < slot.End && line[i] != quote)
+            {
+                map.Add(i);
+                if (line[i] == '\\' && i + 1 < slot.End)
+                {
+                    i++;
+                }
+
+                text.Append(line[i]);
+                i++;
+            }
+
+            // Text after the closing quote makes the token more than one quoted string
+            if (i < slot.End - 1) return false;
+
+            map.Add(i);
+            inner = text.ToString();
+            positions = map.ToArray();
+            return true;
+        }
+
+        private static string Escape(string text, char quote)
+        {
+            return text.Replace("\\", "\\\\").Replace(quote.ToString(), $"\\{quote}");
         }
     }
 }

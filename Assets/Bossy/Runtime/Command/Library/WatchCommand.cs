@@ -18,19 +18,12 @@ namespace Bossy.Runtime.Command.Library
         [Switch('o', "Overwrite last line instead of appending.")]
         private bool _overwrite = true;
         
-        [Variadic("The command to repeat.")] 
-        private string[] _command;
+        [Positional(0, "The command to repeat. Quote it to give it arguments.")]
+        private CommandString _command;
         
         
         public async Task<CommandStatus> ExecuteAsync(CommandContext ctx)
         {
-            if (_command.Length == 0)
-            {
-                return CommandStatus.Error;
-            }
-
-            var command = string.Join(" ", _command);
-
             IModifiableOutputBuffer buffer = null;
             if (_overwrite)
             {
@@ -46,7 +39,7 @@ namespace Bossy.Runtime.Command.Library
             
             while (_repeatCount-- != 0)
             {
-                await foreach (var line in ctx.ExecuteAndRead<object>(command))
+                await foreach (var line in ctx.ExecuteAndRead<object>(_command))
                 {
                     if (buffer != null)
                     {

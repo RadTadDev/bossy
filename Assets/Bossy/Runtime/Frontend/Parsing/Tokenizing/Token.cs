@@ -39,6 +39,13 @@ namespace Bossy.Frontend.Parsing
         public bool IsSwitch => !IsOperator && !IsQuoted && Text.StartsWith("-") && !IsNegativeNumber(Text);
 
         /// <summary>
+        /// The expansion of the alias this token came from, when the alias was typed as an argument. Null for typed
+        /// tokens and for tokens of an alias typed as a command name. Every token of one expansion has the span of
+        /// the alias.
+        /// </summary>
+        internal readonly string AliasExpansion;
+
+        /// <summary>
         /// Creates a token.
         /// </summary>
         /// <param name="text">The text of the token.</param>
@@ -47,12 +54,18 @@ namespace Bossy.Frontend.Parsing
         /// <param name="start">The index in the input line where this token starts.</param>
         /// <param name="end">The index in the input line just past the end of this token.</param>
         public Token(string text, bool isOperator = false, bool isQuoted = false, int start = 0, int end = 0)
+            : this(text, isOperator, isQuoted, start, end, null)
+        {
+        }
+
+        internal Token(string text, bool isOperator, bool isQuoted, int start, int end, string aliasExpansion)
         {
             Text = text;
             IsOperator = isOperator;
             IsQuoted = isQuoted;
             Start = start;
             End = end;
+            AliasExpansion = aliasExpansion;
         }
 
         private static bool IsNegativeNumber(string text)

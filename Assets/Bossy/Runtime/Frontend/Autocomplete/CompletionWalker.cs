@@ -19,8 +19,11 @@ namespace Bossy.Frontend.Autocomplete
         private readonly BossyContext _context;
         private readonly OperatorList _operators;
         private readonly UserSuggestions _userSuggestions;
-        private readonly IReadOnlyList<Token> _tokens;
+        private readonly AutocompleteEngine _engine;
+        private readonly List<Token> _tokens;
+        private readonly string _line;
         private readonly CompletionSlot _slot;
+        private readonly char _quote;
         private readonly ArgumentCursor _cursor;
 
         // The index of the next token to read
@@ -35,17 +38,23 @@ namespace Bossy.Frontend.Autocomplete
         /// <param name="context">The Bossy context.</param>
         /// <param name="operators">The operators, used to decide when inserted values need quotes.</param>
         /// <param name="userSuggestions">The suggestion functions and their cache.</param>
+        /// <param name="engine">The engine, which completes and checks command strings.</param>
         /// <param name="root">The root command schema.</param>
         /// <param name="tokens">The tokens after the command name and before the slot, with aliases expanded.</param>
+        /// <param name="line">The line being completed.</param>
         /// <param name="slot">The slot at the cursor.</param>
-        public CompletionWalker(BossyContext context, OperatorList operators, UserSuggestions userSuggestions,
-            CommandSchema root, IReadOnlyList<Token> tokens, CompletionSlot slot)
+        /// <param name="quote">The quote character used when an inserted value needs quotes.</param>
+        public CompletionWalker(BossyContext context, OperatorList operators, UserSuggestions userSuggestions, AutocompleteEngine engine,
+            CommandSchema root, List<Token> tokens, string line, CompletionSlot slot, char quote)
         {
             _context = context;
             _operators = operators;
             _userSuggestions = userSuggestions;
+            _engine = engine;
             _tokens = tokens;
+            _line = line;
             _slot = slot;
+            _quote = quote;
             _cursor = new ArgumentCursor(root);
         }
 
@@ -65,6 +74,12 @@ namespace Bossy.Frontend.Autocomplete
         {
             while (_index < _tokens.Count)
             {
+                // An alias typed as an argument of a command that takes a command string stays one value, as in the parser
+                if (_cursor.Schema.Arguments.Any(a => CommandString.IsCommandStringType(a.Type)))
+                {
+                    AliasExpander.Collapse(_tokens, _index);
+                }
+
                 var token = _tokens[_index];
 
                 var result = IsSwitch(token) ? ReadSwitch(token.Text) : ReadOrdered(token);
@@ -195,6 +210,12 @@ namespace Bossy.Frontend.Autocomplete
         // A value before the cursor that fails a validator is an error once the user moves on, as in the parser
         private CompletionResult Bind(ArgumentSchema argument, ValueRead read)
         {
+            var commandError = CommandStringError(read.Value);
+            if (commandError != null)
+            {
+                return CompletionResult.Error(new InvalidCommandStringError(commandError, argument.Name).Message);
+            }
+
             if (FailedValidator(argument, read.Value, out var message) != null)
             {
                 return CompletionResult.Error(new ArgumentValidationError(message, argument.Name).Message);
@@ -289,6 +310,13 @@ namespace Bossy.Frontend.Autocomplete
 
         private CompletionResult CompleteValue(ArgumentSchema argument, ValueRead read)
         {
+            // A command string that opens a quote is completed as a command of its own
+            if (CommandString.IsCommandStringType(argument.Type) && !_slot.IsEmpty)
+            {
+                var inner = _engine.CompleteQuotedCommand(_line, _slot);
+                if (inner != null) return inner;
+            }
+
             var completions = SubcommandCompletions();
             SuggestionFailure failure = null;
 
@@ -306,7 +334,16 @@ namespace Bossy.Frontend.Autocomplete
             string validationError = null;
             if (read.State == ValueState.AtSlot && read.IsValid)
             {
-                failedValidator = FailedValidator(argument, read.Value, out validationError);
+                // An unquoted command string is one token, so a command that needs arguments fails here
+                var commandError = CommandStringError(read.Value);
+                validationError = commandError != null
+                    ? new InvalidCommandStringError(commandError, argument.Name).Reason
+                    : null;
+
+                if (validationError == null)
+                {
+                    failedValidator = FailedValidator(argument, read.Value, out validationError);
+                }
             }
 
             var hint = new ArgumentHint(argument, read.TokenNumber, read.TokensDesired, invalidValue, failedValidator, validationError);
@@ -463,7 +500,23 @@ namespace Bossy.Frontend.Autocomplete
             var values = _userSuggestions.Get(context, out var error);
             failure = error != null ? new SuggestionFailure(argument, error) : null;
 
-            return values.Select(v => MakeCompletion(Quote(v.Value, _slot.IsQuoted), v.Value, v.Description, CompletionKind.Value)).ToList();
+            var completions = values
+                .Select(v => MakeCompletion(Quote(v.Value, _slot.IsQuoted), v.Value, v.Description, CompletionKind.Value))
+                .ToList();
+
+            // An unquoted command string is one token, so it can only be a command name or an alias
+            if (CommandString.IsCommandStringType(argument.Type))
+            {
+                completions.AddRange(_engine.CommandNameCompletions(_slot));
+            }
+
+            return completions;
+        }
+
+        // Runs the parser's check on a command string value. Returns null for any other value.
+        private ParseResult CommandStringError(object value)
+        {
+            return value is CommandString { IsEmpty: false } command ? _engine.CheckCommandString(command) : null;
         }
 
         /*
@@ -478,7 +531,10 @@ namespace Bossy.Frontend.Autocomplete
                               || _operators.ToEnumerable().Any(value.Contains)
                               || new Token(value).IsSwitch;
 
-            return needsQuotes ? $"\"{value.Replace("\\", "\\\\").Replace("\"", "\\\"")}\"" : value;
+            if (!needsQuotes) return value;
+
+            var escaped = value.Replace("\\", "\\\\").Replace(_quote.ToString(), $"\\{_quote}");
+            return $"{_quote}{escaped}{_quote}";
         }
 
         // --- Completions ---
