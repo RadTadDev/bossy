@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Applies the Bossy look: the theme stylesheet, its root class and the Bossy font.

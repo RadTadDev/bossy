@@ -1,8 +1,7 @@
 using NUnit.Framework;
-using Bossy.Frontend.Parsing;
 using UnityEngine;
 
-namespace Bossy.Tests.FrontEnd.Parsing
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the Unity adapters.

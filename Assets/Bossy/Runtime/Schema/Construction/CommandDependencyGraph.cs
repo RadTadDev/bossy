@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Bossy.Schema
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A graph of command type dependencies listing each types parent and children.

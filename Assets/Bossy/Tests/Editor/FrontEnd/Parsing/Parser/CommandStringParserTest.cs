@@ -1,13 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Bossy.Command;
-using Bossy.Frontend.Parsing;
-using Bossy.Schema;
-using Bossy.Schema.Registry;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.FrontEnd.Parsing
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests how the <see cref="Parser"/> reads <see cref="CommandString"/> arguments and expands aliases.

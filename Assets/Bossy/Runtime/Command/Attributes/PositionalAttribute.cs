@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Declares a positional argument for a command.

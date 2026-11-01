@@ -1,9 +1,7 @@
 using System.Collections.Generic;
-using Bossy.Frontend;
-using Bossy.Execution;
 using UnityEngine;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A simple command context.

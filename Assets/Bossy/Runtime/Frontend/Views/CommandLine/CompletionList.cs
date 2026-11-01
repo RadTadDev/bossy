@@ -1,6 +1,4 @@
-using Bossy.Frontend.Autocomplete;
-
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// The completions shown for one input line, with the highlighted row and how accepting it changes the line.

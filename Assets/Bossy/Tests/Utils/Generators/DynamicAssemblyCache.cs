@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Provides a segregated assembly to hold all generated types.

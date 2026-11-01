@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Schema.Registry;
-using Bossy.Schema;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Registry
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="SchemaRegistry"/> class.

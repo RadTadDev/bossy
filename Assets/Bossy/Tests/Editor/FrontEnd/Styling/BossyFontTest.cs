@@ -1,4 +1,3 @@
-using Bossy.Frontend;
 using System.Collections;
 using System.Linq;
 using System.Reflection;
@@ -9,7 +8,7 @@ using UnityEngine.TestTools;
 using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 
-namespace Bossy.Tests.FrontEnd.Styling
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the Bossy font.

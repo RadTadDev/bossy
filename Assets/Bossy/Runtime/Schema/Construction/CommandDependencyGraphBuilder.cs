@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Bossy.Command;
-using Bossy.Utils;
 
-namespace Bossy.Schema
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Defines the relationships between all commands. Represents a collection of graphs with each

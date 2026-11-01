@@ -2,13 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Bossy.Command;
-using Bossy.Schema.Registry;
-using Bossy.Schema;
-using Bossy.Execution;
-using Bossy.Utils;
 
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Parses a string input to a <see cref="CommandGraph"/>.

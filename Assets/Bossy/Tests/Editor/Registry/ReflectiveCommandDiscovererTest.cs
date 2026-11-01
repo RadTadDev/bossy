@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using Bossy.Schema.Registry;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Registry
+namespace RadTadDev.Bossy.Tests
 {
 	/// <summary>
 	/// Tests the <see cref="ReflectiveCommandDiscoverer"/> class.

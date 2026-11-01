@@ -1,12 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Frontend;
-using Bossy.Frontend.Parsing;
-using Bossy.Schema;
-using Bossy.Schema.Registry;
-using Bossy.Settings;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -14,7 +8,7 @@ using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
-namespace Bossy.Tests.Runtime
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the runtime console in play mode, driven by a simulated keyboard.

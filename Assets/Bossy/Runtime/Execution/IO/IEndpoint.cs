@@ -1,4 +1,4 @@
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Where a session reads commands and input from and writes output to. Every session has one.

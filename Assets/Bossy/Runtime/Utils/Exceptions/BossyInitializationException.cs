@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Utils
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Indicates something went wrong during Bossy's initialization.

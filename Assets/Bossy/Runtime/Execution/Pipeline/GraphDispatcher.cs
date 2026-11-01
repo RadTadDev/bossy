@@ -1,9 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Command;
-using Bossy.Frontend;
 
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Sends a session's graphs where they should run. Windowed graphs open a command window through the

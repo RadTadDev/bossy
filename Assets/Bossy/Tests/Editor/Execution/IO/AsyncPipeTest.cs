@@ -1,10 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Execution;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Shell
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="AsyncPipe"/> class.

@@ -1,12 +1,10 @@
-using Bossy.Command;
-
 #if UNITY_EDITOR
 using UnityEditor;
 #else
 using UnityEngine;
 #endif
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [RestrictPlatform(Platform.Runtime)]
     [Command("exit", "Exits the game.")]

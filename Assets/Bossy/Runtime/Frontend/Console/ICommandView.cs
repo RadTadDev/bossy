@@ -1,6 +1,6 @@
 using UnityEngine.UIElements;
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A command with its own UI. While the command runs, its view is shown on top of the console,

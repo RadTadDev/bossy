@@ -1,8 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using Bossy.Command;
 
-namespace Bossy.Tests.Utils.Commands
+namespace RadTadDev.Bossy.Tests
 {
     internal enum InfiniteOperation
     {

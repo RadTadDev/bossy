@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Bossy.Command;
-using Bossy.Frontend.Autocomplete;
+using RadTadDev.Bossy;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using RangeAttribute = Bossy.Command.RangeAttribute;
 
 /*
  * Hand-testing playground for autocomplete. Not part of the package.
@@ -67,7 +65,7 @@ namespace Startup
         [Switch('r', "Move relative to the current position.")]
         private bool _relative;
 
-        [Range(0f, 10f)]
+        [InRange(0f, 10f)]
         [Switch('d', "How long the move takes, in seconds.")]
         private float _duration = 1f;
 

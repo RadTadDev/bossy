@@ -1,4 +1,4 @@
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// The visibility state of the console.

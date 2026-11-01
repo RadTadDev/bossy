@@ -1,11 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Execution;
-using Bossy.Frontend;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// A session frontend that records what is written to it. Reads return the given input in order, one item each,

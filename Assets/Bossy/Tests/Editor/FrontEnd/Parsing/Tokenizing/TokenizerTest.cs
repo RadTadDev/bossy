@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Frontend.Parsing;
 using NUnit.Framework;
 
-namespace Bossy.Tests.FrontEnd.Parsing
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="Tokenizer"/> class.

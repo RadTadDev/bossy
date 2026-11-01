@@ -1,7 +1,6 @@
-using Bossy.Command;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Schema
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="CommandMetaProcessor"/> class.

@@ -1,7 +1,4 @@
-using Bossy.Execution;
-using Bossy.Frontend;
-
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Creates sessions for tests. Their history is kept in memory and never saved.

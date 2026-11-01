@@ -1,7 +1,6 @@
 using System;
-using Bossy.Command;
 
-namespace Bossy.Tests.Utils.Commands
+namespace RadTadDev.Bossy.Tests
 {
     internal class ThrowsCommand : SimpleCommand
     {

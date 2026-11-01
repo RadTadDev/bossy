@@ -1,9 +1,6 @@
-using Bossy.Execution;
 using System.Collections.Generic;
-using Bossy.Command;
-using Bossy.Schema;
 
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A single command and its link. The smallest parseable unit.

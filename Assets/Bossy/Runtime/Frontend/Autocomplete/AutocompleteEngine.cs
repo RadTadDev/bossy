@@ -2,12 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Bossy.Command;
-using Bossy.Frontend.Parsing;
-using Bossy.Schema;
-using Bossy.Schema.Registry;
 
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// The engine that drives autocomplete. It finds the command the cursor is in, checks the commands before it

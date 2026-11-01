@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// This item will be bound to an instance registered via the <see cref="IBossyBinder"/>.

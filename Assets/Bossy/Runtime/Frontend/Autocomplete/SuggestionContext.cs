@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Command;
-using Bossy.Schema;
-using Bossy.Utils;
 
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Passed to a suggestion function. It gives the values the user has already typed for the command's other

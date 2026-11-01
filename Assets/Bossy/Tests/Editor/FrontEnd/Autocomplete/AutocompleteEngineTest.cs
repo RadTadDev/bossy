@@ -1,15 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Frontend.Autocomplete;
-using Bossy.Frontend.Parsing;
-using Bossy.Schema;
-using Bossy.Schema.Registry;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Bossy.Tests.FrontEnd.Autocomplete
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="AutocompleteEngine"/>. The rule numbers (R1 to R31, B1 to B9, and the numbered
@@ -112,15 +107,15 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
                 .Generate().GetType();
 
             var script = CommandGenerator.WithName("script")
-                .WithPositional("file", typeof(string)).WithValidator(typeof(Bossy.Command.EndsWithAttribute), ".cs")
+                .WithPositional("file", typeof(string)).WithValidator(typeof(Bossy.EndsWithAttribute), ".cs")
                 .Generate().GetType();
 
             var scripts = CommandGenerator.WithName("scripts")
-                .WithVariadic("files", typeof(string)).WithValidator(typeof(Bossy.Command.EndsWithAttribute), ".cs")
+                .WithVariadic("files", typeof(string)).WithValidator(typeof(Bossy.EndsWithAttribute), ".cs")
                 .Generate().GetType();
 
             var volume = CommandGenerator.WithName("volume")
-                .WithPositional("level", typeof(int)).WithValidator(typeof(Bossy.Command.RangeAttribute), 0f, 10f)
+                .WithPositional("level", typeof(int)).WithValidator(typeof(Bossy.InRangeAttribute), 0f, 10f)
                 .Generate().GetType();
 
             var shaky = CommandGenerator.WithName("shaky")

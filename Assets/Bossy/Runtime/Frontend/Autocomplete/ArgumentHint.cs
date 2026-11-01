@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using Bossy.Command;
-using Bossy.Schema;
 
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Details about the argument being typed, so a view can lay out, style, and shorten the hint itself instead of

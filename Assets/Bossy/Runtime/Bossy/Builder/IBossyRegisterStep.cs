@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Frontend.Parsing;
-using Bossy.Runtime.Command.Library;
-using Bossy.Schema.Registry;
-using Bossy.Utils;
 using UnityEngine;
+using RadTadDev.Logger;
 
-namespace Bossy
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Assists in creating a <see cref="TypeAdapterRegistry"/>.

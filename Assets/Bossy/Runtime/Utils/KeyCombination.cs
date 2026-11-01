@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Bossy.Utils
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Represents modifier keys for use in a shortcut binding.

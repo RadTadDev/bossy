@@ -1,4 +1,4 @@
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     public static class CloseWriterSentinel
     {

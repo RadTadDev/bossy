@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Settings
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Marks a field as a setting.

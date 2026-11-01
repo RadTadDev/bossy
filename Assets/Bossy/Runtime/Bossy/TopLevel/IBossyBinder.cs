@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Allows Bossy to get items that are registered.

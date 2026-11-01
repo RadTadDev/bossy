@@ -1,4 +1,4 @@
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// What a <see cref="Completion"/> completes.

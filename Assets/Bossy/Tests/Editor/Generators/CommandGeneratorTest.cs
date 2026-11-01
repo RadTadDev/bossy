@@ -1,9 +1,8 @@
 using System;
 using System.Reflection;
-using Bossy.Command;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="CommandGenerator"/> class.

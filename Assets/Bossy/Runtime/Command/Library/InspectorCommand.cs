@@ -1,9 +1,8 @@
 #if UNITY_EDITOR
 
-using Bossy.Command;
 using UnityEditor;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("ilock", "Toggles the inspector lock.")]
     public class InspectorCommand : SimpleCommand

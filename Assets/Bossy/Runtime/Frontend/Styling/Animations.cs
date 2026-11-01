@@ -1,7 +1,7 @@
 using System;
 using UnityEngine.UIElements;
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Plays the theme's USS transitions by adding and removing state classes.

@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
-using Bossy.Execution;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A runnable command.

@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Command;
 using System.Threading.Tasks;
 using UnityEngine.SceneManagement;
-using Bossy.Frontend.Autocomplete;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -13,7 +11,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     
     [Command("scene", "Commands for inspecting and manipulating Unity scenes.")]

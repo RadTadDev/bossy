@@ -2,14 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Frontend.Parsing;
-using Bossy.Execution;
-using Bossy.Schema;
-using Bossy.Tests.Utils;
-using Bossy.Tests.Utils.Commands;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Shell
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="GraphDispatcher"/> behavior that a session sees: windows, views, endpoint resets and closing.

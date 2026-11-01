@@ -3,7 +3,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// An editor window that runs one command graph in its own session. Closing it ends the session.

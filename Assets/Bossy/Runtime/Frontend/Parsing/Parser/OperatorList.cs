@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A list of all operators the parser recognizes.

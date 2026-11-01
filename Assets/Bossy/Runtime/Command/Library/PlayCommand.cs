@@ -1,11 +1,10 @@
 #if UNITY_EDITOR
 
 using System.Linq;
-using Bossy.Command;
 using UnityEditor;
 using UnityEngine;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [RestrictPlatform(Platform.EditMode)]
     [Command("play", "Enters play mode.")]

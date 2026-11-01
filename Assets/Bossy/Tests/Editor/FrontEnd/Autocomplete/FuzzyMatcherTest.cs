@@ -1,7 +1,6 @@
-using Bossy.Frontend.Autocomplete;
 using NUnit.Framework;
 
-namespace Bossy.Tests.FrontEnd.Autocomplete
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="FuzzyMatcher"/> class.

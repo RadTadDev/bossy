@@ -1,12 +1,11 @@
 #if UNITY_EDITOR
 
 using System;
-using Bossy.Execution;
 using UnityEditor;
 using UnityEditor.ShortcutManagement;
 using UnityEngine;
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// The console in the editor: one dockable console window with its own session, plus any command windows.

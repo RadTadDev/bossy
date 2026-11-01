@@ -1,4 +1,4 @@
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Enumerates the possible statuses that a command can return with.

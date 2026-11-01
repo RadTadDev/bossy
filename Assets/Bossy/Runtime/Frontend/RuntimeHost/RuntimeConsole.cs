@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Bossy.Execution;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
@@ -11,7 +10,7 @@ using UnityEditor;
 using UnityEngine.SceneManagement;
 #endif
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// The console at runtime, in builds and in play mode: one console session in the overlay, plus any command windows.

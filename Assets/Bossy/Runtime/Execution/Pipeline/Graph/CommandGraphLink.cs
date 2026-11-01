@@ -1,4 +1,4 @@
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Enumerates possible command links in a graph.

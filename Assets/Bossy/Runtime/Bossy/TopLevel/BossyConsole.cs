@@ -1,15 +1,11 @@
 using System;
-using Bossy.Frontend;
-using Bossy.Frontend.Parsing;
-using Bossy.Schema.Registry;
-using Bossy.Settings;
 using UnityEngine;
 
 #if BOSSY_SRP_CORE
 using UnityEngine.Rendering;
 #endif
 
-namespace Bossy
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// The top level boss (pun intended). Maybe this is a terrible spot for a joke, especially

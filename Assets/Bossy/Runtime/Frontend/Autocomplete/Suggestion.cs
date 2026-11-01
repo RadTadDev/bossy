@@ -1,4 +1,4 @@
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A value suggested by a suggestion function, with an optional description shown beside it. A string converts

@@ -1,6 +1,4 @@
-using Bossy.Schema;
-
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// An argument's suggestion function or validator threw while the completions were made. The rest of the

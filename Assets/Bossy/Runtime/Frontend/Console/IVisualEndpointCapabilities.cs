@@ -1,10 +1,8 @@
-using Bossy.Execution;
-
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// An endpoint with a user interface. Commands can test for optional capabilities, such as
-    /// <see cref="IClearable"/>, by casting <see cref="Command.SimpleContext.Endpoint"/>.
+    /// <see cref="IClearable"/>, by casting <see cref="Bossy.SimpleContext.Endpoint"/>.
     /// </summary>
     public interface IVisualEndpointCapabilities : IEndpoint
     {

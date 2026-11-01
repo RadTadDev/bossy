@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Utils
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Occurs when a path for a Uxml assert returns null.

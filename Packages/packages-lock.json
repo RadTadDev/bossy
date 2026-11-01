@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.radtaddev.logger": {
+      "version": "https://github.com/RadTadDev/logger.git?path=/Assets/Logger",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "3298cdfcbfd13c73a15a41965d574060a46a65f1"
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.12",
       "depth": 0,
@@ -10,7 +17,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.burst": {
-      "version": "1.8.28",
+      "version": "1.8.29",
       "depth": 2,
       "source": "registry",
       "dependencies": {
@@ -158,7 +165,7 @@
       }
     },
     "com.unity.test-framework.performance": {
-      "version": "3.2.0",
+      "version": "3.4.0",
       "depth": 3,
       "source": "registry",
       "dependencies": {

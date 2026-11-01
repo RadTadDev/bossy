@@ -1,4 +1,4 @@
-namespace Bossy.Schema.Registry
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Enumerated possible schema query status results.

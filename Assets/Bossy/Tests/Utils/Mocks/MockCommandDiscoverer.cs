@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Bossy.Schema.Registry;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// A dummy command discoverer that returns the same list given on creation.

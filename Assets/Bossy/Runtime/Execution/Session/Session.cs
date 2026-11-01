@@ -2,11 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Command;
-using Bossy.Frontend;
-using Bossy.Utils;
 
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A session container with state and a single endpoint.

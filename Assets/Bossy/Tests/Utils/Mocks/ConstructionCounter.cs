@@ -1,4 +1,4 @@
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Counts how often generated commands are created, for use with

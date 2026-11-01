@@ -1,4 +1,4 @@
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// This front end is capable of modifying the output buffer in non-linear ways.

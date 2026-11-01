@@ -1,4 +1,4 @@
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A run of characters in a completion's display text that matched the typed text, so views can highlight it.

@@ -1,9 +1,7 @@
 using System;
-using Bossy.Frontend.Parsing;
-using Bossy.Utils;
 using UnityEngine;
 
-namespace Bossy.Settings
+namespace RadTadDev.Bossy
 {
     [Serializable]
     public class BossyCliSettings

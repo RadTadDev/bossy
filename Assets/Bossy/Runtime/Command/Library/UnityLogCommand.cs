@@ -1,9 +1,8 @@
 using System;
 using System.Threading.Tasks;
-using Bossy.Command;
 using UnityEngine;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("unity-log", "Pipes the unity log to the console.")]
     public class UnityLogCommand : ICommand

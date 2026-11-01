@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Declares that a class is a command and allows autoregistration.

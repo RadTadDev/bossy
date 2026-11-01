@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Expands aliases in a tokenized line. The parser and autocomplete both use it, so they agree on what a line means.

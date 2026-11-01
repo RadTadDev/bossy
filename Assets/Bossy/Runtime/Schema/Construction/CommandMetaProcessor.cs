@@ -1,7 +1,7 @@
 using System.Linq;
 using System.Reflection;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Preprocesses command metadata so that the registry has a normalized format.

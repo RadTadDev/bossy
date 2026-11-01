@@ -1,8 +1,6 @@
-using Bossy.Command;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Shell
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="SimpleContext"/> class.

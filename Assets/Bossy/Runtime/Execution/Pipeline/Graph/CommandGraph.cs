@@ -1,9 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Command;
-using Bossy.Schema;
 
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Begins building a graph.

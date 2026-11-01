@@ -1,4 +1,4 @@
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Represents the result of an argument validation.

@@ -1,6 +1,4 @@
-using Bossy.Utils;
-
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Ensures a string is a valid file system path.

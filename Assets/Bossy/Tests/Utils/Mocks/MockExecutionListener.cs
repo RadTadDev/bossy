@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using Bossy.Execution;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// An execution listener that records when each command group starts and finishes.

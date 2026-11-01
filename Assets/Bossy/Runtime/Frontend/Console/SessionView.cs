@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bossy.Execution;
-using Bossy.Settings;
-using Bossy.Utils;
+using RadTadDev.Logger;
 using UnityEngine.UIElements;
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// The UI for one session: its frontend, with any running command's view stacked on top.

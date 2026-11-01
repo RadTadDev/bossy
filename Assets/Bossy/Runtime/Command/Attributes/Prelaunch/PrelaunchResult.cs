@@ -1,4 +1,4 @@
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Determines if a prelaunch hook will allow a command to run or not.

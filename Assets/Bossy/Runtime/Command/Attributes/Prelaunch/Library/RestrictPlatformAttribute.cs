@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using UnityEditor;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     [AttributeUsage(AttributeTargets.Class)]
     public class RestrictPlatformAttribute : PrelaunchHookAttribute

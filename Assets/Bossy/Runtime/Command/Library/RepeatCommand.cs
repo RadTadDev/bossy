@@ -1,8 +1,6 @@
 using System.Threading.Tasks;
-using Bossy.Command;
-using Bossy.Frontend;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("repeat", "Repeats input as output.")]
     public class RepeatCommand : ICommand

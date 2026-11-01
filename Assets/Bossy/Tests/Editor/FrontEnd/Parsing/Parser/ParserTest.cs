@@ -1,14 +1,9 @@
 using System.Collections.Generic;
 using System.Reflection;
-using Bossy.Command;
 using NUnit.Framework;
-using Bossy.Frontend.Parsing;
-using Bossy.Schema.Registry;
-using Bossy.Schema;
-using Bossy.Tests.Utils;
 using UnityEngine;
 
-namespace Bossy.Tests.FrontEnd.Parsing
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="Parser"/> class.
@@ -148,7 +143,7 @@ namespace Bossy.Tests.FrontEnd.Parsing
             var volumesArgs = new HashSet<ArgumentSchema>
             {
                 new("levels", "description", volumesField, volumesField.GetCustomAttribute<VariadicAttribute>(),
-                    new List<ArgumentValidationAttribute> { new Bossy.Command.RangeAttribute(0, 10) }),
+                    new List<ArgumentValidationAttribute> { new Bossy.InRangeAttribute(0, 10) }),
             };
             var volumesSchema = new CommandSchema("volumes", "description", volumes.GetType(), volumesArgs);
             

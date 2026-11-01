@@ -1,4 +1,4 @@
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A choice offered by a <see cref="ReadRequest"/>.

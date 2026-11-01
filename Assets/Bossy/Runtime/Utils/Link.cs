@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
 // Allow our test assemblies to share internal data
-[assembly: InternalsVisibleTo("Bossy.Tests.Editor")]
-[assembly: InternalsVisibleTo("Bossy.Tests.Runtime")]
-[assembly: InternalsVisibleTo("Bossy.Tests.Utils")]
+[assembly: InternalsVisibleTo("RadTadDev.Bossy.Tests.Editor")]
+[assembly: InternalsVisibleTo("RadTadDev.Bossy.Tests.Runtime")]
+[assembly: InternalsVisibleTo("RadTadDev.Bossy.Tests.Utils")]

@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 
-namespace Bossy.Schema.Registry
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A container holding a registry of all command schemas.

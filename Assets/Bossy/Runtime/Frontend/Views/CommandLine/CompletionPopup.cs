@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Bossy.Command;
-using Bossy.Frontend.Autocomplete;
-using Bossy.Utils;
 using UnityEngine.UIElements;
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Shows a <see cref="CompletionList"/> above the CLI input: a status line, then a virtualized list of rows.

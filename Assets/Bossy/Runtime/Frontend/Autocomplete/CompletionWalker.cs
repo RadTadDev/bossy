@@ -1,12 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Command;
-using Bossy.Frontend.Parsing;
-using Bossy.Schema;
-using Bossy.Utils;
 
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Walks the tokens of one command, the way the parser binds them, and completes the slot at the cursor.

@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Runs a callback before a command launches.

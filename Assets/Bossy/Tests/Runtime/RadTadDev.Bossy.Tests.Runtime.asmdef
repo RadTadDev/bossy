@@ -1,8 +1,8 @@
 {
-    "name": "Bossy.Tests.Runtime",
+    "name": "RadTadDev.Bossy.Tests.Runtime",
     "references": [
-        "Bossy",
-        "Bossy.Tests.Utils",
+        "RadTadDev.Bossy",
+        "RadTadDev.Bossy.Tests.Utils",
         "Unity.InputSystem",
         "Unity.InputSystem.TestFramework"
     ],

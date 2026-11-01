@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A completion from the autocomplete engine. Applying it replaces a span of the input line with new text.

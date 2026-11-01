@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Command;
 
-namespace Bossy.Schema
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A readonly blueprint declaring the structure of a command.

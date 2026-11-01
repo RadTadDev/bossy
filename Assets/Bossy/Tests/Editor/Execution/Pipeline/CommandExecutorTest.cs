@@ -2,17 +2,10 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Command;
-using Bossy.Frontend;
-using Bossy.Frontend.Parsing;
-using Bossy.Execution;
-using Bossy.Schema;
-using Bossy.Tests.Utils;
-using Bossy.Tests.Utils.Commands;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Bossy.Tests.Shell
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="CommandExecutor"/> class.
@@ -542,7 +535,7 @@ namespace Bossy.Tests.Shell
                 .Execute(new ThrowsCommand(), null)
                 .Build();
 
-            UnityEngine.TestTools.LogAssert.Expect(LogType.Exception, new Regex("ArgumentException:.*"));
+            UnityEngine.TestTools.LogAssert.Expect(LogType.Error, new Regex("ArgumentException:.*"));
             await _executor.ExecuteAsync(graph, _session, cts.Token, reader, writer);
         
             Assert.That(writer.Log, Is.Not.Empty);

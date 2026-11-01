@@ -1,6 +1,4 @@
-using Bossy.Command;
-
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("hist", "Gets command history.")]
     public class HistoryCommand : SimpleCommand

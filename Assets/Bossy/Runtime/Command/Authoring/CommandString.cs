@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A command line held as a value, such as the command a <c>watch</c> command repeats. As an argument, it is a

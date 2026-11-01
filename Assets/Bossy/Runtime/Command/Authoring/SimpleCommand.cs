@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A simple and synchronous command.

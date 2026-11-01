@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
-using Bossy.Command;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("print", "Prints text to the screen.")]
     public class PrintCommand : ICommand

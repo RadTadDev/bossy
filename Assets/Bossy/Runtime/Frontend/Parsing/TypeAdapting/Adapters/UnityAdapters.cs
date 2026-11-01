@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     public class Vector2Adapter : BaseTypeAdapter<Vector2>
     {

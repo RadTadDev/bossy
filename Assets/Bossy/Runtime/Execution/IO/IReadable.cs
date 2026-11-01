@@ -1,8 +1,7 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Able to read from a standard stream.

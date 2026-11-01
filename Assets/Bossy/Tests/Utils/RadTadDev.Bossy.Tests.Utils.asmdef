@@ -1,7 +1,7 @@
 {
-  "name": "Bossy.Tests.Utils",
+  "name": "RadTadDev.Bossy.Tests.Utils",
   "references": [
-    "Bossy"
+    "RadTadDev.Bossy"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

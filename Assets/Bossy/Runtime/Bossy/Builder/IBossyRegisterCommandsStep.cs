@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Bossy.Schema.Registry;
-using Bossy.Schema;
-using Bossy.Utils;
+using RadTadDev.Logger;
 
-namespace Bossy
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Specifies how to discover commands.
@@ -111,7 +109,7 @@ namespace Bossy
                 }
                 else
                 {
-                    Log.Warning($"Command type {commandType} is not a command and will not be available to run.");
+                    Log.Warn($"Command type {commandType} is not a command and will not be available to run.");
                 }
             }
             

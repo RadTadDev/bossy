@@ -1,4 +1,4 @@
-namespace Bossy.Settings
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Loads and saves json text.

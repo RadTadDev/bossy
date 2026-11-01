@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Schema;
 
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Tracks which arguments of a command are still open while the autocomplete engine walks its tokens.

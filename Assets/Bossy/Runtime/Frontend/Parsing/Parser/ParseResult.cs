@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Bossy.Execution;
-using Bossy.Utils;
 
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// The result of parsing text into a command graph.

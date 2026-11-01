@@ -3,10 +3,8 @@ using UnityEditor;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Bossy.Command;
-using Bossy.Frontend.Autocomplete;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [RestrictPlatform(Platform.Editor)]
     [Command("open", "Opens a file to edit in the external editor.")]

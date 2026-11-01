@@ -1,6 +1,6 @@
 using UnityEngine.UIElements;
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A visual endpoint drawn with UI Toolkit, which can be shown in an editor window or at runtime.

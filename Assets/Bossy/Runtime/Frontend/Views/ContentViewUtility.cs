@@ -1,8 +1,7 @@
-using Bossy.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Assists in generating content views.

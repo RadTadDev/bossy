@@ -1,6 +1,4 @@
-using Bossy.Frontend.Parsing;
-
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// The place in the input line that completions replace: either the token at the cursor, or an empty span at

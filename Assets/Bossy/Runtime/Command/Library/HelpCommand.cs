@@ -2,185 +2,183 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Bossy.Command;
-using Bossy.Frontend.Autocomplete;
-using Bossy.Schema;
-using Bossy.Schema.Registry;
-using Bossy.Utils;
 
-[Command("help", "Displays information about a command and its arguments.")]
-public class HelpCommand : SimpleCommand
+namespace RadTadDev.Bossy
 {
-    [Suggest(nameof(Suggest))]
-    [Variadic("The command path to look up.")]
-    private string[] _command;
-
-    [Switch('r', "Also display all subcommands recursively.")]
-    private bool _recursive;
-
-    protected override CommandStatus Execute(SimpleContext ctx)
+    [Command("help", "Displays information about a command and its arguments.")]
+    public class HelpCommand : SimpleCommand
     {
-        var sb = new StringBuilder();
+        [Suggest(nameof(Suggest))]
+        [Variadic("The command path to look up.")]
+        private string[] _command;
 
-        if (_command.Length == 0)
+        [Switch('r', "Also display all subcommands recursively.")]
+        private bool _recursive;
+
+        protected override CommandStatus Execute(SimpleContext ctx)
         {
-            ctx.Bossy.SchemaRegistry.TryResolveSchema("help", out var help);
-            
-            ctx.Write("To get a list of all available commands, use 'reg'.");
-            ctx.Write("To get help for any command, use the following:");
-            ctx.Write("  " + BuildUsageLine(help));
-            ctx.Write("Your current terminal operator configuration is the following:");
+            var sb = new StringBuilder();
 
-            ctx.NewLine();
-            var operators = new List<(string, string)>
+            if (_command.Length == 0)
             {
-                ($"{Format.Color("Then  ", Format.LightBlue)} {Format.Color(ctx.Bossy.Settings.BossyCliSettings.ThenOperator, Format.Green)}",   "Run a command after another."),
-                ($"{Format.Color("And   ", Format.LightBlue)} {Format.Color(ctx.Bossy.Settings.BossyCliSettings.AndOperator, Format.Green)}",    "Run a command after another if it succeeds."),
-                ($"{Format.Color("Or    ", Format.LightBlue)} {Format.Color(ctx.Bossy.Settings.BossyCliSettings.OrOperator, Format.Green)}",     "Run a command after another if it fails."),
-                ($"{Format.Color("Pipe  ", Format.LightBlue)} {Format.Color(ctx.Bossy.Settings.BossyCliSettings.PipeOperator, Format.Green)}",   "Pipe the output of one command to the input of another."),
-                ($"{Format.Color("Window", Format.LightBlue)} {Format.Color(ctx.Bossy.Settings.BossyCliSettings.WindowOperator, Format.Green)}", "Run this command in a window."),
-            };
+                ctx.Bossy.SchemaRegistry.TryResolveSchema("help", out var help);
+                
+                ctx.Write("To get a list of all available commands, use 'reg'.");
+                ctx.Write("To get help for any command, use the following:");
+                ctx.Write("  " + BuildUsageLine(help));
+                ctx.Write("Your current terminal operator configuration is the following:");
 
-            Format.Align(operators, t => t.Item1, t => t.Item2, ctx);
+                ctx.NewLine();
+                var operators = new List<(string, string)>
+                {
+                    ($"{Format.Color("Then  ", Format.LightBlue)} {Format.Color(ctx.Bossy.Settings.BossyCliSettings.ThenOperator, Format.Green)}",   "Run a command after another."),
+                    ($"{Format.Color("And   ", Format.LightBlue)} {Format.Color(ctx.Bossy.Settings.BossyCliSettings.AndOperator, Format.Green)}",    "Run a command after another if it succeeds."),
+                    ($"{Format.Color("Or    ", Format.LightBlue)} {Format.Color(ctx.Bossy.Settings.BossyCliSettings.OrOperator, Format.Green)}",     "Run a command after another if it fails."),
+                    ($"{Format.Color("Pipe  ", Format.LightBlue)} {Format.Color(ctx.Bossy.Settings.BossyCliSettings.PipeOperator, Format.Green)}",   "Pipe the output of one command to the input of another."),
+                    ($"{Format.Color("Window", Format.LightBlue)} {Format.Color(ctx.Bossy.Settings.BossyCliSettings.WindowOperator, Format.Green)}", "Run this command in a window."),
+                };
+
+                Format.Align(operators, t => t.Item1, t => t.Item2, ctx);
+                return CommandStatus.Ok;
+            }
+
+            var root = _command[0];
+            var subcommands = _command.Skip(1);
+
+            var status = ctx.Bossy.SchemaRegistry.TryResolveSchema(root, subcommands, out var schema);
+
+            if (status is not SchemaQueryStatus.Found)
+            {
+                ctx.WriteError($"Unknown command: '{string.Join(" ", _command)}'");
+                return CommandStatus.Error;
+            }
+
+            AppendSchema(sb, schema, depth: 0);
+            ctx.Write(sb.ToString());
             return CommandStatus.Ok;
         }
 
-        var root = _command[0];
-        var subcommands = _command.Skip(1);
-
-        var status = ctx.Bossy.SchemaRegistry.TryResolveSchema(root, subcommands, out var schema);
-
-        if (status is not SchemaQueryStatus.Found)
+        private void AppendSchema(StringBuilder sb, CommandSchema schema, int depth)
         {
-            ctx.WriteError($"Unknown command: '{string.Join(" ", _command)}'");
-            return CommandStatus.Error;
-        }
+            var indent = new string(' ', depth * 2);
 
-        AppendSchema(sb, schema, depth: 0);
-        ctx.Write(sb.ToString());
-        return CommandStatus.Ok;
-    }
+            // Header
+            sb.Append(indent).Append(Format.Bold(schema.Name));
 
-    private void AppendSchema(StringBuilder sb, CommandSchema schema, int depth)
-    {
-        var indent = new string(' ', depth * 2);
-
-        // Header
-        sb.Append(indent).Append(Format.Bold(schema.Name));
-
-        if (!string.IsNullOrEmpty(schema.Description))
-        {
-            sb.Append("  ").Append(Format.Italics(Format.Color(schema.Description, Format.Gray)));
-        }
-
-        sb.AppendLine();
-
-        // Usage line
-        var usageLine = BuildUsageLine(schema);
-        if (usageLine != null)
-        {
-            sb.Append(indent).Append(Format.Color("  Usage: ", Format.Yellow)).AppendLine(usageLine);
-        }
-
-        // Arguments
-        if (schema.Arguments.Count > 0)
-        {
-            sb.Append(indent).AppendLine(Format.Color("  Arguments:", Format.Yellow));
-
-           
-            sb.Append(Format.Align(
-                schema.Arguments,
-                arg => indent + "    " + Format.Color(arg.Name, Format.LightBlue)
-                           + Format.Color($" <{arg.Type.GetFriendlyName()}>", Format.Gray)
-                           + Format.Color($" {GetKindLabel(arg.ArgumentAttribute)}", Format.Gray),
-                arg => arg.Description
-            ));
-        }
-
-        // Subcommands
-        if (!_recursive && schema.ChildSchemas.Count > 0)
-        {
-            sb.Append(indent).AppendLine(Format.Color("  Subcommands:", Format.Yellow));
-            sb.Append(Format.Align(
-                schema.ChildSchemas,
-                c => indent + "    " + c.Name,
-                c => c.Description,
-                Format.LightBlue
-            ));
-        }
-
-        if (_recursive && schema.ChildSchemas.Count > 0)
-        {
-            sb.Append(indent).AppendLine(Format.Color("  Subcommands:", Format.Yellow));
-            foreach (var child in schema.ChildSchemas)
+            if (!string.IsNullOrEmpty(schema.Description))
             {
-                AppendSchema(sb, child, depth + 1);
+                sb.Append("  ").Append(Format.Italics(Format.Color(schema.Description, Format.Gray)));
+            }
+
+            sb.AppendLine();
+
+            // Usage line
+            var usageLine = BuildUsageLine(schema);
+            if (usageLine != null)
+            {
+                sb.Append(indent).Append(Format.Color("  Usage: ", Format.Yellow)).AppendLine(usageLine);
+            }
+
+            // Arguments
+            if (schema.Arguments.Count > 0)
+            {
+                sb.Append(indent).AppendLine(Format.Color("  Arguments:", Format.Yellow));
+
+               
+                sb.Append(Format.Align(
+                    schema.Arguments,
+                    arg => indent + "    " + Format.Color(arg.Name, Format.LightBlue)
+                               + Format.Color($" <{arg.Type.GetFriendlyName()}>", Format.Gray)
+                               + Format.Color($" {GetKindLabel(arg.ArgumentAttribute)}", Format.Gray),
+                    arg => arg.Description
+                ));
+            }
+
+            // Subcommands
+            if (!_recursive && schema.ChildSchemas.Count > 0)
+            {
+                sb.Append(indent).AppendLine(Format.Color("  Subcommands:", Format.Yellow));
+                sb.Append(Format.Align(
+                    schema.ChildSchemas,
+                    c => indent + "    " + c.Name,
+                    c => c.Description,
+                    Format.LightBlue
+                ));
+            }
+
+            if (_recursive && schema.ChildSchemas.Count > 0)
+            {
+                sb.Append(indent).AppendLine(Format.Color("  Subcommands:", Format.Yellow));
+                foreach (var child in schema.ChildSchemas)
+                {
+                    AppendSchema(sb, child, depth + 1);
+                }
             }
         }
-    }
 
-    private static string BuildUsageLine(CommandSchema schema)
-    {
-        if (schema.Arguments.Count == 0)
+        private static string BuildUsageLine(CommandSchema schema)
         {
-            return null;
+            if (schema.Arguments.Count == 0)
+            {
+                return null;
+            }
+
+            var parts = new List<string> { Format.Bold(CommandPath(schema)) };
+
+            var positionals = schema.GetOrderedPositionalArguments();
+            var optionals   = schema.GetOrderedOptionalArguments();
+            var switches    = schema.GetSwitches();
+            schema.TryGetVariadic(out var variadic);
+
+            parts.AddRange(positionals.Select(arg => Format.Color($"<{arg.Name}>", Format.LightBlue)));
+            parts.AddRange(optionals.Select(arg => Format.Color($"[{arg.Name}]", Format.Gray)));
+            parts.AddRange(switches.Select(arg => (SwitchAttribute)arg.ArgumentAttribute).Select(attr => Format.Color($"[-{attr.ShortName}]", Format.Gray)));
+
+            if (variadic != null)
+            {
+                parts.Add(Format.Color($"[{variadic.Name}...]", Format.Gray));
+            }
+
+            return string.Join(" ", parts);
         }
 
-        var parts = new List<string> { Format.Bold(CommandPath(schema)) };
-
-        var positionals = schema.GetOrderedPositionalArguments();
-        var optionals   = schema.GetOrderedOptionalArguments();
-        var switches    = schema.GetSwitches();
-        schema.TryGetVariadic(out var variadic);
-
-        parts.AddRange(positionals.Select(arg => Format.Color($"<{arg.Name}>", Format.LightBlue)));
-        parts.AddRange(optionals.Select(arg => Format.Color($"[{arg.Name}]", Format.Gray)));
-        parts.AddRange(switches.Select(arg => (SwitchAttribute)arg.ArgumentAttribute).Select(attr => Format.Color($"[-{attr.ShortName}]", Format.Gray)));
-
-        if (variadic != null)
+        // A subcommand cannot be run by its own name, so the usage starts from the root command
+        private static string CommandPath(CommandSchema schema)
         {
-            parts.Add(Format.Color($"[{variadic.Name}...]", Format.Gray));
+            var names = new List<string>();
+            for (var current = schema; current != null; current = current.ParentSchema)
+            {
+                names.Insert(0, current.Name);
+            }
+
+            return string.Join(" ", names);
         }
 
-        return string.Join(" ", parts);
-    }
-
-    // A subcommand cannot be run by its own name, so the usage starts from the root command
-    private static string CommandPath(CommandSchema schema)
-    {
-        var names = new List<string>();
-        for (var current = schema; current != null; current = current.ParentSchema)
+        private static string GetKindLabel(ArgumentAttribute attr)
         {
-            names.Insert(0, current.Name);
+            return attr switch
+            {
+                PositionalAttribute => "[positional]",
+                OptionalAttribute   => "[optional]",
+                SwitchAttribute     => "[switch]",
+                VariadicAttribute   => "[variadic]",
+                _                   => "[argument]",
+            };
         }
 
-        return string.Join(" ", names);
-    }
-
-    private static string GetKindLabel(ArgumentAttribute attr)
-    {
-        return attr switch
+        private static Suggestion[] Suggest(SuggestionContext ctx)
         {
-            PositionalAttribute => "[positional]",
-            OptionalAttribute   => "[optional]",
-            SwitchAttribute     => "[switch]",
-            VariadicAttribute   => "[variadic]",
-            _                   => "[argument]",
-        };
-    }
+            if (!ctx.TryGet<string[]>(nameof(_command), out var commandPath))
+            {
+                return ctx.Bossy.SchemaRegistry.GetValidSchemas().Select(s => new Suggestion(s.Name, s.Description)).ToArray();
+            }
 
-    private static Suggestion[] Suggest(SuggestionContext ctx)
-    {
-        if (!ctx.TryGet<string[]>(nameof(_command), out var commandPath))
-        {
-            return ctx.Bossy.SchemaRegistry.GetValidSchemas().Select(s => new Suggestion(s.Name, s.Description)).ToArray();
+            if (ctx.Bossy.SchemaRegistry.TryResolveSchema(commandPath[0], commandPath.Skip(1), out var schema) is SchemaQueryStatus.Found)
+            {
+                return schema.ChildSchemas.Select(s => new Suggestion(s.Name, s.Description)).ToArray();
+            }
+
+            return Array.Empty<Suggestion>();
         }
-
-        if (ctx.Bossy.SchemaRegistry.TryResolveSchema(commandPath[0], commandPath.Skip(1), out var schema) is SchemaQueryStatus.Found)
-        {
-            return schema.ChildSchemas.Select(s => new Suggestion(s.Name, s.Description)).ToArray();
-        }
-
-        return Array.Empty<Suggestion>();
-    }
+    }   
 }

@@ -1,4 +1,4 @@
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     public interface IModifiablePromptHeader
     {

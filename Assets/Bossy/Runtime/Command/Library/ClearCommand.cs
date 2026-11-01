@@ -1,7 +1,4 @@
-using Bossy.Command;
-using Bossy.Frontend;
-
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("clear", "Clears the screen.")]
     public class ClearCommand : SimpleCommand

@@ -1,4 +1,4 @@
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// The kind of status message in a <see cref="CompletionResult"/>.

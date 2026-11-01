@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Bossy.Utils;
+using RadTadDev.Logger;
 
-namespace Bossy.Schema.Registry
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Uses reflection to discover all command types.
@@ -36,7 +36,7 @@ namespace Bossy.Schema.Registry
                         foreach (var ex in e.LoaderExceptions)
                         {
                             // This normally happens when an assembly references types in an unloaded assembly.
-                            Log.Warning($"Failed to load type during command discovery: {ex?.Message}");
+                            Log.Warn($"Failed to load type during command discovery: {ex?.Message}");
                         }
                         
                         return e.Types.Where(t => t != null);

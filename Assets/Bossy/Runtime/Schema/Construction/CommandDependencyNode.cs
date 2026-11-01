@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Bossy.Schema
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Defines the relationship between command types.

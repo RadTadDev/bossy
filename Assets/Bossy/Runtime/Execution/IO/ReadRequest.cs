@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Describes a read that a reader is asked to fulfill.

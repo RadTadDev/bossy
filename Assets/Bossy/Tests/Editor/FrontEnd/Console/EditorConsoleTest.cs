@@ -1,11 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using Bossy.Frontend;
-using Bossy.Frontend.Parsing;
-using Bossy.Schema;
-using Bossy.Schema.Registry;
-using Bossy.Settings;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -13,7 +7,7 @@ using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
-namespace Bossy.Tests.FrontEnd.Console
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the editor console with real editor windows.

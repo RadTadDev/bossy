@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A value the autocomplete engine read for an argument before the cursor, converted by the argument's type

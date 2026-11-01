@@ -1,10 +1,9 @@
 using NUnit.Framework;
-using Bossy.Frontend.Parsing;
 
-namespace Bossy.Tests.FrontEnd.Parsing
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
-    /// Tests the primitive type adatpers.
+    /// Tests the primitive type adapters.
     /// </summary>
     public class PrimitiveAdapterTest
     {

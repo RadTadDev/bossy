@@ -1,8 +1,4 @@
-using Bossy.Frontend.Parsing;
-using Bossy.Schema.Registry;
-using Bossy.Settings;
-
-namespace Bossy
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A state container for Bossy.

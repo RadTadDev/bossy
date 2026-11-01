@@ -1,7 +1,6 @@
 using System;
-using Bossy.Command;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     internal interface IDeclareTypeStep
     {

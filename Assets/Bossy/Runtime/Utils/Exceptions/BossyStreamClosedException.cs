@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Utils
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Occurs when a closed stream is read.

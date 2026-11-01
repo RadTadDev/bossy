@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Bossy.Command;
-using Bossy.Schema;
-using Bossy.Utils;
+using RadTadDev.Logger;
 
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Gets the suggested values for an argument: from the function named by its <see cref="SuggestAttribute"/>,
@@ -128,7 +126,7 @@ namespace Bossy.Frontend.Autocomplete
 
             if (method == null)
             {
-                Log.Warning($"No {Format.Bold("static")} suggestion function with name '{suggestor.FunctionName}' found on type {type}");
+                Log.Warn($"No {Format.Bold("static")} suggestion function with name '{suggestor.FunctionName}' found on type {type}");
                 return null;
             }
 
@@ -137,7 +135,7 @@ namespace Bossy.Frontend.Autocomplete
 
             if (parameters.Length > 0 && !takesContext)
             {
-                Log.Warning($"Suggestion function '{suggestor.FunctionName}' may only have a parameter of type {typeof(SuggestionContext)}, or no parameters");
+                Log.Warn($"Suggestion function '{suggestor.FunctionName}' may only have a parameter of type {typeof(SuggestionContext)}, or no parameters");
                 return null;
             }
 
@@ -157,7 +155,7 @@ namespace Bossy.Frontend.Autocomplete
                 return context => strings(context)?.Select(s => (Suggestion)s);
             }
 
-            Log.Warning($"Suggestion function '{suggestor.FunctionName}' must return a type assignable to IEnumerable<string> or IEnumerable<Suggestion>");
+            Log.Warn($"Suggestion function '{suggestor.FunctionName}' must return a type assignable to IEnumerable<string> or IEnumerable<Suggestion>");
             return null;
         }
 

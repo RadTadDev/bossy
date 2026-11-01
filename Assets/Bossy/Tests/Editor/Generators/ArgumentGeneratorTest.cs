@@ -1,7 +1,7 @@
 using System;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="ArgumentGenerator"/> class.

@@ -1,7 +1,6 @@
-using Bossy.Execution;
 using System.Collections.Generic;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Creates an inspectable write target for testing.

@@ -1,4 +1,4 @@
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     public class Option<T>
     {

@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Bossy.Settings
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A file settings source.

@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Declares an optional argument for a command.

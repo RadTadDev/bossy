@@ -1,4 +1,4 @@
-namespace Bossy.Schema
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A writer interface to modify otherwise readonly state. 

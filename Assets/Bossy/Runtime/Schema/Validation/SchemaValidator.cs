@@ -1,10 +1,7 @@
-using Bossy.Schema.Registry;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Command;
-using Bossy.Utils;
 
-namespace Bossy.Schema
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Validates a schema to ensure that no errors have been compiled into a command.

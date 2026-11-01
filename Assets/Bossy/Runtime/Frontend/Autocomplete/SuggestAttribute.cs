@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Frontend.Autocomplete
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Name a function returning an IEnumerable of strings used to suggest options for this argument.

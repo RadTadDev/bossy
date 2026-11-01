@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Bossy.Settings
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Database of all Bossy settings.

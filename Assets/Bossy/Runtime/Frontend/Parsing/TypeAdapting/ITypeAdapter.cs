@@ -1,4 +1,4 @@
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A converter from one type to another.

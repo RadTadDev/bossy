@@ -1,4 +1,4 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Bossy.Tests.Editor")]
-[assembly: InternalsVisibleTo("Bossy.Tests.Runtime")]
+[assembly: InternalsVisibleTo("RadTadDev.Bossy.Tests.Editor")]
+[assembly: InternalsVisibleTo("RadTadDev.Bossy.Tests.Runtime")]

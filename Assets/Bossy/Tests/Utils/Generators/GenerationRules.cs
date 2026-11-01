@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     internal static class GenerationRules
     {

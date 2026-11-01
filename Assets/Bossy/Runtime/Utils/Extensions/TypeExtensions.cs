@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Bossy.Utils
+namespace RadTadDev.Bossy
 {
     public static class TypeExtensions
     {

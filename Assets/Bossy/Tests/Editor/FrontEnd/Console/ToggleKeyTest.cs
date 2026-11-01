@@ -1,8 +1,7 @@
-using Bossy.Frontend;
 using NUnit.Framework;
 using UnityEngine.UIElements;
 
-namespace Bossy.Tests.FrontEnd.Console
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the rule for when the toggle key types instead of toggling.

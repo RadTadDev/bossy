@@ -1,14 +1,12 @@
 using System;
 using System.Threading.Tasks;
-using Bossy.Command;
-using Bossy.Frontend;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("watch", "Repeats another command on an interval.")]
     public class WatchCommand : ICommand
     {
-        [Range(0.001f, float.PositiveInfinity)]
+        [InRange(0.001f, float.PositiveInfinity)]
         [Switch('i', "The interval in seconds.")]
         private float _interval = 1;
         

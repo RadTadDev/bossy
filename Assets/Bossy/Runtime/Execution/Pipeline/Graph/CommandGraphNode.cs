@@ -1,7 +1,4 @@
-using Bossy.Command;
-using Bossy.Schema;
-
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Allows writing to a command graph node after its creation.

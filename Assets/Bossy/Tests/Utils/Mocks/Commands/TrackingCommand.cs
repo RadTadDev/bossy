@@ -1,6 +1,4 @@
-using Bossy.Command;
-
-namespace Bossy.Tests.Utils.Commands
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tracks whether this command was called. Useful for testing command graphs.

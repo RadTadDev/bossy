@@ -3,12 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using Bossy.Command;
-using Bossy.Schema;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Schema
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="SchemaValidator"/> class.

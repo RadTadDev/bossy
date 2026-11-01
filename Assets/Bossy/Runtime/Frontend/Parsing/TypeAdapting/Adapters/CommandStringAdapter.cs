@@ -1,6 +1,4 @@
-using Bossy.Command;
-
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Reads a <see cref="CommandString"/> from one token. Whether the command would parse is checked by the parser,

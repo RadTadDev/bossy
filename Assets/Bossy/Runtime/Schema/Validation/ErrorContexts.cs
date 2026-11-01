@@ -1,7 +1,6 @@
 using System;
-using Bossy.Command;
 
-namespace Bossy.Schema
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A context for a command schema error.

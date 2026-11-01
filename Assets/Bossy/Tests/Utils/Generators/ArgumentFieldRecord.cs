@@ -1,8 +1,7 @@
 using System;
 using System.Reflection;
-using Bossy.Command;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Information needed to generate an argument field.

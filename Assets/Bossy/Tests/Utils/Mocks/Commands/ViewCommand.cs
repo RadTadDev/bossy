@@ -1,8 +1,6 @@
-using Bossy.Command;
-using Bossy.Frontend;
 using UnityEngine.UIElements;
 
-namespace Bossy.Tests.Utils.Commands
+namespace RadTadDev.Bossy.Tests
 {
     internal class ViewCommand : SimpleCommand, ICommandView
     {

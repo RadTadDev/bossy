@@ -1,16 +1,8 @@
 using System.Collections.Generic;
-using Bossy.Frontend;
-using Bossy.Frontend.Parsing;
-using Bossy.Execution;
-using Bossy.Schema;
-using Bossy.Schema.Registry;
-using Bossy.Settings;
-using Bossy.Tests.Utils;
-using Bossy.Tests.Utils.Commands;
 using NUnit.Framework;
 using UnityEngine.UIElements;
 
-namespace Bossy.Tests.FrontEnd.Console
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests building session views with the CLI frontend, without an editor window.

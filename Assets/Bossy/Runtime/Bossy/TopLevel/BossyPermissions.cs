@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using Bossy.Schema;
 
-namespace Bossy
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A very simple permissions manager to gate playtests. This is not intended to be foolproof,
@@ -9,7 +8,7 @@ namespace Bossy
     /// </summary>
     public class BossyPermissions
     {
-        public static bool IsLoggedIn { get; private set; } = false;
+        public static bool IsLoggedIn { get; private set; }
 
         private HashSet<CommandSchema> _whiteList;
         

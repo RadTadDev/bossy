@@ -1,15 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Command;
-using Bossy.Frontend.Autocomplete;
-using Bossy.Frontend.Parsing;
-using Bossy.Schema;
-using Bossy.Schema.Registry;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.FrontEnd.Autocomplete
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests how the <see cref="AutocompleteEngine"/> completes <see cref="CommandString"/> arguments: command names

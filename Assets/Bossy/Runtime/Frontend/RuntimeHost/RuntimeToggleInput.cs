@@ -1,10 +1,8 @@
-using UnityEngine;
-
 #if ENABLE_INPUT_SYSTEM && BOSSY_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Reads the toggle key at runtime with whichever input backend the project uses.

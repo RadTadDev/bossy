@@ -3,7 +3,7 @@
 using UnityEditor;
 using UnityEngine.UIElements;
 
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Base for Bossy's editor windows. Displays a session view and handles the toggle key inside the window.

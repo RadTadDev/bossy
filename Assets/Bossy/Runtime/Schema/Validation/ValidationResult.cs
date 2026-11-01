@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Bossy.Schema
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A container for the result of running a validation check against a schema.

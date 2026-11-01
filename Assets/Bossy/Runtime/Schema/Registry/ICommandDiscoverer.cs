@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Bossy.Command;
 
-namespace Bossy.Schema.Registry
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Defines a strategy for discovering all command types.

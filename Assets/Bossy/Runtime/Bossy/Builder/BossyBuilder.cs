@@ -1,4 +1,4 @@
-namespace Bossy
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Builds a new Bossy runtime.

@@ -1,11 +1,7 @@
 using System.Threading.Tasks;
-using Bossy.Command;
-using Bossy.Schema.Registry;
-using Bossy.Execution;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Registry
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the default methods on the <see cref="ICommandDiscoverer"/> interface.

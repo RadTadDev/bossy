@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Command;
-using Bossy.Schema;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("bossy", "Inspects the Bossy system.")]
     public class BossyCommand : SimpleCommand

@@ -1,11 +1,7 @@
 using System.Collections.Generic;
-using Bossy.Command;
-using Bossy.Frontend;
-using Bossy.Frontend.Autocomplete;
-using Bossy.Schema;
 using NUnit.Framework;
 
-namespace Bossy.Tests.FrontEnd.Views
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the text helpers of the <see cref="CompletionPopup"/> class.

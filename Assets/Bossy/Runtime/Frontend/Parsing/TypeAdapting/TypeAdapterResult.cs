@@ -1,4 +1,4 @@
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Holds information about the result of a type conversion attempt.

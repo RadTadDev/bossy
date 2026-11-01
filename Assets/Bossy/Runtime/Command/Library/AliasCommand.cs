@@ -1,7 +1,6 @@
 using System.Linq;
-using Bossy.Command;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("alias", "Adds an alias.")]
     public class AliasCommand : SimpleCommand

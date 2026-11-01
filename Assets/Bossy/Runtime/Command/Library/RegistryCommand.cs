@@ -1,6 +1,4 @@
-using Bossy.Command;
-
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("reg", "Displays available commands.")]
     public class RegistryCommand : SimpleCommand

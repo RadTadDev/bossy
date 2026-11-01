@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using Bossy.Frontend;
 
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A group of commands executed together.

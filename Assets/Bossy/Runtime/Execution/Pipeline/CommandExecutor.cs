@@ -4,11 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Command;
-using Bossy.Frontend;
-using Bossy.Utils;
+using RadTadDev.Logger;
 
-namespace Bossy.Execution
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Executes a command graph.

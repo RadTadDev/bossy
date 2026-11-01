@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Bossy.Schema;
-using Bossy.Tests.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Schema
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="CommandDependencyGraphBuilder"/> and data classes. 

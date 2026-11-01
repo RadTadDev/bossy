@@ -1,17 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Bossy.Execution;
-using Bossy.Frontend.Parsing;
-using Bossy.Schema;
-using Bossy.Schema.Registry;
-using Bossy.Settings;
-using Bossy.Tests.Utils;
-using Bossy.Tests.Utils.Commands;
-using Bossy.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Shell
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests how <see cref="Session.RunAsync"/> turns what its endpoint reads into commands.

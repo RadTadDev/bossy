@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A single token from an input line.

@@ -1,16 +1,9 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Command;
-using Bossy.Frontend;
-using Bossy.Frontend.Parsing;
-using Bossy.Execution;
-using Bossy.Schema;
-using Bossy.Tests.Utils;
-using Bossy.Utils;
 using NUnit.Framework;
 
-namespace Bossy.Tests.Shell
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="CommandContext"/> class.

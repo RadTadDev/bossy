@@ -3,11 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Bossy.Frontend.Parsing;
-using Bossy.Execution;
-using Bossy.Utils;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A context object providing utility functionality to commands.

@@ -1,8 +1,7 @@
 using System.Reflection;
-using Bossy.Command;
 using UnityEngine;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("login", "Logs in to the bossy runtime.")]
     public class LogInCommand : SimpleCommand

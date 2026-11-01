@@ -1,8 +1,6 @@
 using System.Collections.Generic;
-using Bossy.Execution;
-using Bossy.Frontend;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// A session host that records the calls made to it.

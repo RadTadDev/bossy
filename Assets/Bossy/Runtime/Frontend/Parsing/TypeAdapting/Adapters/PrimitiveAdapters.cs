@@ -1,7 +1,6 @@
 using System;
-using Bossy.Utils;
 
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     public class BoolAdapter : BaseTypeAdapter<bool>
     {

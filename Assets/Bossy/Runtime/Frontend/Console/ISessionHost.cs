@@ -1,6 +1,4 @@
-using Bossy.Execution;
-
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Where a session's UI lives. Lets a session show command views and open command windows

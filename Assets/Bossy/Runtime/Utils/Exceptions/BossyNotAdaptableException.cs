@@ -1,6 +1,6 @@
 using System;
 
-namespace Bossy.Utils
+namespace RadTadDev.Bossy
 {
     public class BossyNotAdaptableException : Exception
     {

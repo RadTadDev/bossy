@@ -4,11 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
-using Bossy.Command;
-using Bossy.Frontend.Autocomplete;
-using Bossy.Schema.Registry;
 
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Used to generate dummy commands at runtime for testing purposes.

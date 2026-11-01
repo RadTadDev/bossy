@@ -2,13 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Bossy.Command;
-using Bossy.Frontend.Autocomplete;
-using Bossy.Utils;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Bossy.Runtime.Command.Library
+namespace RadTadDev.Bossy
 {
     [Command("get", "Get generic data.")]
     public class GetCommand : SimpleCommand

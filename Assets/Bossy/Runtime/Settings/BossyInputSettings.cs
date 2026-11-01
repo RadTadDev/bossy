@@ -1,7 +1,6 @@
-using Bossy.Utils;
 using UnityEngine;
 
-namespace Bossy.Settings
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Settings for Bossy input.

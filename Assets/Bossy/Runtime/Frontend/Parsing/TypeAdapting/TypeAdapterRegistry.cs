@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Bossy.Utils;
 
-namespace Bossy.Frontend.Parsing
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A registry of all type adapters.

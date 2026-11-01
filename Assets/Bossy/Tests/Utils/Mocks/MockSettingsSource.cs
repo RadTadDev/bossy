@@ -1,6 +1,4 @@
-using Bossy.Settings;
-
-namespace Bossy.Tests.Utils
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// A mock settings source.

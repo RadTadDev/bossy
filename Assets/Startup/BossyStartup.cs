@@ -1,4 +1,4 @@
-using Bossy;
+using RadTadDev.Bossy;
 using JetBrains.Annotations;
 
 #if UNITY_EDITOR

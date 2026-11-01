@@ -1,7 +1,6 @@
 using System.Threading.Tasks;
-using Bossy.Command;
 
-namespace Bossy.Tests.Utils.Commands
+namespace RadTadDev.Bossy.Tests
 {
     internal class EchoCommand : ICommand
     {

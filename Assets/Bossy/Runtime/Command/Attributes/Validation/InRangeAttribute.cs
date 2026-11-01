@@ -1,19 +1,18 @@
 using System;
 using System.Globalization;
-using Bossy.Utils;
 
-namespace Bossy.Command
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// Validates that an argument is within a certain range.
     /// </summary>
     [AttributeUsage(AttributeTargets.Field)]
-    public class RangeAttribute : ArgumentValidationAttribute
+    public class InRangeAttribute : ArgumentValidationAttribute
     {
         public readonly float Min;
         public readonly float Max;
         
-        public RangeAttribute(float min, float max)
+        public InRangeAttribute(float min, float max)
         {
             Min = min;
             Max = max;

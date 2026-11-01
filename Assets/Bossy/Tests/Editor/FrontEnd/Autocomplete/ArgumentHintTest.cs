@@ -1,10 +1,7 @@
 using System.Collections.Generic;
-using Bossy.Command;
-using Bossy.Frontend.Autocomplete;
-using Bossy.Schema;
 using NUnit.Framework;
 
-namespace Bossy.Tests.FrontEnd.Autocomplete
+namespace RadTadDev.Bossy.Tests
 {
     /// <summary>
     /// Tests the <see cref="ArgumentHint"/> constraints, which come from <see cref="ArgumentValidationAttribute.Describe"/>.
@@ -15,7 +12,7 @@ namespace Bossy.Tests.FrontEnd.Autocomplete
         public void Constraints_BuiltInValidators_DescribeThemselves()
         {
             var hint = HintWith(
-                new Bossy.Command.RangeAttribute(0.5f, float.MaxValue),
+                new Bossy.InRangeAttribute(0.5f, float.MaxValue),
                 new EndsWithAttribute(".cs"),
                 new StartsWithAttribute("Assets"),
                 new IsPathAttribute(),

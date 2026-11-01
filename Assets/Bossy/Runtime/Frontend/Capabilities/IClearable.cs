@@ -1,4 +1,4 @@
-namespace Bossy.Frontend
+namespace RadTadDev.Bossy
 {
     /// <summary>
     /// A front end which can clear itself.
