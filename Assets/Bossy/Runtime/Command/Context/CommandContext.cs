@@ -183,8 +183,11 @@ namespace Bossy.Command
                 if (!result.IsEmpty) WriteError(result.Message);
                 return;
             }
-            
-            await Session.ExecuteAsync(graph, _token);
+
+            // A nested command writes to this command's output, so its output flows through this command's pipe.
+            // A windowed command has a window of its own to write to, so it keeps the default output.
+            var output = graph.Windowed ? null : new NonClosingWriter(Writer);
+            await Session.ExecuteAsync(graph, _token, null, output);
         }
 
         /// <summary>
