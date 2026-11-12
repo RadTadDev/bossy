@@ -96,6 +96,22 @@ namespace Bossy.Tests.Shell
         }
 
         [Test]
+        public async Task Test_PipedOutput_DoesNotResetEndpoint()
+        {
+            var endpoint = new MockEndpoint();
+            var session = MockSession.Create(_context, _permissions, endpoint);
+
+            var graph = CommandGraph
+                .Create(false)
+                .Execute(new SuccessfulCommand(), null)
+                .Build();
+
+            await session.ExecuteAsync(graph, CancellationToken.None, new MockReadable(), new MockWriteable());
+
+            Assert.That(endpoint.ResetCount, Is.EqualTo(0));
+        }
+
+        [Test]
         public async Task Test_CommandOutput_DoesNotCloseEndpoint()
         {
             var endpoint = new MockEndpoint();

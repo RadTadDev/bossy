@@ -15,6 +15,7 @@ namespace Bossy.Execution
         private readonly IEndpoint _endpoint;
         private readonly ISessionHost _host;
         private readonly CommandExecutor _executor;
+        private readonly IWriteable _endpointWriter;
 
         /// <summary>
         /// Creates a new graph dispatcher.
@@ -28,6 +29,7 @@ namespace Bossy.Execution
             _endpoint = endpoint;
             _host = host;
             _executor = new CommandExecutor(context, permissions, this);
+            _endpointWriter = new NonClosingWriter(endpoint);
         }
 
         /// <summary>
@@ -56,7 +58,7 @@ namespace Bossy.Execution
 
             // Commands close their output when they finish, which would end the endpoint for the rest of the session.
             // Only an output the caller passed in is closed, because the caller may be waiting for it to end.
-            var resolvedOutput = output ?? new NonClosingWriter(_endpoint);
+            var resolvedOutput = output ?? _endpointWriter;
 
             await _executor.ExecuteAsync(graph, session, token, input ?? _endpoint, resolvedOutput);
         }
@@ -76,27 +78,13 @@ namespace Bossy.Execution
                 _host?.PopView();
             }
 
-            (_endpoint as IVisualEndpointCapabilities)?.ResetCapabilities();
+            // Only a group that writes to the endpoint owns its capabilities. A group writing to a pipe, such as a
+            // command reading another command's output, must not reset what the endpoint's writer has set.
+            if (group.Nodes[^1].Context.GetWriter() == _endpointWriter)
+            {
+                (_endpoint as IVisualEndpointCapabilities)?.ResetCapabilities();
+            }
         }
 
-        /// <summary>
-        /// Writes through to a writer but ignores requests to close it.
-        /// </summary>
-        private sealed class NonClosingWriter : IWriteable
-        {
-            private readonly IWriteable _target;
-
-            public NonClosingWriter(IWriteable target)
-            {
-                _target = target;
-            }
-
-            public void Write(object value)
-            {
-                _target.Write(value);
-            }
-
-            public void CloseWriter() { }
-        }
     }
 }
